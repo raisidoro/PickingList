@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Rubik&display=swap" rel="stylesheet">
+
+  <title>Login</title>
+
+  <style type="text/tailwindcss">
+    @theme {
+      --text: #363636;
+      --text-secondary: #4F4F4F;
+      --primary: #696969; 
+      --background: #F5F5F5; 
+      --text-button: #F5F5F5;
+      --button: #363636;
+
+      --gradient: 180deg, 
+        #778899 0%, 
+        #708090 100%;
+
+      --gradient-hover: 180deg, 
+        #B0C4DE 0%, 
+        #778899 100%;
+
+      --shadow: 0px 11px 7px 0px rgba(0, 0, 0, 0.01), 
+        0px 7px 7px 0px rgba(0, 0, 0, 0.04), 
+        0px 4px 6px 0px rgba(0, 0, 0, 0.10), 
+        0px 2px 4px 0px rgba(0, 0, 0, 0.10), 
+        0px 0px 2px 0px rgba(0, 0, 0, 0.10), 
+        0px 2px 3px 0px rgba(255, 255, 255, 0.06) inset;
+
+      --font-sans: 'Montserrat', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-linear-[180deg,_#DCDCDC_0%,_#DCDCDC_100%] min-h-screen text-(--text) font-(--font-sans)"></body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
