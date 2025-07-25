@@ -113,6 +113,7 @@ function Input({ label, type = "text", className = "", ...props }: InputProps) {
     );
 }
 
+
 function LoginForm() {
       return (
       <Card className={`
@@ -125,7 +126,7 @@ function LoginForm() {
           className="mx-auto"
         />
         <Text as="p" variant="blast" className="text-center mt-0">
-        LOGIN
+            LOGIN
         </Text>
         <form className="flex flex-col gap-6">
         <Input label="Matrícula" type="text" className="default"/>
