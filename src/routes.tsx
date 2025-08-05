@@ -1,20 +1,12 @@
 import { createBrowserRouter } from 'react-router-dom';
 import Login from './pages/Login';
 import CargaList from './pages/Carga';
-//import PalletsList from './pages/Pallets';
+import PalletList from './pages/Pallets';
 //import ItensList from './pages/Itens';
 
-function handleCargaSelected(carga: any) {
-  console.log('Carga selecionada:', carga);
-}
-
-function handlePalletSelected(pallet: any) {
-  console.log('Pallet selecionado:', pallet);
-}
-
-function handleItemSelected(item: any) {
-  console.log('Item selecionado:', item);
-}
+//function handleItemSelected(item: any) {
+  //console.log('Item selecionado:', item);
+//}
 
 const routerApp = createBrowserRouter([
   {
@@ -23,11 +15,11 @@ const routerApp = createBrowserRouter([
   },
   {
     path: '/Carga',
-    element: <CargaList onSelectCarga={handleCargaSelected} />,
+    element: <CargaList />,
   },
   {
     path: '/Pallets',
-    //element: <PalletsList onSelectPallet={handlePalletSelected} />,
+    element: <PalletList cCarga={''}/>,
   },
   {
     path: '/Itens',

@@ -1,6 +1,6 @@
 import React, { type JSX } from "react"; 
 import { useState } from 'react';
-import { api, apiCarga } from '../lib/axios';
+import { apiOperadores } from '../lib/axios';
 import { useNavigate } from "react-router-dom";
 
 
@@ -137,7 +137,7 @@ function LoginForm() {
             cPass: senha.trim(),
         };
 
-        const resp = await api.get('', { params });
+        const resp = await apiOperadores.get('', { params });
         const data = resp.data;
 
         if (data && data.Nome && data.Matricula) {
