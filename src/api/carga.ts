@@ -1,4 +1,4 @@
-import { api } from '../lib/axios';
+import { apiCarga } from '../lib/axios';
 
 export interface CargaGetResponse {
   cod_carg: string;  
@@ -16,11 +16,11 @@ export interface CargaPostBody {
 }
 
 export async function getCargas() {
-  const response = await api.get<{ cargas: CargaGetResponse[] }>('/PICK_CARGA');
+  const response = await apiCarga.get<{ cargas: CargaGetResponse[] }>('/PICK_CARGA');
   return response.data.cargas;
 }
 
 export async function updateCargaStatus(body: CargaPostBody) {
-  const response = await api.post('/', body);
+  const response = await apiCarga.post('/', body);
   return response.data; 
 }

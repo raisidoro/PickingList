@@ -1,15 +1,14 @@
-import React, { type JSX } from "react"; 
-import { useState } from 'react';
-import { apiOperadores } from '../lib/axios';
+import React, { type JSX } from "react";
+import { useState } from "react";
+import { apiOperadores } from "../lib/axios";
 import { useNavigate } from "react-router-dom";
 
-
 const textVariants = {
-  default: "text-xl",
-  muted: "text-xl text-gray-500",
-  heading: "text-xl",
-  blast: "text-2xl",
-  title: "text-3xl",
+  default: "text-xl sm:text-2xl",
+  muted: "text-xl sm:text-2xl text-gray-500",
+  heading: "text-xl sm:text-2xl",
+  blast: "text-2xl sm:text-3xl",
+  title: "text-3xl sm:text-4xl",
 };
 
 type TextProps = {
@@ -118,91 +117,94 @@ function Input({ label, type = "text", className = "", ...props }: InputProps) {
 }
 
 function LoginForm() {
-    const [matricula, setMatricula] = useState('');
-    const [senha, setSenha] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [erro, setErro] = useState<string | null>(null);
+  const [matricula, setMatricula] = useState("");
+  const [senha, setSenha] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
-    const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
-    async function handleSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        setLoading(true);
-        setErro(null);
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setErro(null);
 
-        try {
-        const params = {
-            cNfc: '-',    
-            cMat: matricula.trim(),
-            cPass: senha.trim(),
-        };
+    try {
+      const params = {
+        cNfc: "-",    
+        cMat: matricula.trim(),
+        cPass: senha.trim(),
+      };
 
-        const resp = await apiOperadores.get('', { params });
-        const data = resp.data;
+      const resp = await apiOperadores.get("", { params });
+      const data = resp.data;
 
-        if (data && data.Nome && data.Matricula) {
-            window.alert(`Bem-vindo, ${data.Nome.trim()}`);
-            navigate('/Carga');
-        } else if (data && data.Erro) {
-            setErro(data.Erro);
-        } else {
-            setErro("Falha de autenticação. Tente novamente.");
-        }
-        } catch (err) {
-        setErro("Erro ao conectar.");
-        } finally {
-        setLoading(false);
-        }
+      if (data && data.Nome && data.Matricula) {
+        window.alert(`Bem-vindo, ${data.Nome.trim()}`);
+        navigate("/Carga");
+      } else if (data && data.Erro) {
+        setErro(data.Erro);
+      } else {
+        setErro("Falha de autenticação. Tente novamente.");
+      }
+    } catch (err) {
+      setErro("Erro ao conectar.");
+    } finally {
+      setLoading(false);
     }
+  }
 
-    return (
-        <Card className={`
-          flex flex-col gap-8 w-[22.25rem]
-          pt-14 px-8 pb-8
-          `}>
-          <img
-              src="/GDBR_logo.png"
-              alt="GDBR"
-              className="mx-auto"
-          />
-          <Text as="p" variant="blast" className="text-center mt-0">
-              LOGIN
+  return (
+    <Card
+      className={`
+        flex flex-col gap-8 w-full max-w-md
+        pt-8 sm:pt-14 px-4 sm:px-8 pb-8
+        overflow-hidden
+      `}
+    >
+      <img
+        src="/GDBR_logo.png"
+        alt="GDBR"
+        className="mx-auto max-w-[8rem] sm:max-w-[12rem] w-full"
+      />
+      <Text as="p" variant="blast" className="text-center mt-0">
+        LOGIN
+      </Text>
+      <form
+        className="flex flex-col gap-4 sm:gap-6"
+        onSubmit={handleSubmit}
+        autoComplete="off"
+      >
+        <Input
+          label="Matrícula"
+          type="text"
+          value={matricula}
+          onChange={e => setMatricula(e.target.value)}
+          required
+        />
+        <Input
+          label="Senha"
+          type="password"
+          value={senha}
+          onChange={e => setSenha(e.target.value)}
+          required
+        />
+        {erro && (
+          <Text variant="muted" className="text-red-600 text-center">
+            {erro}
           </Text>
-          <form
-              className="flex flex-col gap-6"
-              onSubmit={handleSubmit}
-              autoComplete="off"
-          >
-              <Input
-                label="Matrícula"
-                type="text"
-                value={matricula}
-                onChange={e => setMatricula(e.target.value)}
-                required
-              />
-              <Input
-                label="Senha"
-                type="password"
-                value={senha}
-                onChange={e => setSenha(e.target.value)}
-                required
-              />
-              {erro && (
-              <Text variant="muted" className="text-red-600 text-center">
-                  {erro}
-              </Text>
-              )}
-              <Button
-                variant="primary"
-                className="py-3"
-                type="submit"
-                disabled={loading}
-              >
-                {loading ? "Entrando..." : "Entrar"}
-              </Button>
-          </form>
-        </Card>
-    );
+        )}
+        <Button
+          variant="primary"
+          className="py-3"
+          type="submit"
+          disabled={loading}
+        >
+          {loading ? "Entrando..." : "Entrar"}
+        </Button>
+      </form>
+    </Card>
+  );
 }
 
 export default function Login() {
@@ -210,7 +212,7 @@ export default function Login() {
     <main
       className={`
         min-h-screen flex items-center justify-center
-        py-28 px-4 bg-gradient-to-b from-gray-200 to-gray-200
+        py-8 sm:py-28 px-2 sm:px-4 bg-gradient-to-b from-gray-200 to-gray-200
       `}
     >
       <LoginForm />

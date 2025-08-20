@@ -1,4 +1,4 @@
-import { api } from '../lib/axios'; 
+import { apiItens } from '../lib/axios'; 
 
 export interface ItensGetResponse {
     cCarga: string; // enviar
@@ -18,6 +18,6 @@ export interface ItensPostBody {
 }
 
 export async function getItens() {
-    const response = await api.get<ItensGetResponse[]>('/PICK_ITENS');
+    const response = await apiItens.get<ItensGetResponse[]>('/PICK_ITENS');
     return response.data;
 }

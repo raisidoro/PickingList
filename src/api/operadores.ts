@@ -1,4 +1,4 @@
-import { api } from '../lib/axios';
+import { apiOperadores } from '../lib/axios';
 
 export interface SignInBody {
   cNfc: string;
@@ -7,7 +7,7 @@ export interface SignInBody {
 }
 
 export async function signIn(params: SignInBody) {
-  return api.get('/rest/PICK_OPERAD', { params });
+  return apiOperadores.get('/rest/PICK_OPERAD', { params });
 }
 
 

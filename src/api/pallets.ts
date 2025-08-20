@@ -1,4 +1,4 @@
-import { api } from '../lib/axios';
+import { apiPallets } from '../lib/axios';
 
 export interface PalletsGetResponse{
     cod_palete: string;
@@ -17,6 +17,6 @@ export interface PalletsPostBody{
 }
 
 export async function getPallets() {
-    const response = await api.get<PalletsGetResponse[]>('/PICK_PALETE');
+    const response = await apiPallets.get<PalletsGetResponse[]>('/PICK_PALETE');
     return response.data;
 }

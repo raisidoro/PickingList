@@ -1,16 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { apiCarga, apiItens, apiPallets } from '../lib/axios';
+import { apiItens, apiPallets } from '../lib/axios';
 import { SlArrowLeftCircle } from "react-icons/sl";
 import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from 'react';
 
-
 const textVariants = {
-  default: "text-xl",
-  muted: "text-xl text-gray-500",
-  heading: "text-xl",
-  blast: "text-2xl",
-  title: "text-3xl",
+  default: "text-xl sm:text-2xl",
+  muted: "text-xl sm:text-2xl text-gray-500",
+  heading: "text-xl sm:text-2xl",
+  blast: "text-2xl sm:text-3xl",
+  title: "text-3xl sm:text-4xl",
 } as const;
 
 type Variant = keyof typeof textVariants;
@@ -22,30 +21,11 @@ type TextProps = {
   children: React.ReactNode;
 } & React.HTMLAttributes<HTMLElement>;
 
-function Text({ as = "span", variant = "default", className = "", children, ...props }: TextProps) {
-  const Component = as;
-  return React.createElement(
-    Component,
-    {
-      className: `${textVariants[variant]} ${className}`,
-      ...props,
-    },
-    children
-  );
-}
-
 type CardProps = React.HTMLAttributes<HTMLDivElement> & {
   children: React.ReactNode;
   className?: string;
 };
 
-function Card({ children, className = '', ...props }: CardProps) {
-  return (
-    <div className={`bg-gray-100 shadow-md rounded-2xl ${className}`} {...props}>
-      {children}
-    </div>
-  );
-}
 
 export interface Carga {
   cod_carg: string;
@@ -79,7 +59,29 @@ interface PalletItem {
 
 interface Pallet {
   cod_palete: string;
+  stat_pale: string;
   itens: PalletItem[];
+}
+
+
+function Text({ as = "span", variant = "default", className = "", children, ...props }: TextProps) {
+  const Component = as;
+  return React.createElement(
+    Component,
+    {
+      className: `${textVariants[variant]} ${className}`,
+      ...props,
+    },
+    children
+  );
+}
+
+function Card({ children, className = '', ...props }: CardProps) {
+  return (
+    <div className={`bg-gray-100 shadow-md rounded-2xl ${className}`} {...props}>
+      {children}
+    </div>
+  );
 }
 
 export default function PalletViewSingle() {
@@ -92,13 +94,19 @@ export default function PalletViewSingle() {
   const [erro, setErro] = useState<string | null>(null);
   const [palletIndex, setPalletIndex] = useState(0);
 
+  useEffect(() => {
+    if (palletIndex > pallets.length - 1) {
+      setPalletIndex(Math.max(0, pallets.length - 1));
+    }
+  }, [pallets, palletIndex]);
+
   if (!carga) {
     return (
-      <main className="min-h-screen flex items-center justify-center">
-        <span className="text-red-600">Carga não informada!</span>
+      <main className="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-gray-200 to-gray-300">
+        <span className="text-red-600 text-lg">Carga não informada!</span>
       </main>
     );
-  } 
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -107,28 +115,33 @@ export default function PalletViewSingle() {
     apiPallets.get('/PICK_PALETE', { params: { cCarga: carga.cod_carg } })
       .then(resp => {
         const palletsApi: PalletApi[] = Array.isArray(resp.data?.paletes) ? resp.data.paletes : [];
-
         if (palletsApi.length === 0) {
           setErro("Nenhum pallet encontrado.");
           setPallets([]);
           setLoading(false);
           return;
         }
-
         Promise.all(
-          palletsApi.map((p: PalletApi) =>
-            apiItens.get('', { params: { cCarga: carga.cod_carg, cPalet: p.cod_palete } })
-              .then(respItens => ({
-                cod_palete: p.cod_palete,
-                itens: Array.isArray(respItens.data?.itens)
-                  ? respItens.data.itens.map((it: any) => ({
-                    kanban: it.kanban ?? it.Kanban ?? '-',
-                    qtd: Number(it.qtd ?? it.Qtd ?? 1),
-                    status: it.status ?? 'Concluido',
-                  }))
-                  : [],
-              }))
-          )
+          palletsApi
+            .filter(p => !!p.cod_palete)
+            .map(p =>
+              apiItens.get('', { params: { cCarga: carga.cod_carg, cPalet: p.cod_palete } })
+                .then(respItens => ({
+                  cod_palete: p.cod_palete,
+                  stat_pale: p.stat_pale,
+                  itens: Array.isArray(respItens.data?.itens)
+                    ? respItens.data.itens.map((it: any) => ({
+                      kanban: it.kanban ?? it.Kanban ?? '-',
+                      sequen: it.sequen ?? it.Sequen ?? '-',
+                      qtd_caixa: it.qtd_caixa ?? it.Qtd_Caixa ?? '-',
+                      qtd_peca: it.qtd_peca ?? it.Qtd_Peca ?? '-',
+                      embalagem: it.embalagem ?? it.Embalagem ?? '-',
+                      multiplo: it.multiplo ?? it.Multiplo ?? '-',
+                      status: it.status ?? it.Status ?? '-',
+                    }))
+                    : [],
+                }))
+            )
         )
           .then(palletsDetalhados => {
             setPallets(palletsDetalhados);
@@ -141,67 +154,175 @@ export default function PalletViewSingle() {
         setPallets([]);
         setLoading(false);
       });
-
   }, [carga]);
 
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-start py-20 px-6 bg-gradient-to-b from-gray-200 to-gray-300">
-      <Card className="w-full max-w-md p-6 mt-12 flex flex-col gap-2 shadow-lg bg-white rounded-3xl">
-        <div className="flex items-center gap-2 mb-2">
-          <button onClick={() => navigate('/cargas')} className="focus:outline-none" title="Voltar">
-            <SlArrowLeftCircle className="text-gray-500 w-6 h-6" />
-          </button>
-          <Text as="span" variant="muted" className="text-sm text-gray-900">
-            <b>Carga:</b> {carga.cod_carg} – {carga.nome_cli} – {carga.data_col} – {carga.hora_col}
-          </Text>
-        </div>
+    <main
+      className="
+      fixed inset-0 flex items-center justify-center
+      bg-gradient-to-b from-gray-200 to-gray-300
+      p-0 sm:p-4
+      "
+    >
+      <Card
+        className="
+        w-full h-full max-w-full max-h-full flex flex-col items-center justify-start
+        p-0 shadow-lg bg-white rounded-none
+        sm:rounded-3xl sm:max-w-lg sm:max-h-[90vh] overflow-hidden
+        "
+      >
+        <div className="w-full flex flex-col gap-4 h-full p-3 sm:gap-6 sm:p-6 overflow-auto">
 
-        {loading && <Text className="text-center text-gray-600">Carregando pallets...</Text>}
-        {erro && <Text className="text-center text-red-600">{erro}</Text>}
-
-        {!loading && !erro && palletAtual && (
-          <><div className="bg-white rounded-xl px-3 py-2 border shadow-inner flex flex-col gap-2">
-            <div className="text-base font-bold text-center">
-              Pallet {String(palletIndex + 1).padStart(2, '0')}/{totalPallets.toString().padStart(2, '0')}
-            </div>
-            <ul className="mb-2">
-              {palletAtual.itens.map((item, idx) => (
-                <li key={idx} className="flex justify-between items-center text-base py-0.5">
-                  <span>
-                    <span className="mr-1">{item.kanban}</span>
-                    if (item.status == '0') {
-                     <span className="text-red-600 font-semibold">Pendente</span>
-                    } else if (item.status == '1') {
-                      <span className="text-yellow-600 font-semibold">Em Montagem</span>
-                    } else {
-                      <span className="text-green-600 font-semibold">Concluido</span>
-                    }
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <div className="text-center font-bold text-orange-700 text-lg mt-2">PALETE EM MONTAGEM</div>
+          <div className="flex items-center gap-2 mb-4">
+            <button onClick={() => navigate('/Carga')} className="focus:outline-none" title="Voltar">
+              <SlArrowLeftCircle className="text-gray-500 w-6 h-6" />
+            </button>
+            <Text as="span" variant="muted" className="text-sm sm:text-base text-gray-900 truncate">
+              <b>Carga:</b> {carga.cod_carg} – {carga.nome_cli} | {carga.data_col} – {carga.hora_col}
+            </Text>
           </div>
-          <div className="flex justify-between mt-2">
-              <button
-                className="rounded px-2 py-1 text-xs bg-gray-300 hover:bg-gray-400 disabled:opacity-50"
-                disabled={palletIndex === 0}
-                onClick={() => setPalletIndex(i => Math.max(i - 1, 0))}
-              >
-                Anterior
-              </button>
-              <button
-                className="rounded px-2 py-1 text-xs bg-gray-300 hover:bg-gray-400 disabled:opacity-50"
-                disabled={palletIndex === totalPallets - 1}
-                onClick={() => setPalletIndex(i => Math.min(i + 1, totalPallets - 1))}
-              >
-                Próximo
-              </button>
-            </div></>
-        )}
+
+          {loading && <Text className="text-center text-gray-600">Carregando pallets...</Text>}
+          {erro && <Text className="text-center text-red-600">{erro}</Text>}
+
+          {!loading && !erro && palletAtual && (
+            <>
+              <div className="w-full flex flex-col gap-4 mb-6 max-w-lg">
+                <input
+                  type="text"
+                  placeholder="Kanban"
+                  className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    placeholder=""
+                    className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-24"
+                  />
+                  <span className="text-base text-gray-700">Peças</span>
+                </div>
+              </div>
+
+              <div className="max-w-lg w-full">
+                <div className="text-base font-bold text-center mb-2">
+                  Pallet {palletAtual?.cod_palete ?? String(palletIndex + 1).padStart(2, '0')}/{totalPallets.toString().padStart(2, '0')}
+                  </div>
+
+                <div className="hidden sm:block bg-white rounded-2xl px-3 py-4 border shadow-inner overflow-auto">
+                  <table className="w-full table-fixed border-separate border-spacing-0 border border-gray-300 text-sm text-center">
+                  <thead className="bg-gray-100 select-none">
+                    <tr>
+                    <th className="border-b border-gray-300 px-2 py-1 w-[2.5rem]">#</th>
+                    <th className="border-b border-gray-300 px-2 py-1 text-left w-40">Kanban</th>
+                    <th className="border-b border-gray-300 px-2 py-1 w-12">Cxs</th>
+                    <th className="border-b border-gray-300 px-2 py-1 w-12">Pcs</th>
+                    <th className="border-b border-gray-300 px-2 py-1 text-left w-32">Emb.</th>
+                    <th className="border-b border-gray-300 px-2 py-1 w-12">Múlt.</th>
+                    <th className="border-b border-gray-300 px-2 py-1 w-36">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {palletAtual.itens.map((item, idx) => (
+                    <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="border-b border-gray-300 px-2 py-1">{item.sequen}</td>
+                      <td className="border-b border-gray-300 px-2 py-1 text-left truncate" title={item.kanban}>{item.kanban}</td>
+                      <td className="border-b border-gray-300 px-2 py-1">{item.qtd_caixa}</td>
+                      <td className="border-b border-gray-300 px-2 py-1">{item.qtd_peca}</td>
+                      <td className="border-b border-gray-300 px-2 py-1 text-left truncate" title={item.embalagem}>{item.embalagem}</td>
+                      <td className="border-b border-gray-300 px-2 py-1">{item.multiplo}</td>
+                      <td className="border-b border-gray-300 px-2 py-1 font-bold truncate" title={
+                      item.status === "0" ? "Pendente" :
+                        item.status === "1" ? "Em montagem" :
+                        item.status === "2" ? "Finalizado" :
+                          item.status === "3" ? "Finalizado com divergência" : ""
+                      }>
+                      {item.status === "0" && <span className="text-red-700">Pendente</span>}
+                      {item.status === "1" && <span className="text-orange-700">Em montagem</span>}
+                      {item.status === "2" && <span className="text-green-700">Finalizado</span>}
+                      {item.status === "3" && <span className="text-orange-700">Finalizado com divergência</span>}
+                      </td>
+                    </tr>
+                    ))}
+                  </tbody>
+                  </table>
+                </div>
+
+                <div className="sm:hidden flex flex-col gap-2">
+                  {palletAtual.itens.map((item, idx) => (
+                    <Card key={idx} className="p-2 rounded-xl bg-white border border-gray-300 shadow-sm">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-semibold text-xs">Seq</span>
+                        <span className="text-xs">{item.sequen}</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-semibold text-xs">Kanban</span>
+                        <span className="text-xs truncate max-w-[90px]" title={item.kanban}>{item.kanban}</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-semibold text-xs">Cxs</span>
+                        <span className="text-xs">{item.qtd_caixa}</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-semibold text-xs">Peças</span>
+                        <span className="text-xs">{item.qtd_peca}</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-semibold text-xs">Embal.</span>
+                        <span className="text-xs truncate max-w-[80px]" title={item.embalagem}>{item.embalagem}</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-semibold text-xs">Múltiplo</span>
+                        <span className="text-xs">{item.multiplo}</span>
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="font-semibold text-xs">Status</span>
+                        <span className={
+                          `font-bold text-xs ${
+                            item.status === "0" ? "text-red-700" :
+                            item.status === "1" ? "text-orange-700" :
+                            item.status === "2" ? "text-green-700" :
+                            item.status === "3" ? "text-orange-700" : ""}`
+                        }>
+                          {item.status === "0" && "Pendente"}
+                          {item.status === "1" && "Em montagem"}
+                          {item.status === "2" && "Finalizado"}
+                          {item.status === "3" && "Divergência"}
+                        </span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+
+                <div className="text-center font-bold text-lg mt-2 select-none">
+                  {palletAtual.stat_pale === "0" && <span className="text-red-700">Pendente</span>}
+                  {palletAtual.stat_pale === "1" && <span className="text-orange-700">Em montagem</span>}
+                  {palletAtual.stat_pale === "2" && <span className="text-green-700">Finalizado com divergência</span>}
+                  {palletAtual.stat_pale === "3" && <span className="text-orange-700">Finalizado</span>}
+                </div>
+              </div>
+
+              <div className="flex justify-between mt-6 gap-4 max-w-xs mx-auto w-full px-4">
+                <button
+                  className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
+                  disabled={palletIndex === 0}
+                  onClick={() => setPalletIndex(i => Math.max(i - 1, 0))}
+                >
+                  Anterior
+                </button>
+                <button
+                  className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
+                  disabled={palletIndex === totalPallets - 1}
+                  onClick={() => setPalletIndex(i => Math.min(i + 1, totalPallets - 1))}
+                >
+                  Próximo
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </Card>
     </main>
   );
