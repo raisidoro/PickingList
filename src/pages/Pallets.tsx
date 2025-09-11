@@ -168,7 +168,7 @@ export default function PalletViewSingle() {
       "
     >
       <Card
-        className="
+        className="</main>
         w-full h-full max-w-full max-h-full flex flex-col items-center justify-start
         p-0 shadow-lg bg-white rounded-none
         sm:rounded-3xl sm:max-w-lg sm:max-h-[90vh] overflow-hidden
@@ -180,7 +180,7 @@ export default function PalletViewSingle() {
             <button onClick={() => navigate('/Carga')} className="focus:outline-none" title="Voltar">
               <SlArrowLeftCircle className="text-gray-500 w-6 h-6" />
             </button>
-            <Text as="span" variant="muted" className="text-sm sm:text-base text-gray-900 truncate">
+            <Text as="span" variant="muted" className="text-sm sm:text-base t</Text>ext-gray-900 truncate">
               <b>Carga:</b> {carga.cod_carg} – {carga.nome_cli} | {carga.data_col} – {carga.hora_col}
             </Text>
           </div>
@@ -211,90 +211,48 @@ export default function PalletViewSingle() {
                   Pallet {palletAtual?.cod_palete ?? String(palletIndex + 1).padStart(2, '0')}/{totalPallets.toString().padStart(2, '0')}
                   </div>
 
-                <div className="hidden sm:block bg-white rounded-2xl px-3 py-4 border shadow-inner overflow-auto">
-                  <table className="w-full table-fixed border-separate border-spacing-0 border border-gray-300 text-sm text-center">
-                  <thead className="bg-gray-100 select-none">
-                    <tr>
-                    <th className="border-b border-gray-300 px-2 py-1 w-[2.5rem]">#</th>
-                    <th className="border-b border-gray-300 px-2 py-1 text-left w-40">Kanban</th>
-                    <th className="border-b border-gray-300 px-2 py-1 w-12">Cxs</th>
-                    <th className="border-b border-gray-300 px-2 py-1 w-12">Pcs</th>
-                    <th className="border-b border-gray-300 px-2 py-1 text-left w-32">Emb.</th>
-                    <th className="border-b border-gray-300 px-2 py-1 w-12">Múlt.</th>
-                    <th className="border-b border-gray-300 px-2 py-1 w-36">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {palletAtual.itens.map((item, idx) => (
-                    <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="border-b border-gray-300 px-2 py-1">{item.sequen}</td>
-                      <td className="border-b border-gray-300 px-2 py-1 text-left truncate" title={item.kanban}>{item.kanban}</td>
-                      <td className="border-b border-gray-300 px-2 py-1">{item.qtd_caixa}</td>
-                      <td className="border-b border-gray-300 px-2 py-1">{item.qtd_peca}</td>
-                      <td className="border-b border-gray-300 px-2 py-1 text-left truncate" title={item.embalagem}>{item.embalagem}</td>
-                      <td className="border-b border-gray-300 px-2 py-1">{item.multiplo}</td>
-                      <td className="border-b border-gray-300 px-2 py-1 font-bold truncate" title={
-                      item.status === "0" ? "Pendente" :
-                        item.status === "1" ? "Em montagem" :
-                        item.status === "2" ? "Finalizado" :
-                          item.status === "3" ? "Finalizado com divergência" : ""
-                      }>
-                      {item.status === "0" && <span className="text-red-700">Pendente</span>}
-                      {item.status === "1" && <span className="text-orange-700">Em montagem</span>}
-                      {item.status === "2" && <span className="text-green-700">Finalizado</span>}
-                      {item.status === "3" && <span className="text-orange-700">Finalizado com divergência</span>}
-                      </td>
-                    </tr>
-                    ))}
-                  </tbody>
-                  </table>
-                </div>
-
-                <div className="sm:hidden flex flex-col gap-2">
-                  {palletAtual.itens.map((item, idx) => (
-                    <Card key={idx} className="p-2 rounded-xl bg-white border border-gray-300 shadow-sm">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="font-semibold text-xs">Seq</span>
-                        <span className="text-xs">{item.sequen}</span>
-                      </div>
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="font-semibold text-xs">Kanban</span>
-                        <span className="text-xs truncate max-w-[90px]" title={item.kanban}>{item.kanban}</span>
-                      </div>
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="font-semibold text-xs">Cxs</span>
-                        <span className="text-xs">{item.qtd_caixa}</span>
-                      </div>
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="font-semibold text-xs">Peças</span>
-                        <span className="text-xs">{item.qtd_peca}</span>
-                      </div>
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="font-semibold text-xs">Embal.</span>
-                        <span className="text-xs truncate max-w-[80px]" title={item.embalagem}>{item.embalagem}</span>
-                      </div>
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="font-semibold text-xs">Múltiplo</span>
-                        <span className="text-xs">{item.multiplo}</span>
-                      </div>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="font-semibold text-xs">Status</span>
-                        <span className={
-                          `font-bold text-xs ${
-                            item.status === "0" ? "text-red-700" :
-                            item.status === "1" ? "text-orange-700" :
+                <div className="flex flex-col gap-2">
+                {palletAtual.itens.map((item, idx) => (
+                  <Card key={idx} className="p-2 rounded-xl bg-white border border-gray-300 shadow-sm">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="font-semibold text-xs">Seq</span>
+                      <span className="text-xs">{item.sequen}</span>
+                    </div>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="font-semibold text-xs">Kanban</span>
+                      <span className="text-xs truncate max-w-[90px]" title={item.kanban}>{item.kanban}</span>
+                    </div>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="font-semibold text-xs">Cxs</span>
+                      <span className="text-xs">{item.qtd_caixa}</span>
+                    </div>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="font-semibold text-xs">Peças</span>
+                      <span className="text-xs">{item.qtd_peca}</span>
+                    </div>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="font-semibold text-xs">Embal.</span>
+                      <span className="text-xs truncate max-w-[80px]" title={item.embalagem}>{item.embalagem}</span>
+                    </div>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="font-semibold text-xs">Múltiplo</span>
+                      <span className="text-xs">{item.multiplo}</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="font-semibold text-xs">Status</span>
+                      <span className={`font-bold text-xs ${item.status === "0" ? "text-red-700" :
+                          item.status === "1" ? "text-orange-700" :
                             item.status === "2" ? "text-green-700" :
-                            item.status === "3" ? "text-orange-700" : ""}`
-                        }>
-                          {item.status === "0" && "Pendente"}
-                          {item.status === "1" && "Em montagem"}
-                          {item.status === "2" && "Finalizado"}
-                          {item.status === "3" && "Divergência"}
-                        </span>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
+                              item.status === "3" ? "text-orange-700" : ""}`}>
+                        {item.status === "0" && "Pendente"}
+                        {item.status === "1" && "Em montagem"}
+                        {item.status === "2" && "Finalizado"}
+                        {item.status === "3" && "Divergência"}
+                      </span>
+                    </div>
+                  </Card>
+                ))}
+              </div>
 
                 <div className="text-center font-bold text-lg mt-2 select-none">
                   {palletAtual.stat_pale === "0" && <span className="text-red-700">Pendente</span>}
