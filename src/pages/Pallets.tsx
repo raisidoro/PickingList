@@ -26,7 +26,6 @@ type CardProps = React.HTMLAttributes<HTMLDivElement> & {
   className?: string;
 };
 
-
 export interface Carga {
   cod_carg: string;
   cod_cli: string;
@@ -159,6 +158,25 @@ export default function PalletViewSingle() {
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
 
+  let kanbanGDBR = '';
+  let etiquetaCliente = '';
+
+  function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const setKanbanGDBR = (value: string) => {
+      kanbanGDBR = value;
+    };
+    setKanbanGDBR(e.target.value);
+    console.log('Kanban GDBR:', kanbanGDBR);
+  }
+
+  function handleEtiquetaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const setEtiquetaCliente = (value: string) => {
+      etiquetaCliente = value;
+    };
+    setEtiquetaCliente(e.target.value);
+    console.log('Etiqueta Cliente:', etiquetaCliente);
+  }
+
   return (
     <main
       className="
@@ -193,66 +211,74 @@ export default function PalletViewSingle() {
               <div className="w-full flex flex-col gap-4 mb-6 max-w-lg">
                 <input
                   type="text"
-                  placeholder="Kanban"
+                  placeholder="Kanban GDBR"
                   className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
+                  onChange={handleKanbanGDBRChange}
                 />
                 <div className="flex items-center gap-2">
                   <input
-                    type="number"
-                    placeholder=""
-                    className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-24"
+                    type="text"
+                    placeholder="Etiqueta Cliente"
+                    className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
+                    onChange={handleEtiquetaClienteChange}
                   />
-                  <span className="text-base text-gray-700">Peças</span>
                 </div>
               </div>
 
+              if (kanbanGDBR.includes(etiquetaCliente)) {
+                console.log("Kanban GDBR contém Etiqueta Cliente")
+              } else {
+                console.log("Kanban GDBR não contém Etiqueta Cliente")
+              }
+
+            
               <div className="max-w-lg w-full">
                 <div className="text-base font-bold text-center mb-2">
                   Pallet {palletAtual?.cod_palete ?? String(palletIndex + 1).padStart(2, '0')}/{totalPallets.toString().padStart(2, '0')}
-                  </div>
+                </div>
 
                 <div className="flex flex-col gap-2">
-                {palletAtual.itens.map((item, idx) => (
-                  <Card key={idx} className="p-2 rounded-xl bg-white border border-gray-300 shadow-sm">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-semibold text-xs">Seq</span>
-                      <span className="text-xs">{item.sequen}</span>
-                    </div>
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-semibold text-xs">Kanban</span>
-                      <span className="text-xs truncate max-w-[90px]" title={item.kanban}>{item.kanban}</span>
-                    </div>
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-semibold text-xs">Cxs</span>
-                      <span className="text-xs">{item.qtd_caixa}</span>
-                    </div>
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-semibold text-xs">Peças</span>
-                      <span className="text-xs">{item.qtd_peca}</span>
-                    </div>
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-semibold text-xs">Embal.</span>
-                      <span className="text-xs truncate max-w-[80px]" title={item.embalagem}>{item.embalagem}</span>
-                    </div>
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-semibold text-xs">Múltiplo</span>
-                      <span className="text-xs">{item.multiplo}</span>
-                    </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="font-semibold text-xs">Status</span>
-                      <span className={`font-bold text-xs ${item.status === "0" ? "text-red-700" :
+                  {palletAtual.itens.map((item, idx) => (
+                    <Card key={idx} className="p-2 rounded-xl bg-white border border-gray-300 shadow-sm">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-semibold text-xs">Seq</span>
+                        <span className="text-xs">{item.sequen}</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-semibold text-xs">Kanban</span>
+                        <span className="text-xs truncate max-w-[90px]" title={item.kanban}>{item.kanban}</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-semibold text-xs">Cxs</span>
+                        <span className="text-xs">{item.qtd_caixa}</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-semibold text-xs">Peças</span>
+                        <span className="text-xs">{item.qtd_peca}</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-semibold text-xs">Embal.</span>
+                        <span className="text-xs truncate max-w-[80px]" title={item.embalagem}>{item.embalagem}</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-semibold text-xs">Múltiplo</span>
+                        <span className="text-xs">{item.multiplo}</span>
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="font-semibold text-xs">Status</span>
+                        <span className={`font-bold text-xs ${item.status === "0" ? "text-red-700" :
                           item.status === "1" ? "text-orange-700" :
                             item.status === "2" ? "text-green-700" :
                               item.status === "3" ? "text-orange-700" : ""}`}>
-                        {item.status === "0" && "Pendente"}
-                        {item.status === "1" && "Em montagem"}
-                        {item.status === "2" && "Finalizado"}
-                        {item.status === "3" && "Divergência"}
-                      </span>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                          {item.status === "0" && "Pendente"}
+                          {item.status === "1" && "Em montagem"}
+                          {item.status === "2" && "Finalizado"}
+                          {item.status === "3" && "Divergência"}
+                        </span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
 
                 <div className="text-center font-bold text-lg mt-2 select-none">
                   {palletAtual.stat_pale === "0" && <span className="text-red-700">Pendente</span>}
