@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { apiItens, apiPallets } from '../lib/axios';
+import React, { useEffect, useState } from "react";
+import { apiItens, apiPallets } from "../lib/axios";
 import { SlArrowLeftCircle } from "react-icons/sl";
 import { useLocation, useNavigate } from "react-router-dom";
-import { type JSX } from 'react';
+import { type JSX } from "react";
 
 const textVariants = {
   default: "text-xl sm:text-2xl",
@@ -62,8 +62,13 @@ interface Pallet {
   itens: PalletItem[];
 }
 
-
-function Text({ as = "span", variant = "default", className = "", children, ...props }: TextProps) {
+function Text({
+  as = "span",
+  variant = "default",
+  className = "",
+  children,
+  ...props
+}: TextProps) {
   const Component = as;
   return React.createElement(
     Component,
@@ -75,9 +80,12 @@ function Text({ as = "span", variant = "default", className = "", children, ...p
   );
 }
 
-function Card({ children, className = '', ...props }: CardProps) {
+function Card({ children, className = "", ...props }: CardProps) {
   return (
-    <div className={`bg-gray-100 shadow-md rounded-2xl ${className}`} {...props}>
+    <div
+      className={`bg-gray-100 shadow-md rounded-2xl ${className}`}
+      {...props}
+    >
       {children}
     </div>
   );
@@ -111,9 +119,12 @@ export default function PalletViewSingle() {
     setLoading(true);
     setErro(null);
 
-    apiPallets.get('/PICK_PALETE', { params: { cCarga: carga.cod_carg } })
-      .then(resp => {
-        const palletsApi: PalletApi[] = Array.isArray(resp.data?.paletes) ? resp.data.paletes : [];
+    apiPallets
+      .get("/PICK_PALETE", { params: { cCarga: carga.cod_carg } })
+      .then((resp) => {
+        const palletsApi: PalletApi[] = Array.isArray(resp.data?.paletes)
+          ? resp.data.paletes
+          : [];
         if (palletsApi.length === 0) {
           setErro("Nenhum pallet encontrado.");
           setPallets([]);
@@ -122,34 +133,37 @@ export default function PalletViewSingle() {
         }
         Promise.all(
           palletsApi
-            .filter(p => !!p.cod_palete)
-            .map(p =>
-              apiItens.get('', { params: { cCarga: carga.cod_carg, cPalet: p.cod_palete } })
-                .then(respItens => ({
+            .filter((p) => !!p.cod_palete)
+            .map((p) =>
+              apiItens
+                .get("", {
+                  params: { cCarga: carga.cod_carg, cPalet: p.cod_palete },
+                })
+                .then((respItens) => ({
                   cod_palete: p.cod_palete,
                   stat_pale: p.stat_pale,
                   itens: Array.isArray(respItens.data?.itens)
                     ? respItens.data.itens.map((it: any) => ({
-                      kanban: it.kanban ?? it.Kanban ?? '-',
-                      sequen: it.sequen ?? it.Sequen ?? '-',
-                      qtd_caixa: it.qtd_caixa ?? it.Qtd_Caixa ?? '-',
-                      qtd_peca: it.qtd_peca ?? it.Qtd_Peca ?? '-',
-                      embalagem: it.embalagem ?? it.Embalagem ?? '-',
-                      multiplo: it.multiplo ?? it.Multiplo ?? '-',
-                      status: it.status ?? it.Status ?? '-',
-                    }))
+                        kanban: it.kanban ?? it.Kanban ?? "-",
+                        sequen: it.sequen ?? it.Sequen ?? "-",
+                        qtd_caixa: it.qtd_caixa ?? it.Qtd_Caixa ?? "-",
+                        qtd_peca: it.qtd_peca ?? it.Qtd_Peca ?? "-",
+                        embalagem: it.embalagem ?? it.Embalagem ?? "-",
+                        multiplo: it.multiplo ?? it.Multiplo ?? "-",
+                        status: it.status ?? it.Status ?? "-",
+                      }))
                     : [],
                 }))
             )
         )
-          .then(palletsDetalhados => {
+          .then((palletsDetalhados) => {
             setPallets(palletsDetalhados);
           })
-          .catch(() => setErro('Erro ao buscar itens dos pallets.'))
+          .catch(() => setErro("Erro ao buscar itens dos pallets."))
           .finally(() => setLoading(false));
       })
       .catch(() => {
-        setErro('Erro ao carregar pallets.');
+        setErro("Erro ao carregar pallets.");
         setPallets([]);
         setLoading(false);
       });
@@ -158,24 +172,60 @@ export default function PalletViewSingle() {
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
 
-  let kanbanGDBR = '';
-  let etiquetaCliente = '';
+  const [kanbanGDBR, setKanbanGDBR] = useState("");
+  const [etiquetaCliente, setEtiquetaCliente] = useState("");
 
   function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const setKanbanGDBR = (value: string) => {
-      kanbanGDBR = value;
-    };
     setKanbanGDBR(e.target.value);
-    console.log('Kanban GDBR:', kanbanGDBR);
   }
 
   function handleEtiquetaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const setEtiquetaCliente = (value: string) => {
-      etiquetaCliente = value;
-    };
     setEtiquetaCliente(e.target.value);
-    console.log('Etiqueta Cliente:', etiquetaCliente);
   }
+
+  useEffect(() => {
+    if (!kanbanGDBR || pallets.length === 0) {
+      console.log("Nenhum pallet ou Kanban informado.");
+      return;
+    }
+
+    const kanbanGDBRNumerico = kanbanGDBR.split("|")[1] || "";
+
+    //array com kanbans de cada pallet
+    const todosKanbansPallet: { pallet: string; kanbans: string[] }[] =
+      pallets.map((pallet) => {
+        const kanbansPallet = pallet.itens.map((item) => item.kanban);
+        return { pallet: pallet.cod_palete, kanbans: kanbansPallet };
+      });
+
+    console.log("Todos os kanbans dos pallets:", todosKanbansPallet);
+
+    let encontrado = false;
+    for (const p of todosKanbansPallet) {
+      if (p.kanbans.includes(kanbanGDBRNumerico)) {
+        console.log(` Kanban ${kanbanGDBRNumerico} encontrado no pallet ${p.pallet}`);
+        const idx = pallets.findIndex((pl) => pl.cod_palete === p.pallet);
+        if (idx >= 0) setPalletIndex(idx);
+        encontrado = true;
+        break;
+      }
+    }
+
+    if (!encontrado) {
+      console.log(` Kanban ${kanbanGDBR} não encontrado em nenhum pallet.`);
+    }
+  }, [kanbanGDBR, pallets]);
+
+  // verifica etiqueta cliente
+  useEffect(() => {
+    if (!kanbanGDBR || !etiquetaCliente) return;
+
+    if (kanbanGDBR.includes(etiquetaCliente)) {
+      console.log(`Kanban GDBR ${kanbanGDBR} contém Etiqueta Cliente ${etiquetaCliente}`);
+    } else {
+      console.log(`Kanban GDBR ${kanbanGDBR} não contém Etiqueta Cliente ${etiquetaCliente}`);
+    }
+  }, [kanbanGDBR, etiquetaCliente]);
 
   return (
     <main
@@ -193,17 +243,29 @@ export default function PalletViewSingle() {
         "
       >
         <div className="w-full flex flex-col gap-4 h-full p-3 sm:gap-6 sm:p-6 overflow-auto">
-
           <div className="flex items-center gap-2 mb-4">
-            <button onClick={() => navigate('/Carga')} className="focus:outline-none" title="Voltar">
+            <button
+              onClick={() => navigate("/Carga")}
+              className="focus:outline-none"
+              title="Voltar"
+            >
               <SlArrowLeftCircle className="text-gray-500 w-6 h-6" />
             </button>
-            <Text as="span" variant="muted" className="text-sm sm:text-base t</Text>ext-gray-900 truncate">
-              <b>Carga:</b> {carga.cod_carg} – {carga.nome_cli} | {carga.data_col} – {carga.hora_col}
+            <Text
+              as="span"
+              variant="muted"
+              className="text-sm sm:text-base t</Text>ext-gray-900 truncate"
+            >
+              <b>Carga:</b> {carga.cod_carg} – {carga.nome_cli} |{" "}
+              {carga.data_col} – {carga.hora_col}
             </Text>
           </div>
 
-          {loading && <Text className="text-center text-gray-600">Carregando pallets...</Text>}
+          {loading && (
+            <Text className="text-center text-gray-600">
+              Carregando pallets...
+            </Text>
+          )}
           {erro && <Text className="text-center text-red-600">{erro}</Text>}
 
           {!loading && !erro && palletAtual && (
@@ -225,28 +287,32 @@ export default function PalletViewSingle() {
                 </div>
               </div>
 
-              if (kanbanGDBR.includes(etiquetaCliente)) {
-                console.log("Kanban GDBR contém Etiqueta Cliente")
-              } else {
-                console.log("Kanban GDBR não contém Etiqueta Cliente")
-              }
-
-            
               <div className="max-w-lg w-full">
                 <div className="text-base font-bold text-center mb-2">
-                  Pallet {palletAtual?.cod_palete ?? String(palletIndex + 1).padStart(2, '0')}/{totalPallets.toString().padStart(2, '0')}
+                  Pallet{" "}
+                  {palletAtual?.cod_palete ??
+                    String(palletIndex + 1).padStart(2, "0")}
+                  /{totalPallets.toString().padStart(2, "0")}
                 </div>
 
                 <div className="flex flex-col gap-2">
                   {palletAtual.itens.map((item, idx) => (
-                    <Card key={idx} className="p-2 rounded-xl bg-white border border-gray-300 shadow-sm">
+                    <Card
+                      key={idx}
+                      className="p-2 rounded-xl bg-white border border-gray-300 shadow-sm"
+                    >
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="font-semibold text-xs">Seq</span>
                         <span className="text-xs">{item.sequen}</span>
                       </div>
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="font-semibold text-xs">Kanban</span>
-                        <span className="text-xs truncate max-w-[90px]" title={item.kanban}>{item.kanban}</span>
+                        <span
+                          className="text-xs truncate max-w-[90px]"
+                          title={item.kanban}
+                        >
+                          {item.kanban}
+                        </span>
                       </div>
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="font-semibold text-xs">Cxs</span>
@@ -258,7 +324,12 @@ export default function PalletViewSingle() {
                       </div>
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="font-semibold text-xs">Embal.</span>
-                        <span className="text-xs truncate max-w-[80px]" title={item.embalagem}>{item.embalagem}</span>
+                        <span
+                          className="text-xs truncate max-w-[80px]"
+                          title={item.embalagem}
+                        >
+                          {item.embalagem}
+                        </span>
                       </div>
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="font-semibold text-xs">Múltiplo</span>
@@ -266,10 +337,19 @@ export default function PalletViewSingle() {
                       </div>
                       <div className="flex items-center justify-between mt-1">
                         <span className="font-semibold text-xs">Status</span>
-                        <span className={`font-bold text-xs ${item.status === "0" ? "text-red-700" :
-                          item.status === "1" ? "text-orange-700" :
-                            item.status === "2" ? "text-green-700" :
-                              item.status === "3" ? "text-orange-700" : ""}`}>
+                        <span
+                          className={`font-bold text-xs ${
+                            item.status === "0"
+                              ? "text-red-700"
+                              : item.status === "1"
+                              ? "text-orange-700"
+                              : item.status === "2"
+                              ? "text-green-700"
+                              : item.status === "3"
+                              ? "text-orange-700"
+                              : ""
+                          }`}
+                        >
                           {item.status === "0" && "Pendente"}
                           {item.status === "1" && "Em montagem"}
                           {item.status === "2" && "Finalizado"}
@@ -281,25 +361,36 @@ export default function PalletViewSingle() {
                 </div>
 
                 <div className="text-center font-bold text-lg mt-2 select-none">
-                  {palletAtual.stat_pale === "0" && <span className="text-red-700">Pendente</span>}
-                  {palletAtual.stat_pale === "1" && <span className="text-orange-700">Em montagem</span>}
-                  {palletAtual.stat_pale === "2" && <span className="text-green-700">Finalizado com divergência</span>}
-                  {palletAtual.stat_pale === "3" && <span className="text-orange-700">Finalizado</span>}
+                  {palletAtual.stat_pale === "0" && (
+                    <span className="text-red-700">Pendente</span>
+                  )}
+                  {palletAtual.stat_pale === "1" && (
+                    <span className="text-orange-700">Em montagem</span>
+                  )}
+                  {palletAtual.stat_pale === "2" && (
+                    <span className="text-green-700">
+                      Finalizado com divergência
+                    </span>
+                  )}
+                  {palletAtual.stat_pale === "3" && (
+                    <span className="text-orange-700">Finalizado</span>
+                  )}
                 </div>
               </div>
-
               <div className="flex justify-between mt-6 gap-4 max-w-xs mx-auto w-full px-4">
                 <button
                   className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
                   disabled={palletIndex === 0}
-                  onClick={() => setPalletIndex(i => Math.max(i - 1, 0))}
+                  onClick={() => setPalletIndex((i) => Math.max(i - 1, 0))}
                 >
                   Anterior
                 </button>
                 <button
                   className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
                   disabled={palletIndex === totalPallets - 1}
-                  onClick={() => setPalletIndex(i => Math.min(i + 1, totalPallets - 1))}
+                  onClick={() =>
+                    setPalletIndex((i) => Math.min(i + 1, totalPallets - 1))
+                  }
                 >
                   Próximo
                 </button>
