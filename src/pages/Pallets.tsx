@@ -172,104 +172,60 @@ export default function PalletViewSingle() {
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
 
-  let kanbanGDBR = "";
-  let etiquetaCliente = "";
+  const [kanbanGDBR, setKanbanGDBR] = useState("");
+  const [etiquetaCliente, setEtiquetaCliente] = useState("");
 
   function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const setKanbanGDBR = (value: string) => {
-      kanbanGDBR = value;
-    };
     setKanbanGDBR(e.target.value);
-    console.log("Kanban GDBR:", kanbanGDBR);
   }
 
   function handleEtiquetaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const setEtiquetaCliente = (value: string) => {
-      etiquetaCliente = value;
-    };
     setEtiquetaCliente(e.target.value);
-    console.log("Etiqueta Cliente:", etiquetaCliente);
+  }
 
-    // Verificação do kanbanGDBR em todos os pallets ao alterar a etiqueta
-    if (!palletAtual || !kanbanGDBR) {
+  useEffect(() => {
+    if (!kanbanGDBR || pallets.length === 0) {
       console.log("Nenhum pallet ou Kanban informado.");
       return;
     }
 
-    const kanbanGDBRNumerico = (kanbanGDBR.match(/\d+/g) || []).join("");
+    const kanbanGDBRNumerico = kanbanGDBR.split("|")[1] || "";
 
+    //array com kanbans de cada pallet
     const todosKanbansPallet: { pallet: string; kanbans: string[] }[] =
       pallets.map((pallet) => {
-        const kanbansNumericos = pallet.itens.map((item) =>
-          (item.kanban.match(/\d+/g) || []).join("")
-        );
-        return { pallet: pallet.cod_palete, kanbans: kanbansNumericos };
+        const kanbansPallet = pallet.itens.map((item) => item.kanban);
+        return { pallet: pallet.cod_palete, kanbans: kanbansPallet };
       });
+
     console.log("Todos os kanbans dos pallets:", todosKanbansPallet);
 
     let encontrado = false;
     for (const p of todosKanbansPallet) {
       if (p.kanbans.includes(kanbanGDBRNumerico)) {
-        console.log(`Kanban ${kanbanGDBR} encontrado no pallet ${p.pallet}`);
+        console.log(` Kanban ${kanbanGDBRNumerico} encontrado no pallet ${p.pallet}`);
+        const idx = pallets.findIndex((pl) => pl.cod_palete === p.pallet);
+        if (idx >= 0) setPalletIndex(idx);
         encontrado = true;
         break;
       }
     }
+
     if (!encontrado) {
-      console.log(`Kanban ${kanbanGDBR} não encontrado em nenhum pallet.`);
+      console.log(` Kanban ${kanbanGDBR} não encontrado em nenhum pallet.`);
     }
+  }, [kanbanGDBR, pallets]);
+
+  // verifica etiqueta cliente
+  useEffect(() => {
+    if (!kanbanGDBR || !etiquetaCliente) return;
+
     if (kanbanGDBR.includes(etiquetaCliente)) {
-      console.log("Kanban GDBR contém Etiqueta Cliente");
+      console.log(`Kanban GDBR ${kanbanGDBR} contém Etiqueta Cliente ${etiquetaCliente}`);
     } else {
-      console.log("Kanban GDBR não contém Etiqueta Cliente");
+      console.log(`Kanban GDBR ${kanbanGDBR} não contém Etiqueta Cliente ${etiquetaCliente}`);
     }
-  }
-
-  // Caroline - Verificar o kanbanGDBR em todos os pallets
-  // 1. Ao digitar o kanbanGDBR, verificar se ele está contido em algum pallet.
-  // 2. Se estiver, exibir o pallet correspondente.
-  // 3. Extrair apenas os números dos kanbans (substring).
-  // 4. Criar um array com todos os kanbans de cada pallet.
-  // 5. Comparar o kanbanGDBR com o array:
-  //    - Se encontrar, mostrar o pallet.
-  //    - Se não encontrar, continuar verificando o próximo pallet.
-  //    - Se chegar ao final da lista sem encontrar, exibir mensagem de erro.
-  // 6. Registrar no console se o kanban foi encontrado ou não:
-  //    - Se encontrado, mostrar também o pallet.
-  //    - Se não encontrado em nenhum, exibir um alert informando que o kanban não existe em nenhum pallet.
-  // Função para verificar automaticamente o kanban em todos os pallets usando array
-
-  // function verificarKanbanPallets(pallet: Pallet | undefined) {
-  //   if (!pallet || !kanbanGDBR) {
-  //     console.log("Nenhum pallet ou Kanban informado.");
-  //     return false;
-  //   }
-
-  //   const kanbanGDBRNumerico = (kanbanGDBR.match(/\d+/g) || []).join("");
-
-  //   const todosKanbansPallet: { pallet: string; kanbans: string[] }[] = pallets.map(
-  //     (pallet) => {
-  //       const kanbansNumericos = pallet.itens.map((item) =>
-  //         (item.kanban.match(/\d+/g) || []).join("")
-  //       );
-  //       return { pallet: pallet.cod_palete, kanbans: kanbansNumericos };
-  //     }
-  //   );
-
-  //   for (const p of todosKanbans) {
-  //     if (p.kanbans.includes(kanbanGDBRNumerico)) {
-  //       console.log(`Kanban ${kanbanGDBR} encontrado no pallet ${p.pallet}`);
-  //       return;
-  //     }
-  //   }
-
-  //   // Se não encontrou em nenhum pallet
-  //   alert(`Kanban ${kanbanGDBR} não encontrado em nenhum pallet.`);
-  // }
-
-  // useEffect(() => {
-  //   verificarKanbanPallets(palletAtual);
-  // }, [kanbanGDBR, pallets, palletAtual]);
+  }, [kanbanGDBR, etiquetaCliente]);
 
   return (
     <main
