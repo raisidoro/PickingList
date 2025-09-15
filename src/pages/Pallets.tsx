@@ -198,17 +198,17 @@ export default function PalletViewSingle() {
 
     const kanbanGDBRNumerico = (kanbanGDBR.match(/\d+/g) || []).join("");
 
-    const todosKanbans: { pallet: string; kanbans: string[] }[] = pallets.map(
-      (pallet) => {
+    const todosKanbansPallet: { pallet: string; kanbans: string[] }[] =
+      pallets.map((pallet) => {
         const kanbansNumericos = pallet.itens.map((item) =>
           (item.kanban.match(/\d+/g) || []).join("")
         );
         return { pallet: pallet.cod_palete, kanbans: kanbansNumericos };
-      }
-    );
+      });
+    console.log("Todos os kanbans dos pallets:", todosKanbansPallet);
 
     let encontrado = false;
-    for (const p of todosKanbans) {
+    for (const p of todosKanbansPallet) {
       if (p.kanbans.includes(kanbanGDBRNumerico)) {
         console.log(`Kanban ${kanbanGDBR} encontrado no pallet ${p.pallet}`);
         encontrado = true;
@@ -218,9 +218,14 @@ export default function PalletViewSingle() {
     if (!encontrado) {
       console.log(`Kanban ${kanbanGDBR} não encontrado em nenhum pallet.`);
     }
+    if (kanbanGDBR.includes(etiquetaCliente)) {
+      console.log("Kanban GDBR contém Etiqueta Cliente");
+    } else {
+      console.log("Kanban GDBR não contém Etiqueta Cliente");
+    }
   }
 
-  // Carolina - Verificar o kanbanGDBR em todos os pallets
+  // Caroline - Verificar o kanbanGDBR em todos os pallets
   // 1. Ao digitar o kanbanGDBR, verificar se ele está contido em algum pallet.
   // 2. Se estiver, exibir o pallet correspondente.
   // 3. Extrair apenas os números dos kanbans (substring).
@@ -242,7 +247,7 @@ export default function PalletViewSingle() {
 
   //   const kanbanGDBRNumerico = (kanbanGDBR.match(/\d+/g) || []).join("");
 
-  //   const todosKanbans: { pallet: string; kanbans: string[] }[] = pallets.map(
+  //   const todosKanbansPallet: { pallet: string; kanbans: string[] }[] = pallets.map(
   //     (pallet) => {
   //       const kanbansNumericos = pallet.itens.map((item) =>
   //         (item.kanban.match(/\d+/g) || []).join("")
@@ -325,9 +330,7 @@ export default function PalletViewSingle() {
                   />
                 </div>
               </div>
-              if (kanbanGDBR.includes(etiquetaCliente)){" "}
-              {console.log("Kanban GDBR contém Etiqueta Cliente")} else{" "}
-              {console.log("Kanban GDBR não contém Etiqueta Cliente")}
+
               <div className="max-w-lg w-full">
                 <div className="text-base font-bold text-center mb-2">
                   Pallet{" "}
