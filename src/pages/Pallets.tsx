@@ -47,6 +47,7 @@ interface PalletApi {
 }
 
 interface PalletItem {
+  lido: unknown;
   kanban: string;
   sequen: string;
   qtd_caixa: string;
@@ -169,20 +170,19 @@ export default function PalletViewSingle() {
       });
   }, [carga]);
 
+  //Validação se o item pertence ao pallet
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
 
+  //Validação se a etiqueta do cliente confere o kanban GDBR
   const [kanbanGDBR, setKanbanGDBR] = useState("");
   const [etiquetaCliente, setEtiquetaCliente] = useState("");
 
-  function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setKanbanGDBR(e.target.value);
-  }
+  //Validação se a quantia de caixas lidas é menor que a quantidade de caixas do pallet
+  const [totalCaixas, setTotalCaixas] = useState(0);
+  const [caixasLidas, setCaixasLidas] = useState(0);
 
-  function handleEtiquetaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setEtiquetaCliente(e.target.value);
-  }
-
+  //Verifica se item pertence ao pallet
   useEffect(() => {
     if (!kanbanGDBR || pallets.length === 0) {
       console.log("Nenhum pallet ou Kanban informado.");
@@ -216,7 +216,15 @@ export default function PalletViewSingle() {
     }
   }, [kanbanGDBR, pallets]);
 
-  // verifica etiqueta cliente
+  // verifica etiqueta cliente e kanban GDBR
+  function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setKanbanGDBR(e.target.value);
+  }
+
+  function handleEtiquetaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setEtiquetaCliente(e.target.value);
+  }
+
   useEffect(() => {
     if (!kanbanGDBR || !etiquetaCliente) return;
 
@@ -226,6 +234,23 @@ export default function PalletViewSingle() {
       console.log(`Kanban GDBR ${kanbanGDBR} não contém Etiqueta Cliente ${etiquetaCliente}`);
     }
   }, [kanbanGDBR, etiquetaCliente]);
+
+  //verifica quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
+  useEffect(() => {
+    if (!palletAtual) return;
+
+    setTotalCaixas(item => palletAtual.itens.reduce((acc, item) => acc + Number(item.qtd_caixa || 0), 0));
+    setCaixasLidas(palletAtual.itens.filter((item) => item.lido).length);
+
+    if (caixasLidas < totalCaixas) {
+      console.log(`Caixas lidas: ${caixasLidas}/${totalCaixas} - Ainda faltam caixas para ler.`);
+    } else {
+      console.log(`Caixas lidas: ${caixasLidas}/${totalCaixas} - Todas as caixas foram lidas.`);
+    }
+
+  }, [palletAtual]);
+
+  
 
   return (
     <main
