@@ -127,7 +127,7 @@ export default function PalletViewSingle() {
           ? resp.data.paletes
           : [];
         if (palletsApi.length === 0) {
-          setErro("Nenhum pallet encontrado.");
+          setErro("Nenhum palete encontrado.");
           setPallets([]);
           setLoading(false);
           return;
@@ -160,11 +160,11 @@ export default function PalletViewSingle() {
           .then((palletsDetalhados) => {
             setPallets(palletsDetalhados);
           })
-          .catch(() => setErro("Erro ao buscar itens dos pallets."))
+          .catch(() => setErro("Erro ao buscar itens dos paletes."))
           .finally(() => setLoading(false));
       })
       .catch(() => {
-        setErro("Erro ao carregar pallets.");
+        setErro("Erro ao carregar paletes.");
         setPallets([]);
         setLoading(false);
       });
@@ -185,7 +185,7 @@ export default function PalletViewSingle() {
   //Verifica se item pertence ao pallet
   useEffect(() => {
     if (!kanbanGDBR || pallets.length === 0) {
-      console.log("Nenhum pallet ou Kanban informado.");
+      console.log("Nenhum pallete ou Kanban informado.");
       return;
     }
 
@@ -198,12 +198,12 @@ export default function PalletViewSingle() {
         return { pallet: pallet.cod_palete, kanbans: kanbansPallet };
       });
 
-    console.log("Todos os kanbans dos pallets:", todosKanbansPallet);
+    console.log("Todos os kanbans dos paletes:", todosKanbansPallet);
 
     let encontrado = false;
     for (const p of todosKanbansPallet) {
       if (p.kanbans.includes(kanbanGDBRNumerico)) {
-        console.log(` Kanban ${kanbanGDBRNumerico} encontrado no pallet ${p.pallet}`);
+        console.log(` Kanban ${kanbanGDBRNumerico} encontrado no palete ${p.pallet}`);
         const idx = pallets.findIndex((pl) => pl.cod_palete === p.pallet);
         if (idx >= 0) setPalletIndex(idx);
         encontrado = true;
@@ -212,7 +212,7 @@ export default function PalletViewSingle() {
     }
 
     if (!encontrado) {
-      console.log(` Kanban ${kanbanGDBR} não encontrado em nenhum pallet.`);
+      console.log(` Kanban ${kanbanGDBR} não encontrado em nenhum palete.`);
     }
   }, [kanbanGDBR, pallets]);
 
@@ -256,11 +256,26 @@ export default function PalletViewSingle() {
 
     const itensPendentes = palletAtual.itens.filter((item) => !item.lido);
     if (itensPendentes.length > 0) {
-      console.log(`Pallet ${palletAtual.cod_palete} possui itens pendentes.`);
+      console.log(`O Palete ${palletAtual.cod_palete} possui itens pendentes.`);
     } else {
-      console.log(`Pallet ${palletAtual.cod_palete} está completo.`);
+      console.log(`O Palete ${palletAtual.cod_palete} está completo.`);
     }
   }, [palletAtual]);
+
+  //verifica se a carga não foi completada (com pallets pendentes)
+  useEffect(() => { 
+    if (pallets.length === 0) return;
+
+    const palletesPendentes = pallets.filter((pallet) =>
+      pallet.itens.some((item) => !item.lido)
+    );
+
+    if (palletesPendentes.length > 0) {
+      console.log(`A Carga possui palete(s) pendentes: ${palletesPendentes.map(p => p.cod_palete).join(", ")}`);
+    } else {
+      console.log(`A Carga ${carga.cod_carg} está completa.`);
+    }
+  }, [pallets]);
 
   return (
     <main
