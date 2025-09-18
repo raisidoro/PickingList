@@ -250,7 +250,17 @@ export default function PalletViewSingle() {
 
   }, [palletAtual]);
 
-  
+  //verifica se há pallets não lidos completamente (com itens pendentes)
+  useEffect(() => {
+    if (!palletAtual) return;
+
+    const itensPendentes = palletAtual.itens.filter((item) => !item.lido);
+    if (itensPendentes.length > 0) {
+      console.log(`Pallet ${palletAtual.cod_palete} possui itens pendentes.`);
+    } else {
+      console.log(`Pallet ${palletAtual.cod_palete} está completo.`);
+    }
+  }, [palletAtual]);
 
   return (
     <main
