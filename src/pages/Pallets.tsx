@@ -91,8 +91,6 @@ function Card({ children, className = "", ...props }: CardProps) {
   );
 }
 
-
-
 export default function PalletViewSingle() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -128,7 +126,7 @@ export default function PalletViewSingle() {
           ? resp.data.paletes
           : [];
         if (palletsApi.length === 0) {
-          setErro("Nenhum pallet encontrado.");
+          setErro("Nenhum palete encontrado.");
           setPallets([]);
           setLoading(false);
           return;
@@ -161,84 +159,92 @@ export default function PalletViewSingle() {
           .then((palletsDetalhados) => {
             setPallets(palletsDetalhados);
           })
-          .catch(() => setErro("Erro ao buscar itens dos pallets."))
+          .catch(() => setErro("Erro ao buscar itens dos paletes."))
           .finally(() => setLoading(false));
       })
       .catch(() => {
-        setErro("Erro ao carregar pallets.");
+        setErro("Erro ao carregar paletes.");
         setPallets([]);
         setLoading(false);
       });
   }, [carga]);
 
-const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
-const totalPallets = pallets.length;
+  const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
+  const totalPallets = pallets.length;
 
-const [kanbanGDBR, setKanbanGDBR] = useState("");
-const [etiquetaCliente, setEtiquetaCliente] = useState("");
+  const [kanbanGDBR, setKanbanGDBR] = useState("");
+  const [etiquetaCliente, setEtiquetaCliente] = useState("");
 
-const [totalCaixas] = useState("");
-const [caixasLidas] = useState("");
+  const [totalCaixas] = useState("");
+  const [caixasLidas] = useState("");
 
-// Handlers
-function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
-  setKanbanGDBR(e.target.value);
-}
-
-function handleEtiquetaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
-  setEtiquetaCliente(e.target.value);
-}
-
-function validarKanbanEmPallets(kanbanGDBR: string, pallets: any[], setPalletIndex: (index: number) => void) {
-  if (!kanbanGDBR || pallets.length === 0) {
-    console.log("Nenhum pallet ou Kanban informado.");
-    return;
+  function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setKanbanGDBR(e.target.value);
   }
 
-  const kanbanGDBRNumerico = kanbanGDBR.split("|")[1] || "";
+  function handleEtiquetaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setEtiquetaCliente(e.target.value);
+  }
 
-  const todosKanbansPallet: { pallet: string; kanbans: string[] }[] = pallets.map((pallet) => {
-    const kanbansPallet = pallet.itens.map((item: any) => item.kanban);
-    return { pallet: pallet.cod_palete, kanbans: kanbansPallet };
-  });
-
-  console.log("Todos os kanbans dos pallets:", todosKanbansPallet);
-
-  let encontrado = false;
-  for (const p of todosKanbansPallet) {
-    if (p.kanbans.includes(kanbanGDBRNumerico)) {
-      console.log(`Kanban ${kanbanGDBRNumerico} encontrado no pallet ${p.pallet}`);
-      const idx = pallets.findIndex((pl) => pl.cod_palete === p.pallet);
-      if (idx >= 0) setPalletIndex(idx);
-      encontrado = true;
-      break;
+  useEffect(() => {
+    if (!kanbanGDBR || pallets.length === 0) {
+      console.log("Nenhum palete ou Kanban informado.");
+      return;
     }
-  }
-  if (!encontrado) {
-    console.log(`Kanban ${kanbanGDBR} não encontrado em nenhum pallet.`);
-  }
-}
 
-function validarEtiquetaCliente(kanbanGDBR: string, etiquetaCliente: string) {
-  if (!kanbanGDBR || !etiquetaCliente) return;
+    const kanbanGDBRNumerico = kanbanGDBR.split("|")[1] || "";
 
-  if (kanbanGDBR.includes(etiquetaCliente)) {
-    console.log(`Kanban GDBR ${kanbanGDBR} contém Etiqueta Cliente ${etiquetaCliente}`);
-  } else {
-    console.log(`Kanban GDBR ${kanbanGDBR} não contém Etiqueta Cliente ${etiquetaCliente}`);
-  }
-}
+    //array com kanbans de cada palete
+    const todosKanbansPallet: { pallet: string; kanbans: string[] }[] =
+      pallets.map((pallet) => {
+        const kanbansPallet = pallet.itens.map((item) => item.kanban);
+        return { pallet: pallet.cod_palete, kanbans: kanbansPallet };
+      });
 
-function validarQuantidadeCaixas(caixasLidas: any, totalCaixas: any) {
-  if (!totalCaixas || !caixasLidas) return;
+    console.log("Todos os kanbans dos paletes:", todosKanbansPallet);
 
-  if (totalCaixas < caixasLidas) {
-    console.log(`A quantidade ${caixasLidas} de caixas registradas ultrapassou a quantidade total de caixas.`);
-  } else {
-    console.log("A quantidade registrada condiz com a quantidade total");
-  }
-}
+    let encontrado = false;
+    for (const p of todosKanbansPallet) {
+      if (p.kanbans.includes(kanbanGDBRNumerico)) {
+        console.log(` Kanban ${kanbanGDBRNumerico} encontrado no palete ${p.pallet}`);
+        const idx = pallets.findIndex((pl) => pl.cod_palete === p.pallet);
+        if (idx >= 0) setPalletIndex(idx);
+        encontrado = true;
+        break;
+      }
+    }
 
+    if (!encontrado) {
+      console.log(` Kanban ${kanbanGDBR} não encontrado em nenhum palete.`);
+    }
+  }, [kanbanGDBR, pallets]);
+
+  useEffect(() => {
+    if (!kanbanGDBR || !etiquetaCliente) return;
+
+    if (etiquetaCliente.length == 5){
+      if (kanbanGDBR.includes(etiquetaCliente)) {
+      console.log(`Kanban GDBR ${kanbanGDBR} contém Etiqueta Cliente ${etiquetaCliente}`);
+    }else{
+      alert("Kanban GDBR não confere com a etiqueta do cliente! Por favor, realize a leitura de um Kanban válido.")
+    }
+    }  
+  }, [kanbanGDBR, etiquetaCliente]);
+  
+  useEffect(() => {
+    setEtiquetaCliente("");
+  }, [kanbanGDBR]);
+
+  useEffect(() => {
+    if (!totalCaixas || !caixasLidas) return;
+
+    if (totalCaixas > caixasLidas) {
+      alert(`A quantidade ${caixasLidas} de caixas registradas é menor que a quantidade total de caixas.`);
+    }else{
+      console.log("A quantidade registrada condiz com a quantidade total");
+    }
+  }, [caixasLidas, totalCaixas]);
+  
   return (
     <main
       className="
@@ -275,7 +281,7 @@ function validarQuantidadeCaixas(caixasLidas: any, totalCaixas: any) {
 
           {loading && (
             <Text className="text-center text-gray-600">
-              Carregando pallets...
+              Carregando paletes...
             </Text>
           )}
           {erro && <Text className="text-center text-red-600">{erro}</Text>}
