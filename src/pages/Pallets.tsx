@@ -4,23 +4,23 @@ import { SlArrowLeftCircle } from "react-icons/sl";
 import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
 import Modal from "react-modal";
-Modal.setAppElement('#root')
+Modal.setAppElement("#root");
 
-function App(){
+function App() {
   const [modalIsOpen, setItOpen] = React.useState(false);
 
-  function abrirModal(){
+  function abrirModal() {
     setItOpen(true);
   }
 
-  function fecharModal(){
+  function fecharModal() {
     setItOpen(false);
   }
-  
-  return(
+
+  return (
     <div>
       <button onClick={abrirModal}>Abrir Modal</button>
-      <Modal 
+      <Modal
         isOpen={modalIsOpen}
         onRequestClose={fecharModal}
         contentLabel="Modal de teste"
@@ -28,7 +28,7 @@ function App(){
         <h2>TESTE</h2>
         <button onClick={fecharModal}>Ok</button>
         <div>Teste de Modal</div>
-        </Modal>
+      </Modal>
     </div>
   );
 }
@@ -212,7 +212,7 @@ export default function PalletViewSingle() {
   const [caixasLidas, setCaixasLidas] = useState(0);
 
   //Verifica se item pertence ao pallet
-  function itemPallet(){
+  function itemPallet() {
     if (!kanbanGDBR || pallets.length === 0) {
       console.log("Nenhum pallete ou Kanban informado.");
       return;
@@ -232,7 +232,9 @@ export default function PalletViewSingle() {
     let encontrado = false;
     for (const p of todosKanbansPallet) {
       if (p.kanbans.includes(kanbanGDBRNumerico)) {
-        console.log(` Kanban ${kanbanGDBRNumerico} encontrado no palete ${p.pallet}`);
+        console.log(
+          ` Kanban ${kanbanGDBRNumerico} encontrado no palete ${p.pallet}`
+        );
         const idx = pallets.findIndex((pl) => pl.cod_palete === p.pallet);
         if (idx >= 0) setPalletIndex(idx);
         encontrado = true;
@@ -251,39 +253,51 @@ export default function PalletViewSingle() {
   }
 
   function handleEtiquetaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
-    etiquetaCliente = e.target.value
+    etiquetaCliente = e.target.value;
   }
 
-  function verificaKanban(){
+  function verificaKanban() {
     if (!kanbanGDBR || !etiquetaCliente) return;
 
-    if(etiquetaCliente.length == 5) {
+    if (etiquetaCliente.length == 5) {
       if (kanbanGDBR.includes(etiquetaCliente)) {
-        console.log(`Kanban GDBR ${kanbanGDBR} contém Etiqueta Cliente ${etiquetaCliente}`);
+        console.log(
+          `Kanban GDBR ${kanbanGDBR} contém Etiqueta Cliente ${etiquetaCliente}`
+        );
       } else {
-        alert(`Kanban GDBR ${kanbanGDBR} não contém Etiqueta Cliente ${etiquetaCliente}`);
+        alert(
+          `Kanban GDBR ${kanbanGDBR} não contém Etiqueta Cliente ${etiquetaCliente}`
+        );
       }
     }
   }
 
   //verifica quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
-  function Caixas(){
+  function Caixas() {
     if (!palletAtual) return;
 
-    setTotalCaixas(item => palletAtual.itens.reduce((acc, item) => acc + Number(item.qtd_caixa || 0), 0));
+    setTotalCaixas((item) =>
+      palletAtual.itens.reduce(
+        (acc, item) => acc + Number(item.qtd_caixa || 0),
+        0
+      )
+    );
     setCaixasLidas(palletAtual.itens.filter((item) => item.lido).length);
 
     if (caixasLidas < totalCaixas) {
-      console.log(`Caixas lidas: ${caixasLidas}/${totalCaixas} - Ainda faltam caixas para ler.`);
+      console.log(
+        `Caixas lidas: ${caixasLidas}/${totalCaixas} - Ainda faltam caixas para ler.`
+      );
     } else {
-      console.log(`Caixas lidas: ${caixasLidas}/${totalCaixas} - Todas as caixas foram lidas.`);
+      console.log(
+        `Caixas lidas: ${caixasLidas}/${totalCaixas} - Todas as caixas foram lidas.`
+      );
     }
-
   }
 
   //verifica se há palete
   // s não lidos completamente (com itens pendentes)
-  function verificaPalete(){
+  function verificaPalete() {
     if (!palletAtual) return;
 
     const itensPendentes = palletAtual.itens.filter((item) => !item.lido);
@@ -295,7 +309,7 @@ export default function PalletViewSingle() {
   }
 
   //verifica se a carga não foi completada (com palletes pendentes)
-  function Verificacarga() { 
+  function Verificacarga() {
     if (pallets.length === 0) return;
 
     const palletesPendentes = pallets.filter((pallet) =>
@@ -303,7 +317,11 @@ export default function PalletViewSingle() {
     );
 
     if (palletesPendentes.length > 0) {
-      console.log(`A Carga possui palete(s) pendentes: ${palletesPendentes.map(p => p.cod_palete).join(", ")}`);
+      console.log(
+        `A Carga possui palete(s) pendentes: ${palletesPendentes
+          .map((p) => p.cod_palete)
+          .join(", ")}`
+      );
     } else {
       console.log(`A Carga está completa.`);
     }
@@ -357,7 +375,7 @@ export default function PalletViewSingle() {
                   type="text"
                   placeholder="Kanban GDBR"
                   className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
-                  onChange = {handleKanbanGDBRChange}
+                  onChange={handleKanbanGDBRChange}
                 />
                 <div className="flex items-center gap-2">
                   <input
@@ -366,10 +384,10 @@ export default function PalletViewSingle() {
                     placeholder="Etiqueta Cliente"
                     className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:o
                     utline-none focus:border-blue-400 rounded-none w-full max-w-xs"
-                    onChange={(e) => { 
-                    handleEtiquetaClienteChange(e);
-                    verificaKanban();
-                  }}
+                    onChange={(e) => {
+                      handleEtiquetaClienteChange(e);
+                      verificaKanban();
+                    }}
                   />
                 </div>
               </div>
