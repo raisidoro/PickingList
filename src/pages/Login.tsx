@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { apiOperadores } from "../lib/axios";
 import { useNavigate } from "react-router-dom";
 import { NFCReader } from "./nfcReader.ts";
+import ErrorPopup from "./CompErrorPopup.tsx";
 
 const textVariants = {
   default: "text-xl sm:text-2xl",
@@ -204,11 +205,8 @@ function LoginForm() {
           onChange={(e) => setSenha(e.target.value)}
           required
         />
-        {erro && (
-          <Text variant="muted" className="text-red-600 text-center">
-            {erro}
-          </Text>
-        )}
+      {/* Popup de erro */}
+        <ErrorPopup message={erro} onClose={() => setErro(null)} />
         <Button
           variant="primary"
           className="py-3"

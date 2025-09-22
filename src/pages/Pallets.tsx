@@ -5,6 +5,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
 import Modal from "react-modal";
 Modal.setAppElement("#root");
+import ErrorPopup from './CompErrorPopup.tsx';
+
 
 function App() {
   const [modalIsOpen, setItOpen] = React.useState(false);
@@ -208,8 +210,8 @@ export default function PalletViewSingle() {
   var [etiquetaCliente] = useState("12345");
 
   //Validação se a quantia de caixas lidas é menor que a quantidade de caixas do pallet
-  const [totalCaixas, setTotalCaixas] = useState(0);
-  const [caixasLidas, setCaixasLidas] = useState(0);
+   const [totalCaixas, setTotalCaixas] = useState(0);
+   const [caixasLidas, setCaixasLidas] = useState(0);
 
   //Verifica se item pertence ao pallet
   function itemPallet() {
@@ -273,31 +275,31 @@ export default function PalletViewSingle() {
   }
 
   //verifica quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
-  function Caixas() {
-    if (!palletAtual) return;
+   function Caixas() {
+     if (!palletAtual) return;
 
-    setTotalCaixas((item) =>
-      palletAtual.itens.reduce(
-        (acc, item) => acc + Number(item.qtd_caixa || 0),
-        0
-      )
-    );
-    setCaixasLidas(palletAtual.itens.filter((item) => item.lido).length);
+     setTotalCaixas((item) =>
+       palletAtual.itens.reduce(
+         (acc, item) => acc + Number(item.qtd_caixa || 0),
+         0
+       )
+     );
+     setCaixasLidas(palletAtual.itens.filter((item) => item.lido).length);
 
-    if (caixasLidas < totalCaixas) {
-      console.log(
-        `Caixas lidas: ${caixasLidas}/${totalCaixas} - Ainda faltam caixas para ler.`
-      );
-    } else {
-      console.log(
-        `Caixas lidas: ${caixasLidas}/${totalCaixas} - Todas as caixas foram lidas.`
-      );
-    }
-  }
+     if (caixasLidas < totalCaixas) {
+       console.log(
+         `Caixas lidas: ${caixasLidas}/${totalCaixas} - Ainda faltam caixas para ler.`
+       );
+     } else {
+       console.log(
+         `Caixas lidas: ${caixasLidas}/${totalCaixas} - Todas as caixas foram lidas.`
+       );
+     }
+   }
 
   //verifica se há palete
   // s não lidos completamente (com itens pendentes)
-  function verificaPalete() {
+   function verificaPalete() {
     if (!palletAtual) return;
 
     const itensPendentes = palletAtual.itens.filter((item) => !item.lido);
@@ -309,23 +311,23 @@ export default function PalletViewSingle() {
   }
 
   //verifica se a carga não foi completada (com palletes pendentes)
-  function Verificacarga() {
-    if (pallets.length === 0) return;
+   function Verificacarga() {
+     if (pallets.length === 0) return;
 
-    const palletesPendentes = pallets.filter((pallet) =>
-      pallet.itens.some((item) => !item.lido)
-    );
+     const palletesPendentes = pallets.filter((pallet) =>
+       pallet.itens.some((item) => !item.lido)
+     );
 
-    if (palletesPendentes.length > 0) {
-      console.log(
-        `A Carga possui palete(s) pendentes: ${palletesPendentes
-          .map((p) => p.cod_palete)
-          .join(", ")}`
-      );
-    } else {
-      console.log(`A Carga está completa.`);
-    }
-  }
+     if (palletesPendentes.length > 0) {
+       console.log(
+         `A Carga possui palete(s) pendentes: ${palletesPendentes
+           .map((p) => p.cod_palete)
+           .join(", ")}`
+       );
+     } else {
+       console.log(`A Carga está completa.`);
+     }
+   }
 
   return (
     <main
@@ -366,7 +368,7 @@ export default function PalletViewSingle() {
               Carregando palletes...
             </Text>
           )}
-          {erro && <Text className="text-center text-red-600">{erro}</Text>}
+          <ErrorPopup message={erro} onClose={() => setErro("")} />
 
           {!loading && !erro && palletAtual && (
             <>

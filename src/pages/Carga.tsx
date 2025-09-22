@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { type JSX } from 'react';
-import { apiCarga } from '../lib/axios';
+import React, { useEffect, useState } from "react";
+import { type JSX } from "react";
+import { apiCarga } from "../lib/axios";
 import { SlArrowLeftCircle } from "react-icons/sl";
 import { CiFilter } from "react-icons/ci";
 import { useNavigate } from "react-router-dom";
+import ErrorPopup from "./CompErrorPopup.tsx";
 
 const textVariants = {
   default: "text-xl sm:text-2xl",
@@ -20,7 +21,13 @@ type TextProps = {
   children: React.ReactNode;
 } & React.HTMLAttributes<HTMLElement>;
 
-function Text({ as = "span", variant = "default", className = "", children, ...props }: TextProps) {
+function Text({
+  as = "span",
+  variant = "default",
+  className = "",
+  children,
+  ...props
+}: TextProps) {
   const Component = as;
   return React.createElement(
     Component,
@@ -64,29 +71,36 @@ type Props = {
 
 function getStatusText(code: string) {
   switch (code) {
-    case '0': return 'Pendente';
-    case '1': return 'Em montagem';
-    case '2': return 'Concluída com divergência';
-    case '3': return 'Concluída';
-    default: return code;
+    case "0":
+      return "Pendente";
+    case "1":
+      return "Em montagem";
+    case "2":
+      return "Concluída com divergência";
+    case "3":
+      return "Concluída";
+    default:
+      return code;
   }
 }
 
-export default function CargaList({ }: Props) {
+export default function CargaList({}: Props) {
   const [cargas, setCargas] = useState<Carga[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [selectedCod, setSelectedCod] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [showStatusFilter, setShowStatusFilter] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const navigate = useNavigate();
 
   function safeTrim(value?: string) {
-    return value?.trim() ?? '';
+    return value?.trim() ?? "";
   }
 
-  const statusOptions = Array.from(new Set(cargas.map(c => safeTrim(c.stat_col))));
+  const statusOptions = Array.from(
+    new Set(cargas.map((c) => safeTrim(c.stat_col)))
+  );
 
   const cargasFiltradas = cargas.filter((carga) => {
     const busca = searchTerm.toLowerCase();
@@ -97,13 +111,14 @@ export default function CargaList({ }: Props) {
       safeTrim(carga.hora_col).toLowerCase().includes(busca) ||
       safeTrim(carga.stat_col).toLowerCase().includes(busca);
     const matchStatus =
-      selectedStatus.length === 0 || selectedStatus.includes(safeTrim(carga.stat_col));
+      selectedStatus.length === 0 ||
+      selectedStatus.includes(safeTrim(carga.stat_col));
     return matchSearch && matchStatus;
   });
 
   function handleSelect(carga: Carga) {
     setSelectedCod(carga.cod_carg);
-    navigate('/pallets', { state: { carga } });
+    navigate("/pallets", { state: { carga } });
   }
 
   // Handle confirming filter selection and hiding filter box
@@ -112,9 +127,9 @@ export default function CargaList({ }: Props) {
   }
 
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, []);
 
@@ -122,11 +137,11 @@ export default function CargaList({ }: Props) {
     async function fetchCargas() {
       setLoading(true);
       try {
-        const resp = await apiCarga.get('');
+        const resp = await apiCarga.get("");
         setCargas(resp.data?.cargas ?? []);
         setErro(null);
       } catch (error) {
-        setErro('Erro ao buscar cargas.');
+        setErro("Erro ao buscar cargas.");
       } finally {
         setLoading(false);
       }
@@ -135,45 +150,59 @@ export default function CargaList({ }: Props) {
   }, []);
 
   return (
-    <main className="
+    <main
+      className="
       fixed inset-0 flex items-center justify-center 
       bg-gradient-to-b from-gray-200 to-gray-300
       p-0 sm:p-4
-    ">
-      <Card className="
+    "
+    >
+      <Card
+        className="
         w-full h-full max-w-full max-h-full flex flex-col items-center justify-start
         p-0 shadow-lg bg-white rounded-none
         sm:rounded-3xl sm:max-w-lg sm:max-h-[90vh] sm:overflow-hidden
-      ">
-        <div className="
+      "
+      >
+        <div
+          className="
           w-full flex flex-col gap-4 h-full p-3
           sm:gap-6 sm:p-6
-        ">
-          <Text variant="muted" className="text-center mb-2 sm:mb-4 text-gray-900">
-            <span onClick={() => navigate('/')} >
+        "
+        >
+          <Text
+            variant="muted"
+            className="text-center mb-2 sm:mb-4 text-gray-900"
+          >
+            <span onClick={() => navigate("/")}>
               <SlArrowLeftCircle className="text-gray-500 w-6 h-6 mx-2 cursor-pointer" />
             </span>
           </Text>
-          <Text as="h1" variant="blast" className="text-center mb-2 sm:mb-6 text-gray-900">
+          <Text
+            as="h1"
+            variant="blast"
+            className="text-center mb-2 sm:mb-6 text-gray-900"
+          >
             Selecione a Carga
           </Text>
 
           {/* Search and Filter bar */}
-          <div className="flex items-center mb-2 border border-gray-300 rounded-xl overflow-hidden 
-            focus-within:border-gray-600 transition-colors bg-white shadow px-2 relative">
-
+          <div
+            className="flex items-center mb-2 border border-gray-300 rounded-xl overflow-hidden 
+            focus-within:border-gray-600 transition-colors bg-white shadow px-2 relative"
+          >
             <input
               type="text"
               placeholder="Buscar cargas..."
               className="flex-grow px-3 py-2 text-gray-800 placeholder-gray-400 bg-white focus:outline-none"
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value)}
               aria-label="Buscar cargas"
             />
             {searchTerm && (
               <button
                 aria-label="Limpar busca"
-                onClick={() => setSearchTerm('')}
+                onClick={() => setSearchTerm("")}
                 className="px-3 py-2 text-gray-500 hover:text-gray-900 bg-white"
                 title="Limpar busca"
                 type="button"
@@ -184,7 +213,7 @@ export default function CargaList({ }: Props) {
             <button
               type="button"
               aria-label="Filtrar por status"
-              onClick={() => setShowStatusFilter(v => !v)}
+              onClick={() => setShowStatusFilter((v) => !v)}
               className="px-1"
             >
               <CiFilter className="text-gray-500 w-6 h-6 mx-2" />
@@ -195,15 +224,20 @@ export default function CargaList({ }: Props) {
               <div className="absolute top-full right-2 mt-1 w-44 bg-white border border-gray-300 rounded-lg shadow-lg p-3 z-20">
                 <div className="flex flex-col max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200">
                   {statusOptions.map((status) => (
-                    <label key={status} className="flex items-center gap-2 mb-1 cursor-pointer text-gray-700">
+                    <label
+                      key={status}
+                      className="flex items-center gap-2 mb-1 cursor-pointer text-gray-700"
+                    >
                       <input
                         type="checkbox"
                         checked={selectedStatus.includes(status)}
-                        onChange={e => {
+                        onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedStatus(old => [...old, status]);
+                            setSelectedStatus((old) => [...old, status]);
                           } else {
-                            setSelectedStatus(old => old.filter(s => s !== status));
+                            setSelectedStatus((old) =>
+                              old.filter((s) => s !== status)
+                            );
                           }
                         }}
                         className="form-checkbox h-4 w-4 text-blue-600"
@@ -224,45 +258,59 @@ export default function CargaList({ }: Props) {
           </div>
 
           {loading && (
-            <Text className="text-center text-gray-600">Carregando cargas...</Text>
+            <Text className="text-center text-gray-600">
+              Carregando cargas...
+            </Text>
           )}
           {erro && (
-            <Text className="text-center text-red-600">{erro}</Text>
+            //popup de erro
+            <ErrorPopup message={erro} onClose={() => setErro(null)} />
           )}
           {!loading && !erro && cargasFiltradas.length === 0 && (
-            <Text className="text-center text-gray-600">Nenhuma carga disponível para o filtro informado.</Text>
+            <Text className="text-center text-gray-600">
+              Nenhuma carga disponível para o filtro informado.
+            </Text>
           )}
 
-          <div className="
+          <div
+            className="
             flex flex-col gap-3 flex-1 min-h-0
             overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200
             pr-1 sm:pr-0
-          ">
+          "
+          >
             {cargasFiltradas.map((carga) => (
               <Card
                 key={carga.cod_carg}
                 className={`
                   p-4 sm:p-6 cursor-pointer border rounded-2xl transition-shadow duration-300
-                  ${selectedCod === carga.cod_carg
-                    ? 'border-black-600 shadow-black-300 shadow-lg'
-                    : 'border-transparent hover:shadow-md hover:border-black-400'
+                  ${
+                    selectedCod === carga.cod_carg
+                      ? "border-black-600 shadow-black-300 shadow-lg"
+                      : "border-transparent hover:shadow-md hover:border-black-400"
                   }
                 `}
                 onClick={() => handleSelect(carga)}
                 tabIndex={0}
                 role="button"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
+                  if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     handleSelect(carga);
                   }
                 }}
                 aria-pressed={selectedCod === carga.cod_carg}
               >
-                <Text variant="heading" className="text-lg font-semibold text-black-700">
+                <Text
+                  variant="heading"
+                  className="text-lg font-semibold text-black-700"
+                >
                   {safeTrim(carga.cod_carg)} - {safeTrim(carga.nome_cli)}
                 </Text>
-                <Text variant="default" className="text-gray-700 mt-2 whitespace-pre-line">
+                <Text
+                  variant="default"
+                  className="text-gray-700 mt-2 whitespace-pre-line"
+                >
                   <span className="block">
                     <strong>Data de Coleta:</strong> {safeTrim(carga.data_col)}
                   </span>
@@ -273,7 +321,8 @@ export default function CargaList({ }: Props) {
                     <strong>Paletes:</strong> {safeTrim(carga.qtd_pale)}
                   </span>
                   <span className="block">
-                    <strong>Status:</strong> {getStatusText(safeTrim(carga.stat_col))}
+                    <strong>Status:</strong>{" "}
+                    {getStatusText(safeTrim(carga.stat_col))}
                   </span>
                 </Text>
               </Card>
