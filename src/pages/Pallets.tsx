@@ -23,11 +23,11 @@ function App(){
       <Modal 
         isOpen={modalIsOpen}
         onRequestClose={fecharModal}
-        contentLabel="Modal de exemplo"
+        contentLabel="Modal de teste"
       >
         <h2>TESTE</h2>
         <button onClick={fecharModal}>Ok</button>
-        <div>Eu sou um Modal</div>
+        <div>Teste de Modal</div>
         </Modal>
     </div>
   );
@@ -367,9 +367,7 @@ export default function PalletViewSingle() {
                     className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:o
                     utline-none focus:border-blue-400 rounded-none w-full max-w-xs"
                     onChange={(e) => { 
-                    console.log(etiquetaCliente.length)
                     handleEtiquetaClienteChange(e);
-                    console.log('378 - ' +etiquetaCliente)
                     verificaKanban();
                   }}
                   />
