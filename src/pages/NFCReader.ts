@@ -1,79 +1,39 @@
-// import { useEffect } from "react";
-// import NfcManager, { NfcTech, NfcEvents } from "react-native-nfc-manager";
+import { NFC } from "@capawesome-team/capacitor-nfc";
 
-// export function useNfc(onTagRead: (tagId: string) => void) {
-//   useEffect(() => {
-//     NfcManager.start();
+export function NFCReader() {
+  const checkNfc = async () => {
+    try {
+      const result = await NFC.isEnabled();
+      console.log("NFC ativado?", result);
+      return result;
+    } catch (error) {
+      console.error("Erro ao verificar NFC:", error);
+      return false;
+    }
+  };
 
-//     const readTag = async () => {
-//       try {
-//         await NfcManager.requestTechnology(NfcTech.Ndef);
-//         const tag = await NfcManager.getTag();
+  const startReading = async (onTagRead: (tagId: string) => void) => {
+    try {
+      await NFC.startScan();
 
-//         if (tag && tag.id) {
-//           onTagRead(tag.id);
-//         }
-//       } catch (e) {
-//         console.warn("Erro ao ler NFC:", e);
-//       } finally {
-//         try {
-//           await NfcManager.cancelTechnologyRequest();
-//         } catch {}
-//       }
-//     };
+      const listener = NFC.addListener("nfcTagDiscovered", (event: any) => {
+        console.log("Tag detectada:", event);
 
-//     readTag();
+        // Extrai o ID da tag (pode variar conforme a tag)
+        const tagId = event.tag?.id || "Desconhecido";
+        console.log("ID do crachá:", tagId);
 
-//     return () => {
-//       NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
-//       NfcManager.setEventListener(NfcEvents.StateChanged, null);
-//     };
-//   }, []);
-// }
-import { useEffect } from "react";
-import { Nfc } from "@capawesome-team/capacitor-nfc";
+        // Chama callback passando o ID lido
+        if (onTagRead) onTagRead(tagId);
 
-// ✅ Hook simples para leitura de tag (usado no Login.tsx)
-export function useNfc(onTagRead: (tagId: string) => void) {
-  useEffect(() => {
-    let listener: any;
-
-    const startScan = async () => {
-      try {
-        const { isSupported } = await Nfc.isSupported();
-        if (!isSupported) {
-          console.warn("NFC não suportado neste dispositivo");
-          return;
-        }
-
-        const { isEnabled } = await Nfc.isEnabled();
-        if (!isEnabled) {
-          console.warn("NFC desativado. Peça ao usuário para ativar.");
-          return;
-        }
-
-        listener = Nfc.addListener("nfcTagScanned", async (event) => {
-          if (event?.nfcTag?.id) {
-            onTagRead(event.nfcTag.id);
-          } else {
-            console.warn("Tag NFC lida sem ID válido", event);
-          }
-          await Nfc.stopScanSession();
-        });
-
-        await Nfc.startScanSession();
-      } catch (err) {
-        console.error("Erro ao iniciar NFC:", err);
-      }
-    };
-
-    startScan();
-
-    return () => {
-      if (listener) {
+        // Para a leitura após detectar a tag (opcional)
+        NFC.stopScan();
         listener.remove();
-      }
-      Nfc.removeAllListeners();
-    };
-  }, [onTagRead]);
+      });
+    } catch (error) {
+      console.error("Erro ao iniciar leitura NFC:", error);
+    }
+  };
+
+  return { checkNfc, startReading };
 }

@@ -1,7 +1,8 @@
 import React, { type JSX } from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiOperadores } from "../lib/axios";
 import { useNavigate } from "react-router-dom";
+import { NFCReader } from "./nfcReader.ts";
 
 const textVariants = {
   default: "text-xl sm:text-2xl",
@@ -123,15 +124,35 @@ function LoginForm() {
   const [erro, setErro] = useState<string | null>(null);
 
   const navigate = useNavigate();
+  const { checkNfc, startReading } = NFCReader();
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  // Inicia NFC ao montar o componente
+  useEffect(() => {
+    const initNfc = async () => {
+      const nfcEnabled = await checkNfc();
+      if (!nfcEnabled) {
+        console.warn("NFC não ativado!");
+        return;
+      }
+
+      startReading(async (tagId) => {
+        console.log("Crachá lido:", tagId);
+        setMatricula(tagId); // preenche matrícula
+        await handleSubmit(); // dispara login automaticamente
+      });
+    };
+
+    initNfc();
+  }, []);
+
+  async function handleSubmit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     setLoading(true);
     setErro(null);
 
     try {
       const params = {
-        cNfc: "-", 
+        cNfc: matricula || "-",
         cMat: matricula.trim(),
         cPass: senha.trim(),
       };
@@ -155,13 +176,7 @@ function LoginForm() {
   }
 
   return (
-    <Card
-      className={`
-        flex flex-col gap-8 w-full max-w-md
-        pt-8 sm:pt-14 px-4 sm:px-8 pb-8
-        overflow-hidden
-      `}
-    >
+    <Card className="flex flex-col gap-8 w-full max-w-md pt-8 sm:pt-14 px-4 sm:px-8 pb-8 overflow-hidden">
       <img
         src="/GDBR_logo.png"
         alt="GDBR"
