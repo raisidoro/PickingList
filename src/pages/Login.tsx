@@ -3,8 +3,6 @@ import { useState } from "react";
 import { apiOperadores } from "../lib/axios";
 import { useNavigate } from "react-router-dom";
 
-import { useNfc } from "./NFCReader";
-
 const textVariants = {
   default: "text-xl sm:text-2xl",
   muted: "text-xl sm:text-2xl text-gray-500",
@@ -126,13 +124,6 @@ function LoginForm() {
 
   const navigate = useNavigate();
 
-  // Tentativa de integração com NFC - Caroline
- useNfc((tagId) => {
-   console.log("Tag NFC lida:", tagId);
-   setMatricula(tagId);
- });
-  // Fim da tentativa de integração com NFC
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -140,7 +131,7 @@ function LoginForm() {
 
     try {
       const params = {
-        cNfc: "matricula", // Usando campo NFC para matrícula
+        cNfc: "-", 
         cMat: matricula.trim(),
         cPass: senha.trim(),
       };
