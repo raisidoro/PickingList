@@ -3,37 +3,8 @@ import { apiItens, apiPallets } from "../lib/axios";
 import { SlArrowLeftCircle } from "react-icons/sl";
 import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
-import Modal from "react-modal";
-Modal.setAppElement("#root");
 import ErrorPopup from './CompErrorPopup.tsx';
 
-
-function App() {
-  const [modalIsOpen, setItOpen] = React.useState(false);
-
-  function abrirModal() {
-    setItOpen(true);
-  }
-
-  function fecharModal() {
-    setItOpen(false);
-  }
-
-  return (
-    <div>
-      <button onClick={abrirModal}>Abrir Modal</button>
-      <Modal
-        isOpen={modalIsOpen}
-        onRequestClose={fecharModal}
-        contentLabel="Modal de teste"
-      >
-        <h2>TESTE</h2>
-        <button onClick={fecharModal}>Ok</button>
-        <div>Teste de Modal</div>
-      </Modal>
-    </div>
-  );
-}
 
 const textVariants = {
   default: "text-xl sm:text-2xl",
@@ -216,7 +187,7 @@ export default function PalletViewSingle() {
   //Verifica se item pertence ao pallet
   function itemPallet() {
     if (!kanbanGDBR || pallets.length === 0) {
-      console.log("Nenhum pallete ou Kanban informado.");
+      setErro("Nenhum pallete ou Kanban informado.");
       return;
     }
 
@@ -245,7 +216,7 @@ export default function PalletViewSingle() {
     }
 
     if (!encontrado) {
-      console.log(` Kanban ${kanbanGDBR} não encontrado em nenhum palete.`);
+      setErro(` Kanban ${kanbanGDBR} não encontrado em nenhum palete.`);
     }
   }
 
@@ -267,7 +238,7 @@ export default function PalletViewSingle() {
           `Kanban GDBR ${kanbanGDBR} contém Etiqueta Cliente ${etiquetaCliente}`
         );
       } else {
-        alert(
+        setErro(
           `Kanban GDBR ${kanbanGDBR} não contém Etiqueta Cliente ${etiquetaCliente}`
         );
       }
@@ -287,7 +258,7 @@ export default function PalletViewSingle() {
      setCaixasLidas(palletAtual.itens.filter((item) => item.lido).length);
 
      if (caixasLidas < totalCaixas) {
-       console.log(
+       setErro(
          `Caixas lidas: ${caixasLidas}/${totalCaixas} - Ainda faltam caixas para ler.`
        );
      } else {
@@ -307,6 +278,7 @@ export default function PalletViewSingle() {
       console.log(`O Palete ${palletAtual.cod_palete} possui itens pendentes.`);
     } else {
       console.log(`O Palete ${palletAtual.cod_palete} está completo.`);
+      setErro(`O Palete ${palletAtual.cod_palete} está completo.`);
     }
   }
 
@@ -319,7 +291,7 @@ export default function PalletViewSingle() {
      );
 
      if (palletesPendentes.length > 0) {
-       console.log(
+       setErro(
          `A Carga possui palete(s) pendentes: ${palletesPendentes
            .map((p) => p.cod_palete)
            .join(", ")}`

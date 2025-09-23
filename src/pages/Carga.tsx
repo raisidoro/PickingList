@@ -5,6 +5,7 @@ import { SlArrowLeftCircle } from "react-icons/sl";
 import { CiFilter } from "react-icons/ci";
 import { useNavigate } from "react-router-dom";
 import ErrorPopup from "./CompErrorPopup.tsx";
+import ConfirmationPopup from "./CompConfirmationPopup.tsx";
 
 const textVariants = {
   default: "text-xl sm:text-2xl",
@@ -93,6 +94,7 @@ export default function CargaList({}: Props) {
   const [showStatusFilter, setShowStatusFilter] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const navigate = useNavigate();
+  const [Confirm, setConfirm] = useState<string | null>(null);
 
   function safeTrim(value?: string) {
     return value?.trim() ?? "";
@@ -117,9 +119,15 @@ export default function CargaList({}: Props) {
   });
 
   function handleSelect(carga: Carga) {
-    setSelectedCod(carga.cod_carg);
-    navigate("/pallets", { state: { carga } });
-  }
+    setConfirm(null);
+    setSelectedCod(carga.cod_carg)
+    setConfirm(`Deseja iniciar a carga selecionada (${carga.cod_carg})?`); 
+    // if (  == "s"){
+    //   navigate("/pallets", { state: { carga } });
+    // } else{
+    //   navigate("/carga", { state: { carga } });
+    // }
+  }  
 
   // Handle confirming filter selection and hiding filter box
   function applyFilter() {
@@ -262,6 +270,9 @@ export default function CargaList({}: Props) {
               Carregando cargas...
             </Text>
           )}
+
+          <ConfirmationPopup message={Confirm} onRespond={} onClose={() => setConfirm("")} />
+
           {erro && (
             //popup de erro
             <ErrorPopup message={erro} onClose={() => setErro(null)} />
