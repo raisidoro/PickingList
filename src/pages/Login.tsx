@@ -2,6 +2,9 @@ import React, { type JSX } from "react";
 import { useState } from "react";
 import { apiOperadores } from "../lib/axios";
 import { useNavigate } from "react-router-dom";
+import SuccessPopup from "./CompSuccessPopup";
+import ErrorPopup from "./CompErrorPopup";
+import { success } from "zod";
 
 const textVariants = {
   default: "text-xl sm:text-2xl",
@@ -121,6 +124,7 @@ function LoginForm() {
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [Sucess, setSucess] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -140,8 +144,7 @@ function LoginForm() {
       const data = resp.data;
 
       if (data && data.Nome && data.Matricula) {
-        window.alert(`Bem-vindo, ${data.Nome.trim()}`);
-        navigate("/Carga");
+        setSucess(`Bem-vindo, ${data.Nome.trim()}`);
       } else if (data && data.Erro) {
         setErro(data.Erro);
       } else {
@@ -200,6 +203,15 @@ function LoginForm() {
           type="submit"
           disabled={loading}
         >
+        <SuccessPopup 
+        message={Sucess} 
+        onRespond={(response: string) => {
+          setSucess(null);
+          if(response === "OK"){
+            navigate("/Carga")
+          }
+        }}
+        onClose={() => setSucess(null)}/>
           {loading ? "Entrando..." : "Entrar"}
         </Button>
       </form>

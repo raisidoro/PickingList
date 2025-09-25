@@ -186,11 +186,10 @@ export default function PalletViewSingle() {
 
   //Verifica se item pertence ao pallet
   function itemPallet() {
-    if (!kanbanGDBR || pallets.length === 0) {
-      setErro("Nenhum pallete ou Kanban informado.");
+    if (!kanbanGDBR || pallets.length === 0 ) {
+      setErro("Nenhum palete ou Kanban informado.");
       return;
     }
-
     const kanbanGDBRNumerico = kanbanGDBR.split("|")[1] || "";
 
     //array com kanbans de cada pallet
@@ -215,8 +214,10 @@ export default function PalletViewSingle() {
       }
     }
 
-    if (!encontrado) {
-      setErro(` Kanban ${kanbanGDBR} não encontrado em nenhum palete.`);
+    if (kanbanGDBRNumerico.length == 5){
+      if (!encontrado) {
+        setErro(` Kanban ${kanbanGDBRNumerico} não encontrado em nenhum palete.`);
+      }
     }
   }
 
@@ -235,11 +236,11 @@ export default function PalletViewSingle() {
     if (etiquetaCliente.length == 5) {
       if (kanbanGDBR.includes(etiquetaCliente)) {
         console.log(
-          `Kanban GDBR ${kanbanGDBR} contém Etiqueta Cliente ${etiquetaCliente}`
+          `Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiquetaCliente}`
         );
       } else {
         setErro(
-          `Kanban GDBR ${kanbanGDBR} não contém Etiqueta Cliente ${etiquetaCliente}`
+          `Kanban GDBR ${kanbanGDBR} não confere Etiqueta Cliente ${etiquetaCliente}`
         );
       }
     }
@@ -349,7 +350,10 @@ export default function PalletViewSingle() {
                   type="text"
                   placeholder="Kanban GDBR"
                   className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
-                  onChange={handleKanbanGDBRChange}
+                  onChange={(e) => {
+                    handleKanbanGDBRChange(e)
+                    itemPallet()
+                  }}
                 />
                 <div className="flex items-center gap-2">
                   <input

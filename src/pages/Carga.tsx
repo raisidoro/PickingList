@@ -122,11 +122,6 @@ export default function CargaList({}: Props) {
     setConfirm(null);
     setSelectedCod(carga.cod_carg)
     setConfirm(`Deseja iniciar a carga selecionada (${carga.cod_carg})?`); 
-    // if (  == "s"){
-    //   navigate("/pallets", { state: { carga } });
-    // } else{
-    //   navigate("/carga", { state: { carga } });
-    // }
   }  
 
   // Handle confirming filter selection and hiding filter box
@@ -276,7 +271,7 @@ export default function CargaList({}: Props) {
               message={Confirm}
               onRespond={(response: string) => {
               setConfirm(null);
-              if (response === "yes" && selectedCod) {
+              if (response === "s" && selectedCod) {
                 const cargaSelecionada = cargas.find(
                 (c) => c.cod_carg === selectedCod
                 );
@@ -295,7 +290,7 @@ export default function CargaList({}: Props) {
           )}
           {!loading && !erro && cargasFiltradas.length === 0 && (
             <Text className="text-center text-gray-600">
-              Nenhuma carga disponível para o filtro informado.
+              Nenhuma carga disponível para o filtro informado .
             </Text>
           )}
 
