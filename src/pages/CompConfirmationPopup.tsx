@@ -18,6 +18,7 @@ export default function ConfirmationPopup({message, onClose, onRespond}: Confirm
       overlayClassName="fixed inset-0 bg-black/50"
     >
       <div className="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full flex flex-col gap-4">
+        <h2 className="text-xl font-bold text-yellow-600">Confirmação!</h2>
         <p className="text-gray-700 break-words">{message}</p>
 
         <button

@@ -238,6 +238,7 @@ export default function PalletViewSingle() {
         console.log(
           `Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiquetaCliente}`
         );
+        itemPallet()
       } else {
         setErro(
           `Kanban GDBR ${kanbanGDBR} não confere Etiqueta Cliente ${etiquetaCliente}`
@@ -350,10 +351,7 @@ export default function PalletViewSingle() {
                   type="text"
                   placeholder="Kanban GDBR"
                   className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
-                  onChange={(e) => {
-                    handleKanbanGDBRChange(e)
-                    itemPallet()
-                  }}
+                  onChange={handleKanbanGDBRChange}
                 />
                 <div className="flex items-center gap-2">
                   <input
