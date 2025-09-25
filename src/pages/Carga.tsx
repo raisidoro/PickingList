@@ -271,13 +271,41 @@ export default function CargaList({}: Props) {
               message={Confirm}
               onRespond={(response: string) => {
               setConfirm(null);
-              if (response === "s" && selectedCod) {
-                const cargaSelecionada = cargas.find(
-                (c) => c.cod_carg === selectedCod
-                );
-                if (cargaSelecionada) {
-                navigate("/Pallets", { state: { carga: cargaSelecionada } });
-                }
+              confirmaCarga();
+
+              async function confirmaCarga(){
+                if (response === "s" && selectedCod) {
+                  const cargaSelecionada = cargas.find(
+                  (c) => c.cod_carg === selectedCod
+                  );
+                  if (cargaSelecionada) {
+                  navigate("/Pallets", { state: { carga: cargaSelecionada } });
+                  }
+
+                  const [Sucess, setSucess] = useState<string | null>(null);
+
+                  try {
+                        const params = {
+                          cCarga: cargaSelecionada,
+                          status: "2"
+                        };
+                  
+                        const resp = await apiCarga.get("", { params });
+                        const data = resp.data;
+                  
+                        if (data && data.cargaSelecionada && data.status) {
+                          setSucess(`Deu certo eba!`);
+                        } else if (data && data.Erro) {
+                          setErro(data.Erro);
+                        } else {
+                          setErro("Falha ao atualizar status da carga.");
+                        }
+                      } catch (err) {
+                        setErro("Erro ao conectar com a API.");
+                      } finally {
+                        setLoading(false);
+                      }
+                    }
               }
               }}
               onClose={() => setConfirm(null)}
