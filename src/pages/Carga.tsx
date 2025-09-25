@@ -269,9 +269,25 @@ export default function CargaList({}: Props) {
             <Text className="text-center text-gray-600">
               Carregando cargas...
             </Text>
-          )}
 
-          <ConfirmationPopup message={Confirm} onRespond={} onClose={() => setConfirm("")} />
+          )}
+            {Confirm && (
+            <ConfirmationPopup
+              message={Confirm}
+              onRespond={(response: string) => {
+              setConfirm(null);
+              if (response === "yes" && selectedCod) {
+                const cargaSelecionada = cargas.find(
+                (c) => c.cod_carg === selectedCod
+                );
+                if (cargaSelecionada) {
+                navigate("/Pallets", { state: { carga: cargaSelecionada } });
+                }
+              }
+              }}
+              onClose={() => setConfirm(null)}
+            />
+            )}
 
           {erro && (
             //popup de erro
