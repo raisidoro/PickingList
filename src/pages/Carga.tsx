@@ -6,9 +6,7 @@ import { CiFilter } from "react-icons/ci";
 import { useNavigate } from "react-router-dom";
 import ErrorPopup from "./CompErrorPopup.tsx";
 import ConfirmationPopup from "./CompConfirmationPopup.tsx";
-import { env } from '../env'; 
-
-env.VITE_APP_NAME
+//import { env } from '../env'; 
 
 
 const textVariants = {
@@ -60,42 +58,6 @@ function Card({ children, className = "", ...props }: CardProps) {
   );
 }
 
-async function confirmaCarga(response,navigate,selectedCod){
-  if (response === "s" && selectedCod) {
-    const cargaSelecionada = cargas.find(
-    (c) => c.cod_carg === selectedCod
-    );
-    if (cargaSelecionada) {
-    navigate("/Pallets", { state: { carga: cargaSelecionada } });
-    }
-
-    const [Sucess, setSucess] = useState<string | null>(null);
-
-    try {
-          const params = {
-            cCarga: cargaSelecionada,
-            status: "2"
-          };
-    
-          const resp = await apiCarga.get("", { params });
-          const data = resp.data;
-    
-          if (data && data.cargaSelecionada && data.status) {
-            setSucess(`Deu certo eba!`);
-            console.log("Deu certo EBA!")
-          } else if (data && data.Erro) {
-            setErro(data.Erro);
-          } else {
-            setErro("Falha ao atualizar status da carga.");
-          }
-        } catch (err) {
-          setErro("Erro ao conectar com a API.");
-        } finally {
-          setLoading(false);
-        }
-      }
-}
-
 export interface Carga {
   cod_carg: string;
   cod_cli: string;
@@ -135,6 +97,45 @@ export default function CargaList({}: Props) {
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const navigate = useNavigate();
   const [Confirm, setConfirm] = useState<string | null>(null);
+  const [Sucess, setSucess] = useState<string | null>(null);
+
+  async function confirmaCarga(response: string, selectedCod: string | null) {
+    if (response === "s" && selectedCod) {
+      const cargaSelecionada = cargas.find(
+        (c) => c.cod_carg === selectedCod
+      );
+      if (cargaSelecionada) {
+        navigate("/Pallets", { state: { carga: cargaSelecionada } });
+      }
+
+      try {
+        setLoading(true);
+        const params = {
+          cCarga: cargaSelecionada,
+          status: "2"
+        };
+
+        const resp = await apiCarga.get("", { params });
+        const data = resp.data;
+
+        if (data && data.cargaSelecionada && data.status) {
+          setSucess(`Deu certo eba!`);
+          console.log("Deu certo EBA!");
+        } else if (data && data.Erro) {
+          setErro(data.Erro);
+        } else {
+          setErro("Falha ao atualizar status da carga.");
+        }
+      } catch (err) {
+        setErro("Erro ao conectar com a API.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+
+
 
   function safeTrim(value?: string) {
     return value?.trim() ?? "";
@@ -161,7 +162,7 @@ export default function CargaList({}: Props) {
   function handleSelect(carga: Carga) {
     setConfirm(null);
     setSelectedCod(carga.cod_carg)
-    setConfirm(`Deseja iniciar a carga selecionada (${carga.cod_carg})?`); 
+    setConfirm(`Deseja iniciar a carga selecionada patra o cliente ${carga.nome_cli} com data de coleta para ${carga.data_col} as ${carga.hora_col}?`); 
   }  
 
   // Handle confirming filter selection and hiding filter box
@@ -311,8 +312,7 @@ export default function CargaList({}: Props) {
               message={Confirm}
               onRespond={(response: string) => {
               setConfirm(null);
-              confirmaCarga(response,navigate,selectedCod)
-
+              confirmaCarga(response, selectedCod)
               }}
               onClose={() => setConfirm(null)}
             />
