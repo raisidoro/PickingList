@@ -3,6 +3,7 @@ import { type JSX } from "react";
 import { apiCarga } from "../lib/axios";
 import { SlArrowLeftCircle } from "react-icons/sl";
 import { CiFilter } from "react-icons/ci";
+import { IoEyeSharp } from 'react-icons/io5';
 import { useNavigate } from "react-router-dom";
 import ErrorPopup from "./CompErrorPopup.tsx";
 import ConfirmationPopup from "./CompConfirmationPopup.tsx";
@@ -110,17 +111,18 @@ export default function CargaList({}: Props) {
 
       try {
         setLoading(true);
-        const params = {
-          cCarga: cargaSelecionada,
-          status: "2"
-        };
 
-        const resp = await apiCarga.get("", { params });
+        const resp = await apiCarga.post("", { 
+          "codCarg": cargaSelecionada?.cod_carg,
+          "status": "2" });
+        console.log(resp)
         const data = resp.data;
 
-        if (data && data.cargaSelecionada && data.status) {
+
+        console.log("cCarga : " + data.codCarg + "status: " + data.status)
+        if (data && data.cCarga && data.status) {
           setSucess(`Deu certo eba!`);
-          console.log("Deu certo EBA!");
+          console.log("Emviado pra API");
         } else if (data && data.Erro) {
           setErro(data.Erro);
         } else {
@@ -133,8 +135,6 @@ export default function CargaList({}: Props) {
       }
     }
   }
-
-
 
 
   function safeTrim(value?: string) {
@@ -162,7 +162,7 @@ export default function CargaList({}: Props) {
   function handleSelect(carga: Carga) {
     setConfirm(null);
     setSelectedCod(carga.cod_carg)
-    setConfirm(`Deseja iniciar a carga selecionada patra o cliente ${carga.nome_cli} com data de coleta para ${carga.data_col} as ${carga.hora_col}?`); 
+    setConfirm(`Deseja iniciar a carga selecionada para o cliente ${carga.nome_cli} com data de coleta para ${carga.data_col} as ${carga.hora_col}?`); 
   }  
 
   // Handle confirming filter selection and hiding filter box
@@ -380,6 +380,17 @@ export default function CargaList({}: Props) {
                     <strong>Status:</strong>{" "}
                     {getStatusText(safeTrim(carga.stat_col))}
                   </span>
+
+                    <IoEyeSharp className="text-gray-500 w-190 h-8 mx-" onClick={() => handleSelect(carga)}
+                    tabIndex={0}
+                    role="button"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleSelect(carga);
+                      }
+                    }} />
+
                 </Text>
               </Card>
             ))}

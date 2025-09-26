@@ -16,6 +16,10 @@ const routerApp = createBrowserRouter([
     path: '/Pallets',
     element: <PalletList/>,
   },
+  {
+    path: '/PalletsView',
+    element: <PalletList/>,
+  },
 ]);
 
 export default routerApp;
