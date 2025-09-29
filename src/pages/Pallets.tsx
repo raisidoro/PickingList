@@ -4,6 +4,7 @@ import { SlArrowLeftCircle } from "react-icons/sl";
 import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
 import ErrorPopup from './CompErrorPopup.tsx';
+import ConfirmationPopup from "./CompConfirmationPopup.tsx";
 
 
 const textVariants = {
@@ -102,6 +103,8 @@ export default function PalletViewSingle() {
   const [pallets, setPallets] = useState<Pallet[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [sucess, setSucess] = useState<string | null>(null);
+  const [Confirm, setConfirm] = useState<string | null>(null);
   const [palletIndex, setPalletIndex] = useState(0);
 
   useEffect(() => {
@@ -303,19 +306,45 @@ export default function PalletViewSingle() {
      }
    }
 
-
-   function exibePopUp(){
+  async  function iniciarPalete(){
+    var [isVisible, setIsVisible] = useState(true);
     var palete1 = false;
 
     if (palletAtual?.cod_palete == "01"){
-      console.log("Pallet 1")
+      console.log("Palete 1")
       palete1 = true;
+    }else{
+      setIsVisible(true)
     }
 
-    if (palete1 == false){
-      
-   }
+    try {
+      setLoading(true);
+    
+      const resp = await apiPallets.post("", { 
+        "codCarg": carga?.cod_carg,
+        "codPale" : palletAtual,
+        "status": "1"
+      });
+      console.log(resp)
+      const data = resp.data;
+    
+      console.log("codCarg : " + data.codCarg + "codPale: " + data.cod_palete + "status: " + data.status)
+      if (data && data.cod_carga && data.status && data.cod_palete) {
+        setSucess(`Deu certo eba!`);
+        console.log("Emviado pra API");
+      } else if (data && data.Erro) {
+        setErro(data.Erro);
+      } else {
+        setErro("Falha ao atualizar status da carga.");
+      }
+    } catch (err) {
+      setErro("Erro ao conectar com a API.");
+    } finally {
+      setLoading(false);
+    }
   }
+
+  
   return (
     <main
       className="
@@ -352,9 +381,12 @@ export default function PalletViewSingle() {
 
           {loading && (
             <Text className="text-center text-gray-600">
-              Carregando palletes...
+              Carregando paletes...
             </Text>
           )}
+
+            
+
           <ErrorPopup message={erro} onClose={() => setErro("")} />
 
           {!loading && !erro && palletAtual && (
@@ -381,14 +413,22 @@ export default function PalletViewSingle() {
                 </div>
               </div>
 
+              <button
+                  className="rounded px-3 py-2 text-base bg-blue-300 hover:bg-gray-400 disabled:opacity-100 transition w-50 "
+                  onClick={() =>
+                  {iniciarPalete()}
+                  }
+                >
+                  Iniciar Palete
+                </button>
+
               <div className="max-w-lg w-full">
                 <div className="text-base font-bold text-center mb-2">
-                  Pallet{" "}
+                  Palete{" "}
                   {palletAtual?.cod_palete ??
                     String(palletIndex + 1).padStart(2, "0")}
                   /{totalPallets.toString().padStart(2, "0")}
-                </div>
-
+                </div>           
                 <div className="flex flex-col gap-2">
                   {palletAtual.itens.map((item, idx) => (
                     <Card
@@ -438,16 +478,16 @@ export default function PalletViewSingle() {
                               : item.status === "1"
                               ? "text-orange-700"
                               : item.status === "2"
-                              ? "text-green-700"
-                              : item.status === "3"
                               ? "text-orange-700"
+                              : item.status === "3"
+                              ? "text-green-700"
                               : ""
                           }`}
                         >
                           {item.status === "0" && "Pendente"}
                           {item.status === "1" && "Em montagem"}
-                          {item.status === "2" && "Finalizado"}
-                          {item.status === "3" && "Divergência"}
+                          {item.status === "2" && "Divergência"}
+                          {item.status === "3" && "Finalizado"}
                         </span>
                       </div>
                     </Card>
@@ -462,12 +502,12 @@ export default function PalletViewSingle() {
                     <span className="text-orange-700">Em montagem</span>
                   )}
                   {palletAtual.stat_pale === "2" && (
-                    <span className="text-green-700">
+                    <span className="text-orange-700">
                       Finalizado com divergência
                     </span>
                   )}
                   {palletAtual.stat_pale === "3" && (
-                    <span className="text-orange-700">Finalizado</span>
+                    <span className="text-green-700">Finalizado</span>
                   )}
                 </div>
               </div>
@@ -482,9 +522,14 @@ export default function PalletViewSingle() {
                 <button
                   className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
                   disabled={palletIndex === totalPallets - 1}
-                  onClick={() =>
-                    setPalletIndex((i) => Math.min(i + 1, totalPallets - 1))
+                  onClick={() =>{
+                    if (palletAtual.stat_pale == "2" || palletAtual.stat_pale == "3"){
+                      setPalletIndex((i) => Math.min(i + 1, totalPallets - 1))
+                    }else{
+                      setErro("Não é possível iniciar o próximo palete sem finalizar o anterior. Por favor, finalize a montagem e tente novamente")
+                    }
                   }
+                }
                 >
                   Próximo
                 </button>

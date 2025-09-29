@@ -7,8 +7,6 @@ import { IoEyeSharp } from 'react-icons/io5';
 import { useNavigate } from "react-router-dom";
 import ErrorPopup from "./CompErrorPopup.tsx";
 import ConfirmationPopup from "./CompConfirmationPopup.tsx";
-//import { env } from '../env'; 
-
 
 const textVariants = {
   default: "text-xl sm:text-2xl",
@@ -380,10 +378,6 @@ export default function CargaList({}: Props) {
                     <strong>Status:</strong>{" "}
                     {getStatusText(safeTrim(carga.stat_col))}
                   </span>
-
-
-
-
 
                   <span onClick={() => navigate("/PalletsView", { state: { carga } })}>
                     <IoEyeSharp className="text-gray-500 w-190 h-8 mx-" onClick={() => handleSelect(carga)}

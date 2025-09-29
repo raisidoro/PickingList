@@ -290,8 +290,8 @@ export default function PalletViewSingle() {
                         >
                           {item.status === "0" && "Pendente"}
                           {item.status === "1" && "Em montagem"}
-                          {item.status === "2" && "Finalizado"}
-                          {item.status === "3" && "Divergência"}
+                          {item.status === "2" && "Divergência"}
+                          {item.status === "3" && "Finalizado"}
                         </span>
                       </div>
                     </Card>
