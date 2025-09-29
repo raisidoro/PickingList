@@ -314,7 +314,6 @@ export default function PalletViewSingle() {
       console.log("Palete 1")
       palete1 = true;
     }else{
-      setIsVisible(true)
     }
 
     try {
