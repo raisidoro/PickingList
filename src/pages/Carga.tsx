@@ -381,6 +381,11 @@ export default function CargaList({}: Props) {
                     {getStatusText(safeTrim(carga.stat_col))}
                   </span>
 
+
+
+
+
+                  <span onClick={() => navigate("/PalletsView", { state: { carga } })}>
                     <IoEyeSharp className="text-gray-500 w-190 h-8 mx-" onClick={() => handleSelect(carga)}
                     tabIndex={0}
                     role="button"
@@ -390,6 +395,7 @@ export default function CargaList({}: Props) {
                         handleSelect(carga);
                       }
                     }} />
+                 </span>
 
                 </Text>
               </Card>

@@ -221,6 +221,11 @@ export default function PalletViewSingle() {
             <>
 
               <div className="max-w-lg w-full">
+                <div className="flex justify-center mb-2">
+                  <span className="text-blue-700 text-center font-bold text-lg">
+                    Modo de visualização
+                  </span>
+                </div>
                 <div className="text-base font-bold text-center mb-2">
                   Pallet{" "}
                   {palletAtual?.cod_palete ??

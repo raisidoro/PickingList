@@ -303,6 +303,19 @@ export default function PalletViewSingle() {
      }
    }
 
+
+   function exibePopUp(){
+    var palete1 = false;
+
+    if (palletAtual?.cod_palete == "01"){
+      console.log("Pallet 1")
+      palete1 = true;
+    }
+
+    if (palete1 == false){
+      
+   }
+  }
   return (
     <main
       className="

@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import Login from './pages/Login';
 import CargaList from './pages/Carga';
 import PalletList from './pages/Pallets';
+import PalletListView from './pages/PalletsView';
 
 const routerApp = createBrowserRouter([
   {
@@ -18,7 +19,7 @@ const routerApp = createBrowserRouter([
   },
   {
     path: '/PalletsView',
-    element: <PalletList/>,
+    element: <PalletListView />,
   },
 ]);
 
