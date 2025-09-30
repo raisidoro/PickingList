@@ -380,7 +380,7 @@ export default function CargaList({}: Props) {
                   </span>
 
                   <span onClick={() => navigate("/PalletsView", { state: { carga } })}>
-                    <IoEyeSharp className="text-gray-500 w-190 h-8 mx-" onClick={() => handleSelect(carga)}
+                    <IoEyeSharp className="text-gray-500 w-190 h-8 mh-8" onClick={() => handleSelect(carga)}
                     tabIndex={0}
                     role="button"
                     onKeyDown={(e) => {

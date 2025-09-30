@@ -6,7 +6,6 @@ import { type JSX } from "react";
 import ErrorPopup from './CompErrorPopup.tsx';
 import ConfirmationPopup from "./CompConfirmationPopup.tsx";
 
-
 const textVariants = {
   default: "text-xl sm:text-2xl",
   muted: "text-xl sm:text-2xl text-gray-500",
@@ -106,6 +105,51 @@ export default function PalletViewSingle() {
   const [sucess, setSucess] = useState<string | null>(null);
   const [Confirm, setConfirm] = useState<string | null>(null);
   const [palletIndex, setPalletIndex] = useState(0);
+  const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
+  const totalPallets = pallets.length;
+
+  console.log(palletAtual?.cod_palete)
+
+  async function confirmaPallet(response: string) {
+    if (response === "s") {
+      console.log(`Pallet: ${palletAtual?.cod_palete}`)
+      try {
+        setLoading(true);
+
+        const resp = await apiPallets.post("", {
+          "codCarg": palletAtual?.cod_palete,
+          "status": "1",
+          "CodKanb": "",
+          "CodSenqu": "",
+          "qtdrest": "",
+          "operac": ""
+        });
+        console.log(resp)
+        const data = resp.data;
+
+        console.log("cCarga : " + data.codCarg + "status: " + data.status)
+        if (data && data.cCarga && data.status) {
+          setSucess(`Deu certo eba!`);
+          console.log("Emviado pra API");
+        } else if (data && data.Erro) {
+          setErro(data.Erro);
+        } else {
+          setErro("Falha ao atualizar status da carga.");
+        }
+      } catch (err) {
+        setErro("Erro ao conectar com a API.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  function handleIniciarPalete() {
+    if (palletAtual?.cod_palete && palletAtual.cod_palete !== "01") {
+      setConfirm(`Deseja iniciar o Palete?`);
+    }
+  }
+
 
   useEffect(() => {
     if (palletIndex > pallets.length - 1) {
@@ -150,14 +194,14 @@ export default function PalletViewSingle() {
                   stat_pale: p.stat_pale,
                   itens: Array.isArray(respItens.data?.itens)
                     ? respItens.data.itens.map((it: any) => ({
-                        kanban: it.kanban ?? it.Kanban ?? "-",
-                        sequen: it.sequen ?? it.Sequen ?? "-",
-                        qtd_caixa: it.qtd_caixa ?? it.Qtd_Caixa ?? "-",
-                        qtd_peca: it.qtd_peca ?? it.Qtd_Peca ?? "-",
-                        embalagem: it.embalagem ?? it.Embalagem ?? "-",
-                        multiplo: it.multiplo ?? it.Multiplo ?? "-",
-                        status: it.status ?? it.Status ?? "-",
-                      }))
+                      kanban: it.kanban ?? it.Kanban ?? "-",
+                      sequen: it.sequen ?? it.Sequen ?? "-",
+                      qtd_caixa: it.qtd_caixa ?? it.Qtd_Caixa ?? "-",
+                      qtd_peca: it.qtd_peca ?? it.Qtd_Peca ?? "-",
+                      embalagem: it.embalagem ?? it.Embalagem ?? "-",
+                      multiplo: it.multiplo ?? it.Multiplo ?? "-",
+                      status: it.status ?? it.Status ?? "-",
+                    }))
                     : [],
                 }))
             )
@@ -175,21 +219,17 @@ export default function PalletViewSingle() {
       });
   }, [carga]);
 
-  //Validação se o item pertence ao pallet
-  const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
-  const totalPallets = pallets.length;
-
   //Validação se a etiqueta do cliente confere o kanban GDBR
   const [kanbanGDBR, setKanbanGDBR] = useState("");
   var [etiquetaCliente] = useState("12345");
 
   //Validação se a quantia de caixas lidas é menor que a quantidade de caixas do pallet
-   const [totalCaixas, setTotalCaixas] = useState(0);
-   const [caixasLidas, setCaixasLidas] = useState(0);
+  const [totalCaixas, setTotalCaixas] = useState(0);
+  const [caixasLidas, setCaixasLidas] = useState(0);
 
   //Verifica se item pertence ao pallet
   function itemPallet() {
-    if (!kanbanGDBR || pallets.length === 0 ) {
+    if (!kanbanGDBR || pallets.length === 0) {
       setErro("Nenhum palete ou Kanban informado.");
       return;
     }
@@ -217,7 +257,7 @@ export default function PalletViewSingle() {
       }
     }
 
-    if (kanbanGDBRNumerico.length == 5){
+    if (kanbanGDBRNumerico.length == 5) {
       if (!encontrado) {
         setErro(` Kanban ${kanbanGDBRNumerico} não encontrado em nenhum palete.`);
       }
@@ -251,99 +291,60 @@ export default function PalletViewSingle() {
   }
 
   //verifica quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
-   function Caixas() {
-     if (!palletAtual) return;
+  function Caixas() {
+    if (!palletAtual) return;
 
-     setTotalCaixas((item) =>
-       palletAtual.itens.reduce(
-         (acc, item) => acc + Number(item.qtd_caixa || 0),
-         0
-       )
-     );
-     setCaixasLidas(palletAtual.itens.filter((item) => item.lido).length);
+    setTotalCaixas((item) =>
+      palletAtual.itens.reduce(
+        (acc, item) => acc + Number(item.qtd_caixa || 0),
+        0
+      )
+    );
+    setCaixasLidas(palletAtual.itens.filter((item) => item.lido).length);
 
-     if (caixasLidas < totalCaixas) {
-       setErro(
-         `Caixas lidas: ${caixasLidas}/${totalCaixas} - Ainda faltam caixas para ler.`
-       );
-     } else {
-       console.log(
-         `Caixas lidas: ${caixasLidas}/${totalCaixas} - Todas as caixas foram lidas.`
-       );
-     }
-   }
+    if (caixasLidas < totalCaixas) {
+      setErro(
+        `Caixas lidas: ${caixasLidas}/${totalCaixas} - Ainda faltam caixas para ler.`
+      );
+    } else {
+      console.log(
+        `Caixas lidas: ${caixasLidas}/${totalCaixas} - Todas as caixas foram lidas.`
+      );
+    }
+  }
 
   //verifica se há palete
   // s não lidos completamente (com itens pendentes)
-   function verificaPalete() {
+  function verificaPalete() {
     if (!palletAtual) return;
 
     const itensPendentes = palletAtual.itens.filter((item) => !item.lido);
     if (itensPendentes.length > 0) {
-      console.log(`O Palete ${palletAtual.cod_palete} possui itens pendentes.`);
+      setErro(`O Palete ${palletAtual.cod_palete} possui itens pendentes.`);
     } else {
       console.log(`O Palete ${palletAtual.cod_palete} está completo.`);
-      setErro(`O Palete ${palletAtual.cod_palete} está completo.`);
     }
   }
 
   //verifica se a carga não foi completada (com palletes pendentes)
-   function Verificacarga() {
-     if (pallets.length === 0) return;
+  function Verificacarga() {
+    if (pallets.length === 0) return;
 
-     const palletesPendentes = pallets.filter((pallet) =>
-       pallet.itens.some((item) => !item.lido)
-     );
+    const palletesPendentes = pallets.filter((pallet) =>
+      pallet.itens.some((item) => !item.lido)
+    );
 
-     if (palletesPendentes.length > 0) {
-       setErro(
-         `A Carga possui palete(s) pendentes: ${palletesPendentes
-           .map((p) => p.cod_palete)
-           .join(", ")}`
-       );
-     } else {
-       console.log(`A Carga está completa.`);
-     }
-   }
-
-  async  function iniciarPalete(){
-    var [isVisible, setIsVisible] = useState(true);
-    var palete1 = false;
-
-    if (palletAtual?.cod_palete == "01"){
-      console.log("Palete 1")
-      palete1 = true;
-    }else{
-    }
-
-    try {
-      setLoading(true);
-    
-      const resp = await apiPallets.post("", { 
-        "codCarg": carga?.cod_carg,
-        "codPale" : palletAtual,
-        "status": "1"
-      });
-      console.log(resp)
-      const data = resp.data;
-    
-      console.log("codCarg : " + data.codCarg + "codPale: " + data.cod_palete + "status: " + data.status)
-      if (data && data.cod_carga && data.status && data.cod_palete) {
-        setSucess(`Deu certo eba!`);
-        console.log("Emviado pra API");
-      } else if (data && data.Erro) {
-        setErro(data.Erro);
-      } else {
-        setErro("Falha ao atualizar status da carga.");
-      }
-    } catch (err) {
-      setErro("Erro ao conectar com a API.");
-    } finally {
-      setLoading(false);
+    if (palletesPendentes.length > 0) {
+      setErro(
+        `A Carga possui palete(s) pendentes: ${palletesPendentes
+          .map((p) => p.cod_palete)
+          .join(", ")}`
+      );
+    } else {
+      console.log(`A Carga está completa.`);
     }
   }
 
-  
   return (
     <main
       className="
@@ -384,9 +385,17 @@ export default function PalletViewSingle() {
             </Text>
           )}
 
-            
 
           <ErrorPopup message={erro} onClose={() => setErro("")} />
+
+          <ConfirmationPopup
+            message={Confirm}
+            onRespond={(response: string) => {
+              setConfirm(null);
+              confirmaPallet(response)
+            }}
+            onClose={() => setConfirm(null)}
+          />
 
           {!loading && !erro && palletAtual && (
             <>
@@ -412,22 +421,14 @@ export default function PalletViewSingle() {
                 </div>
               </div>
 
-              <button
-                  className="rounded px-3 py-2 text-base bg-blue-300 hover:bg-gray-400 disabled:opacity-100 transition w-50 "
-                  onClick={() =>
-                  {iniciarPalete()}
-                  }
-                >
-                  Iniciar Palete
-                </button>
-
               <div className="max-w-lg w-full">
-                <div className="text-base font-bold text-center mb-2">
+                <div className="text-base font-bold text-center mb-2"
+                >
                   Palete{" "}
                   {palletAtual?.cod_palete ??
                     String(palletIndex + 1).padStart(2, "0")}
                   /{totalPallets.toString().padStart(2, "0")}
-                </div>           
+                </div>
                 <div className="flex flex-col gap-2">
                   {palletAtual.itens.map((item, idx) => (
                     <Card
@@ -471,17 +472,16 @@ export default function PalletViewSingle() {
                       <div className="flex items-center justify-between mt-1">
                         <span className="font-semibold text-xs">Status</span>
                         <span
-                          className={`font-bold text-xs ${
-                            item.status === "0"
+                          className={`font-bold text-xs ${item.status === "0"
                               ? "text-red-700"
                               : item.status === "1"
-                              ? "text-orange-700"
-                              : item.status === "2"
-                              ? "text-orange-700"
-                              : item.status === "3"
-                              ? "text-green-700"
-                              : ""
-                          }`}
+                                ? "text-orange-700"
+                                : item.status === "2"
+                                  ? "text-orange-700"
+                                  : item.status === "3"
+                                    ? "text-green-700"
+                                    : ""
+                            }`}
                         >
                           {item.status === "0" && "Pendente"}
                           {item.status === "1" && "Em montagem"}
@@ -521,14 +521,15 @@ export default function PalletViewSingle() {
                 <button
                   className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
                   disabled={palletIndex === totalPallets - 1}
-                  onClick={() =>{
-                    if (palletAtual.stat_pale == "2" || palletAtual.stat_pale == "3"){
+                  onClick={() => {
+                    handleIniciarPalete()
+                    if (palletAtual.stat_pale == "2" || palletAtual.stat_pale == "3") {
                       setPalletIndex((i) => Math.min(i + 1, totalPallets - 1))
-                    }else{
+                    } else {
                       setErro("Não é possível iniciar o próximo palete sem finalizar o anterior. Por favor, finalize a montagem e tente novamente")
                     }
                   }
-                }
+                  }
                 >
                   Próximo
                 </button>
