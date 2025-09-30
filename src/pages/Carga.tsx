@@ -96,7 +96,7 @@ export default function CargaList({}: Props) {
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const navigate = useNavigate();
   const [Confirm, setConfirm] = useState<string | null>(null);
-  const [Sucess, setSucess] = useState<string | null>(null);
+  const [, setSucess] = useState<string | null>(null);
 
   async function confirmaCarga(response: string, selectedCod: string | null) {
     if (response === "s" && selectedCod) {
@@ -236,7 +236,7 @@ export default function CargaList({}: Props) {
             <input
               type="text"
               placeholder="Buscar cargas..."
-              className="flex-grow px-3 py-2 text-gray-800 placeholder-gray-400 bg-white focus:outline-none"
+              className="flex-grow px-3 py-2 text-gray-800 placeholder-gray-400 bg-white focus:outline-none" 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               aria-label="Buscar cargas"
@@ -380,7 +380,7 @@ export default function CargaList({}: Props) {
                   </span>
 
                   <span onClick={() => navigate("/PalletsView", { state: { carga } })}>
-                    <IoEyeSharp className="text-gray-500 w-190 h-8 mh-8" onClick={() => handleSelect(carga)}
+                    <IoEyeSharp className="text-gray-500 h-8" onClick={() => handleSelect(carga)}
                     tabIndex={0}
                     role="button"
                     onKeyDown={(e) => {

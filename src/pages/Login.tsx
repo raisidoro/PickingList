@@ -3,8 +3,8 @@ import { useState } from "react";
 import { apiOperadores } from "../lib/axios";
 import { useNavigate } from "react-router-dom";
 import SuccessPopup from "./CompSuccessPopup";
-import ErrorPopup from "./CompErrorPopup";
-import { success } from "zod";
+// import ErrorPopup from "./CompErrorPopup";
+// import { success } from "zod";
 
 const textVariants = {
   default: "text-xl sm:text-2xl",

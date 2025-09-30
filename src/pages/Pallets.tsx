@@ -102,7 +102,7 @@ export default function PalletViewSingle() {
   const [pallets, setPallets] = useState<Pallet[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [sucess, setSucess] = useState<string | null>(null);
+  const [, setSucess] = useState<string | null>(null);
   const [Confirm, setConfirm] = useState<string | null>(null);
   const [palletIndex, setPalletIndex] = useState(0);
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
@@ -224,8 +224,8 @@ export default function PalletViewSingle() {
   var [etiquetaCliente] = useState("12345");
 
   //Validação se a quantia de caixas lidas é menor que a quantidade de caixas do pallet
-  const [totalCaixas, setTotalCaixas] = useState(0);
-  const [caixasLidas, setCaixasLidas] = useState(0);
+  // const [totalCaixas, setTotalCaixas] = useState(0);
+  // const [caixasLidas, setCaixasLidas] = useState(0);
 
   //Verifica se item pertence ao pallet
   function itemPallet() {
@@ -291,59 +291,59 @@ export default function PalletViewSingle() {
   }
 
   //verifica quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
-  function Caixas() {
-    if (!palletAtual) return;
+  // function Caixas() {
+  //   if (!palletAtual) return;
 
-    setTotalCaixas((item) =>
-      palletAtual.itens.reduce(
-        (acc, item) => acc + Number(item.qtd_caixa || 0),
-        0
-      )
-    );
-    setCaixasLidas(palletAtual.itens.filter((item) => item.lido).length);
+  //   setTotalCaixas((item) =>
+  //     palletAtual.itens.reduce(
+  //       (acc, item) => acc + Number(item.qtd_caixa || 0),
+  //       0
+  //     )
+  //   );
+  //   setCaixasLidas(palletAtual.itens.filter((item) => item.lido).length);
 
-    if (caixasLidas < totalCaixas) {
-      setErro(
-        `Caixas lidas: ${caixasLidas}/${totalCaixas} - Ainda faltam caixas para ler.`
-      );
-    } else {
-      console.log(
-        `Caixas lidas: ${caixasLidas}/${totalCaixas} - Todas as caixas foram lidas.`
-      );
-    }
-  }
+  //   if (caixasLidas < totalCaixas) {
+  //     setErro(
+  //       `Caixas lidas: ${caixasLidas}/${totalCaixas} - Ainda faltam caixas para ler.`
+  //     );
+  //   } else {
+  //     console.log(
+  //       `Caixas lidas: ${caixasLidas}/${totalCaixas} - Todas as caixas foram lidas.`
+  //     );
+  //   }
+  // }
 
   //verifica se há palete
   // s não lidos completamente (com itens pendentes)
-  function verificaPalete() {
-    if (!palletAtual) return;
+  // function verificaPalete() {
+  //   if (!palletAtual) return;
 
-    const itensPendentes = palletAtual.itens.filter((item) => !item.lido);
-    if (itensPendentes.length > 0) {
-      setErro(`O Palete ${palletAtual.cod_palete} possui itens pendentes.`);
-    } else {
-      console.log(`O Palete ${palletAtual.cod_palete} está completo.`);
-    }
-  }
+  //   const itensPendentes = palletAtual.itens.filter((item) => !item.lido);
+  //   if (itensPendentes.length > 0) {
+  //     setErro(`O Palete ${palletAtual.cod_palete} possui itens pendentes.`);
+  //   } else {
+  //     console.log(`O Palete ${palletAtual.cod_palete} está completo.`);
+  //   }
+  // }
 
   //verifica se a carga não foi completada (com palletes pendentes)
-  function Verificacarga() {
-    if (pallets.length === 0) return;
+  // function Verificacarga() {
+  //   if (pallets.length === 0) return;
 
-    const palletesPendentes = pallets.filter((pallet) =>
-      pallet.itens.some((item) => !item.lido)
-    );
+  //   const palletesPendentes = pallets.filter((pallet) =>
+  //     pallet.itens.some((item) => !item.lido)
+  //   );
 
-    if (palletesPendentes.length > 0) {
-      setErro(
-        `A Carga possui palete(s) pendentes: ${palletesPendentes
-          .map((p) => p.cod_palete)
-          .join(", ")}`
-      );
-    } else {
-      console.log(`A Carga está completa.`);
-    }
-  }
+  //   if (palletesPendentes.length > 0) {
+  //     setErro(
+  //       `A Carga possui palete(s) pendentes: ${palletesPendentes
+  //         .map((p) => p.cod_palete)
+  //         .join(", ")}`
+  //     );
+  //   } else {
+  //     console.log(`A Carga está completa.`);
+  //   }
+  // }
 
   return (
     <main
@@ -402,6 +402,7 @@ export default function PalletViewSingle() {
               <div className="w-full flex flex-col gap-4 mb-6 max-w-lg">
                 <input
                   type="text"
+                  autoFocus
                   placeholder="Kanban GDBR"
                   className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
                   onChange={handleKanbanGDBRChange}
