@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { apiItens, apiPallets } from "../lib/axios";
-import { SlArrowLeftCircle } from "react-icons/sl";
+import { MdArrowBack } from "react-icons/md";
+import { TfiReload } from "react-icons/tfi";
 import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
 import ErrorPopup from './CompErrorPopup.tsx';
@@ -120,7 +121,7 @@ export default function PalletViewSingle() {
           "codCarg": palletAtual?.cod_palete,
           "status": "1",
           "CodKanb": "",
-          "CodSenqu": "",
+          "CodSequ": "",
           "qtdrest": "",
           "operac": ""
         });
@@ -130,7 +131,7 @@ export default function PalletViewSingle() {
         console.log("cCarga : " + data.codCarg + "status: " + data.status)
         if (data && data.cCarga && data.status) {
           setSucess(`Deu certo eba!`);
-          console.log("Emviado pra API");
+          console.log("Enviado pra API");
         } else if (data && data.Erro) {
           setErro(data.Erro);
         } else {
@@ -221,7 +222,9 @@ export default function PalletViewSingle() {
 
   //Validação se a etiqueta do cliente confere o kanban GDBR
   const [kanbanGDBR, setKanbanGDBR] = useState("");
-  var [etiquetaCliente] = useState("12345");
+  const [etiquetaCliente, setEtiquetaCliente] = useState("");
+  const etiquetaClienteRef = useRef<HTMLInputElement>(null);
+
 
   //Validação se a quantia de caixas lidas é menor que a quantidade de caixas do pallet
   // const [totalCaixas, setTotalCaixas] = useState(0);
@@ -267,10 +270,14 @@ export default function PalletViewSingle() {
   // verifica etiqueta cliente e kanban GDBR
   function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
     setKanbanGDBR(e.target.value);
+
+    if (e.target.value.length === 12) {
+      etiquetaClienteRef.current?.focus();
+    }
   }
 
   function handleEtiquetaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
-    etiquetaCliente = e.target.value;
+    setEtiquetaCliente(e.target.value);
   }
 
   function verificaKanban() {
@@ -367,7 +374,7 @@ export default function PalletViewSingle() {
               className="focus:outline-none"
               title="Voltar"
             >
-              <SlArrowLeftCircle className="text-gray-500 w-6 h-6" />
+              <MdArrowBack className="text-gray-500 w-6 h-6" />
             </button>
             <Text
               as="span"
@@ -377,6 +384,12 @@ export default function PalletViewSingle() {
               <b>Carga:</b> {carga.cod_carg} – {carga.nome_cli} |{" "}
               {carga.data_col} – {carga.hora_col}
             </Text>
+          </div>
+
+          <div className="flex justify-between items-center px-4">
+              <span onClick={() => window.location.reload()}>
+                <TfiReload className="text-gray-500 w-6 h-6 cursor-pointer" />
+              </span>
           </div>
 
           {loading && (
@@ -411,9 +424,9 @@ export default function PalletViewSingle() {
                   <input
                     type="text"
                     maxLength={5}
+                    ref={etiquetaClienteRef}
                     placeholder="Etiqueta Cliente"
-                    className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:o
-                    utline-none focus:border-blue-400 rounded-none w-full max-w-xs"
+                    className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
                     onChange={(e) => {
                       handleEtiquetaClienteChange(e);
                       verificaKanban();

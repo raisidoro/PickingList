@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { apiItens, apiPallets } from "../lib/axios";
-import { SlArrowLeftCircle } from "react-icons/sl";
+import { MdArrowBack } from "react-icons/md";
 import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
 import ErrorPopup from './CompErrorPopup.tsx';
@@ -198,7 +198,7 @@ export default function PalletViewSingle() {
               className="focus:outline-none"
               title="Voltar"
             >
-              <SlArrowLeftCircle className="text-gray-500 w-6 h-6" />
+              <MdArrowBack className="text-gray-500 w-6 h-6" />
             </button>
             <Text
               as="span"

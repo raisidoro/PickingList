@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { type JSX } from "react";
 import { apiCarga } from "../lib/axios";
-import { SlArrowLeftCircle } from "react-icons/sl";
+import { MdArrowBack } from "react-icons/md";
 import { CiFilter } from "react-icons/ci";
 import { IoEyeSharp } from 'react-icons/io5';
+import { TfiReload } from "react-icons/tfi";
 import { useNavigate } from "react-router-dom";
 import ErrorPopup from "./CompErrorPopup.tsx";
 import ConfirmationPopup from "./CompConfirmationPopup.tsx";
@@ -216,9 +217,14 @@ export default function CargaList({}: Props) {
             variant="muted"
             className="text-center mb-2 sm:mb-4 text-gray-900"
           >
-            <span onClick={() => navigate("/")}>
-              <SlArrowLeftCircle className="text-gray-500 w-6 h-6 mx-2 cursor-pointer" />
-            </span>
+            <div className="flex justify-between items-center px-4">
+              <span onClick={() => navigate("/")}>
+                <MdArrowBack className="text-gray-500 w-6 h-6 cursor-pointer" />
+              </span>
+              <span onClick={() => window.location.reload()}>
+                <TfiReload className="text-gray-500 w-6 h-6 cursor-pointer" />
+              </span>
+            </div>
           </Text>
           <Text
             as="h1"
