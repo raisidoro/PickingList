@@ -7,6 +7,7 @@ import { type JSX } from "react";
 import ErrorPopup from './CompErrorPopup.tsx';
 import ConfirmationPopup from "./CompConfirmationPopup.tsx";
 
+// Define tipo de texto com variantes
 const textVariants = {
   default: "text-xl sm:text-2xl",
   muted: "text-xl sm:text-2xl text-gray-500",
@@ -118,24 +119,22 @@ export default function PalletViewSingle() {
         setLoading(true);
 
         const resp = await apiPallets.post("", {
-          "codCarg": palletAtual?.cod_palete,
-          "status": "1",
-          "CodKanb": "",
-          "CodSequ": "",
-          "qtdrest": "",
-          "operac": ""
+          "codCarg": carga?.cod_carg,
+          "codPale": palletAtual?.cod_palete,
+          "codKanb": kanbanGDBR.split("|")[1] || "",
+          "codSequ": //Passar sequencial do item
+          "operac" : //Passar número da operação (1, 2, 3 ou 4)
         });
         console.log(resp)
         const data = resp.data;
 
-        console.log("cCarga : " + data.codCarg + "status: " + data.status)
-        if (data && data.cCarga && data.status) {
+        if (data && data.codCarg && data.codPale) {
           setSucess(`Deu certo eba!`);
           console.log("Enviado pra API");
         } else if (data && data.Erro) {
           setErro(data.Erro);
         } else {
-          setErro("Falha ao atualizar status da carga.");
+          setErro("Falha ao atualizar o status do item");
         }
       } catch (err) {
         setErro("Erro ao conectar com a API.");
@@ -145,12 +144,15 @@ export default function PalletViewSingle() {
     }
   }
 
-  function handleIniciarPalete() {
+  async function handleIniciarPalete() {
     if (palletAtual?.cod_palete && palletAtual.cod_palete !== "01") {
       setConfirm(`Deseja iniciar o Palete?`);
     }
-  }
 
+    if (Confirm == 's'){
+      confirmaPallet('s');
+    }
+  }
 
   useEffect(() => {
     if (palletIndex > pallets.length - 1) {
