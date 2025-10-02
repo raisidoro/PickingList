@@ -110,11 +110,12 @@ export default function PalletViewSingle() {
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
 
-  console.log(palletAtual?.cod_palete)
+  console.log()
 
   async function confirmaPallet(response: string) {
     if (response === "s") {
       console.log(`Pallet: ${palletAtual?.cod_palete}`)
+      console.log(palletAtual?.itens[0]?.sequen || "")
       try {
         setLoading(true);
 
@@ -122,10 +123,11 @@ export default function PalletViewSingle() {
           "codCarg": carga?.cod_carg,
           "codPale": palletAtual?.cod_palete,
           "codKanb": kanbanGDBR.split("|")[1] || "",
-          "codSequ": //Passar sequencial do item
-          "operac" : //Passar número da operação (1, 2, 3 ou 4)
+          "codSequ": palletAtual?.itens[0]?.sequen || "",
+          "operac" : "1"
         });
         console.log(resp)
+        console.log(palletAtual?.itens[0]?.sequen || "")
         const data = resp.data;
 
         if (data && data.codCarg && data.codPale) {
@@ -145,7 +147,7 @@ export default function PalletViewSingle() {
   }
 
   async function handleIniciarPalete() {
-    if (palletAtual?.cod_palete && palletAtual.cod_palete !== "01") {
+    if (palletAtual?.cod_palete && palletAtual.cod_palete !== "01" && palletAtual.stat_pale == "0") {
       setConfirm(`Deseja iniciar o Palete?`);
     }
 
