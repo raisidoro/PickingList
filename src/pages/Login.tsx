@@ -145,6 +145,7 @@ function LoginForm() {
 
       if (data && data.Nome && data.Matricula) {
         setSucess(`Bem-vindo, ${data.Nome.trim()}`);
+        navigate("/Carga");
       } else if (data && data.Erro) {
         setErro(data.Erro);
       } else {
@@ -205,11 +206,8 @@ function LoginForm() {
         >
         <SuccessPopup 
         message={Sucess} 
-        onRespond={(response: string) => {
+        onRespond={() => {
           setSucess(null);
-          if(response === "OK"){
-            navigate("/Carga")
-          }
         }}
         onClose={() => setSucess(null)}/>
           {loading ? "Entrando..." : "Entrar"}
