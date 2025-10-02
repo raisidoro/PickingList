@@ -1,4 +1,7 @@
 import Modal from "react-modal";
+import useSound from 'use-sound';
+import React from "react";
+import errorSound from '../sounds/error.mp3';
 
 Modal.setAppElement("#root");
 
@@ -9,6 +12,14 @@ interface ErrorPopupProps {
 
 
 export default function ErrorPopup({ message, onClose }: ErrorPopupProps) {
+  const [playError] = useSound(errorSound);
+
+  React.useEffect(() => {
+    if (message) {
+      playError();
+    }
+  }, [message, playError]);
+
   return (
     <Modal
       isOpen={!!message}

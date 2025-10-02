@@ -6,6 +6,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
 import ErrorPopup from './CompErrorPopup.tsx';
 import ConfirmationPopup from "./CompConfirmationPopup.tsx";
+import SuccessPopup from "./CompSuccessPopup";
+
 
 // Define tipo de texto com variantes
 const textVariants = {
@@ -104,7 +106,7 @@ export default function PalletViewSingle() {
   const [pallets, setPallets] = useState<Pallet[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [, setSucess] = useState<string | null>(null);
+  const [success, setSucess] = useState<string | null>(null);
   const [Confirm, setConfirm] = useState<string | null>(null);
   const [palletIndex, setPalletIndex] = useState(0);
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
@@ -210,7 +212,9 @@ export default function PalletViewSingle() {
           .then((palletsDetalhados) => {
             setPallets(palletsDetalhados);
           })
-          .catch(() => setErro("Erro ao buscar itens dos paletes."))
+          .catch(() => {
+            setErro("Erro ao buscar itens dos paletes.");
+          })
           .finally(() => setLoading(false));
       })
       .catch(() => {
@@ -222,13 +226,13 @@ export default function PalletViewSingle() {
 
   //Validação se a etiqueta do cliente confere o kanban GDBR
   const [kanbanGDBR, setKanbanGDBR] = useState("");
-  const [etiquetaCliente, setEtiquetaCliente] = useState("");
+  const [, setEtiquetaCliente] = useState("");
   const etiquetaClienteRef = useRef<HTMLInputElement>(null);
 
 
   //Validação se a quantia de caixas lidas é menor que a quantidade de caixas do pallet
-  const [totalCaixas, setTotalCaixas] = useState(0);
-  const [caixasLidas, setCaixasLidas] = useState(0);
+  // const [totalCaixas, setTotalCaixas] = useState(0);
+  // const [caixasLidas, setCaixasLidas] = useState(0);
 
   //Verifica se item pertence ao pallet
   function itemPallet() {
@@ -277,48 +281,52 @@ export default function PalletViewSingle() {
   }
 
   function handleEtiquetaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setEtiquetaCliente(e.target.value);
+    const etiquetaCliente = e.target.value;
+    setEtiquetaCliente(etiquetaCliente);
+    verificaKanban(etiquetaCliente);
   }
 
-  function verificaKanban() {
-    if (!kanbanGDBR || !etiquetaCliente) return;
+  function verificaKanban(etiqueta: string) {
+  if (!kanbanGDBR || !etiqueta) return;
 
-    if (etiquetaCliente.length == 5) {
-      if (kanbanGDBR.includes(etiquetaCliente)) {
-        console.log(
-          `Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiquetaCliente}`
-        );
-        itemPallet()
-      } else {
-        setErro(
-          `Kanban GDBR ${kanbanGDBR} não confere Etiqueta Cliente ${etiquetaCliente}`
-        );
-      }
+  if (etiqueta.length === 5) {
+    etiquetaClienteRef.current?.blur(); 
+    if (kanbanGDBR.includes(etiqueta)) {
+      setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
+      itemPallet();
+      setErro(null); 
+    } else {
+      setErro(`Kanban GDBR ${kanbanGDBR} não confere Etiqueta Cliente ${etiqueta}`);
+      setSucess(null);
     }
+  } else {
+    setErro(null);
+    setSucess(null);
   }
+}
 
   //verifica quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
-  function Caixas() {
-    if (!palletAtual) return;
+  // function Caixas() {
+  //   if (!palletAtual) return;
 
-    setTotalCaixas((item) =>
-      palletAtual.itens.reduce(
-        (acc, item) => acc + Number(item.qtd_caixa || 0),
-        0
-      )
-    );
-    setCaixasLidas(palletAtual.itens.filter((item) => item.lido).length);
+  //   setTotalCaixas((item) =>
+  //     palletAtual.itens.reduce(
+  //       (acc, item) => acc + Number(item.qtd_caixa || 0),
+  //       0
+  //     )
+  //   );
+  //   setCaixasLidas(palletAtual.itens.filter((item) => item.lido).length);
 
-    if (caixasLidas < totalCaixas) {
-      setErro(
-        `Caixas lidas: ${caixasLidas}/${totalCaixas} - Ainda faltam caixas para ler.`
-      );
-    } else {
-      console.log(
-        `Caixas lidas: ${caixasLidas}/${totalCaixas} - Todas as caixas foram lidas.`
-      );
-    }
-  }
+  //   if (caixasLidas < totalCaixas) {
+  //     setErro(
+  //       `Caixas lidas: ${caixasLidas}/${totalCaixas} - Ainda faltam caixas para ler.`
+  //     );
+  //   } else {
+  //     console.log(
+  //       `Caixas lidas: ${caixasLidas}/${totalCaixas} - Todas as caixas foram lidas.`
+  //     );
+  //   }
+  // }
 
   //verifica se há paletes não lidos completamente (com itens pendentes)
   function verificaPalete() {
@@ -428,8 +436,14 @@ export default function PalletViewSingle() {
                     className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
                     onChange={(e) => {
                       handleEtiquetaClienteChange(e);
-                      verificaKanban();
+                      verificaKanban(e.target.value);
                     }}
+                  />
+
+                  <SuccessPopup 
+                    message={success} 
+                    onClose={() => setSucess(null)} 
+                    onRespond={() => setSucess(null)}
                   />
                 </div>
               </div>
@@ -539,7 +553,7 @@ export default function PalletViewSingle() {
                     if (palletAtual.stat_pale == "2" || palletAtual.stat_pale == "3") {
                       setPalletIndex((i) => Math.min(i + 1, totalPallets - 1))
                     }else if (palletAtual.stat_pale == "0" || palletAtual.stat_pale == "1"){
-                      Caixas();
+                      // Caixas();
                       Verificacarga();
                       verificaPalete()                
                     }else {

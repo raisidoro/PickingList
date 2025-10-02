@@ -1,4 +1,7 @@
 import Modal from "react-modal";
+import useSound from 'use-sound';
+import successSound from '../sounds/success.mp3';
+import React from "react";
 
 Modal.setAppElement("#root");
 
@@ -10,6 +13,14 @@ interface SuccessPopupProps {
 
 
 export default function SuccessPopup({ message, onClose, onRespond }: SuccessPopupProps) {
+  const [playSuccess] = useSound(successSound);
+
+  React.useEffect(() => {
+    if (message) {
+      playSuccess();
+    }
+  }, [message, playSuccess]);
+
   return (
     <Modal
       isOpen={!!message}
@@ -23,10 +34,11 @@ export default function SuccessPopup({ message, onClose, onRespond }: SuccessPop
         <p className="text-gray-700 break-words">{message}</p>
         <button
           className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
-          onClick={() =>{
-            {onClose}
-            onRespond("OK")
+          onClick={() => {
+            onClose();
+            onRespond("OK");
           }}
+
           
         >
           OK
