@@ -2,7 +2,7 @@ import React, { type JSX } from "react";
 import { useState } from "react";
 import { apiOperadores } from "../lib/axios";
 import { useNavigate } from "react-router-dom";
-import SuccessPopup from "./CompSuccessPopup";
+import SuccessPopup from "../components/CompSuccessPopup";
 // import ErrorPopup from "./CompErrorPopup";
 // import { success } from "zod";
 

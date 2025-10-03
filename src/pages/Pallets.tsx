@@ -4,9 +4,10 @@ import { MdArrowBack } from "react-icons/md";
 import { TfiReload } from "react-icons/tfi";
 import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
-import ErrorPopup from './CompErrorPopup.tsx';
-import ConfirmationPopup from "./CompConfirmationPopup.tsx";
-import SuccessPopup from "./CompSuccessPopup";
+import ErrorPopup from '../components/CompErrorPopup.tsx';
+import ConfirmationPopup from "../components/CompConfirmationPopup.tsx";
+import SuccessPopup from "../components/CompSuccessPopup.tsx";
+import { IoEyeSharp } from 'react-icons/io5';
 
 
 // Define tipo de texto com variantes
@@ -67,6 +68,8 @@ interface Pallet {
   cod_palete: string;
   stat_pale: string;
   itens: PalletItem[];
+  cod_lane: string;
+  cod_grupo: string;
 }
 
 function Text({
@@ -102,7 +105,6 @@ export default function PalletViewSingle() {
   const navigate = useNavigate();
   const location = useLocation();
   const carga = location.state?.carga as Carga | undefined;
-
   const [pallets, setPallets] = useState<Pallet[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -195,6 +197,8 @@ export default function PalletViewSingle() {
                 .then((respItens) => ({
                   cod_palete: p.cod_palete,
                   stat_pale: p.stat_pale,
+                  cod_lane: p.cod_lane,
+                  cod_grupo: p.cod_grupo,
                   itens: Array.isArray(respItens.data?.itens)
                     ? respItens.data.itens.map((it: any) => ({
                       kanban: it.kanban ?? it.Kanban ?? "-",
@@ -447,6 +451,13 @@ export default function PalletViewSingle() {
                   />
                 </div>
               </div>
+
+              <div className="max-w-lg w-full text-xl">
+                <IoEyeSharp className="inline text-gray-500 w-6 h-6 mr-2" />
+                Detalhes do Palete
+              </div>
+
+
 
               <div className="max-w-lg w-full">
                 <div className="text-base font-bold text-center mb-2"
