@@ -112,6 +112,10 @@ export default function PalletViewSingle() {
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
 
+  // function chamaAPI("codCarg","codPale","codKanb","codSequ","operac"){
+
+  // }
+
   async function confirmaPallet(response: string) {
     if (response === "s") {
       try {
@@ -145,14 +149,14 @@ export default function PalletViewSingle() {
   }
 
   async function handleIniciarPalete() {
-    if (palletAtual?.cod_palete && palletAtual.cod_palete !== "01" ||  palletAtual?.stat_pale == "0") {
-      setConfirm(`Deseja iniciar o Palete?`);
-    }
+      if (palletAtual?.cod_palete && palletAtual.cod_palete !== "01" ||  palletAtual?.stat_pale == "0") {
+        setConfirm(`Deseja iniciar o Palete?`);
+      }
 
-    if (Confirm == 's'){
-      confirmaPallet('s');
+      if (Confirm == 's'){
+        confirmaPallet('s');
+      }
     }
-  }
 
   useEffect(() => {
     if (palletIndex > pallets.length - 1) {
@@ -223,19 +227,27 @@ export default function PalletViewSingle() {
         setLoading(false);
       });
   }, [carga]);
-
+  
   //Validação se a etiqueta do cliente confere o kanban GDBR
   const [kanbanGDBR, setKanbanGDBR] = useState("");
   const [, setEtiquetaCliente] = useState("");
   const etiquetaClienteRef = useRef<HTMLInputElement>(null);
 
-
-  //Validação se a quantia de caixas lidas é menor que a quantidade de caixas do pallet
-  // const [totalCaixas, setTotalCaixas] = useState(0);
-  // const [caixasLidas, setCaixasLidas] = useState(0);
+  // verifica etiqueta cliente e kanban GDBR
+  function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setKanbanGDBR(e.target.value);
+    if (e.target.value.length === 12) {
+      etiquetaClienteRef.current?.focus();
+    }
+  }
+  function handleEtiquetaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const etiquetaCliente = e.target.value;
+    setEtiquetaCliente(etiquetaCliente);
+    verificaKanban(etiquetaCliente);
+  }
 
   //Verifica se item pertence ao pallet
-  function itemPallet() {
+  async function kanbanPallet() {
     if (!kanbanGDBR || pallets.length === 0) {
       setErro("Nenhum palete ou Kanban informado.");
       return;
@@ -260,6 +272,37 @@ export default function PalletViewSingle() {
         const idx = pallets.findIndex((pl) => pl.cod_palete === p.pallet);
         if (idx >= 0) setPalletIndex(idx);
         encontrado = true;
+
+        try {
+        setLoading(true);
+
+        const resp = await apiPallets.post("", {
+          "codCarg": carga?.cod_carg,
+          "codPale": palletAtual?.cod_palete,
+          "codKanb": kanbanGDBR.split("|")[1] || "",
+          "codSequ": palletAtual?.itens[0]?.sequen || "",
+          "operac" : "1"
+        });
+        console.log(resp)
+        console.log(palletAtual?.itens[0]?.sequen || "")
+        const data = resp.data;
+
+        // chamaAPI("codCarg","codPale","codKanb","codSequ","operac")
+
+        if (data && data.codCarg && data.codPale) {
+          setSucess(`Deu certo eba!`);
+          console.log("Enviado pra API");
+        } else if (data && data.Erro) {
+          setErro(data.Erro);
+        } else {
+          setErro("Falha ao atualizar o status do item");
+        }
+      } catch (err) {
+        setErro("Erro ao conectar com a API.");
+      } finally {
+        setLoading(false);
+      }
+
         break;
       }
     }
@@ -271,21 +314,6 @@ export default function PalletViewSingle() {
     }
   }
 
-  // verifica etiqueta cliente e kanban GDBR
-  function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setKanbanGDBR(e.target.value);
-
-    if (e.target.value.length === 12) {
-      etiquetaClienteRef.current?.focus();
-    }
-  }
-
-  function handleEtiquetaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const etiquetaCliente = e.target.value;
-    setEtiquetaCliente(etiquetaCliente);
-    verificaKanban(etiquetaCliente);
-  }
-
   function verificaKanban(etiqueta: string) {
   if (!kanbanGDBR || !etiqueta) return;
 
@@ -293,7 +321,7 @@ export default function PalletViewSingle() {
     etiquetaClienteRef.current?.blur(); 
     if (kanbanGDBR.includes(etiqueta)) {
       setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
-      itemPallet();
+      kanbanPallet();
       setErro(null); 
     } else {
       setErro(`Kanban GDBR ${kanbanGDBR} não confere Etiqueta Cliente ${etiqueta}`);
@@ -305,31 +333,35 @@ export default function PalletViewSingle() {
   }
 }
 
+//Validação se a quantia de caixas lidas é menor que a quantidade de caixas do pallet
+  const [totalCaixas, setTotalCaixas] = useState(0);
+  const [caixasLidas, setCaixasLidas] = useState(0);
+
   //verifica quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
-  // function Caixas() {
-  //   if (!palletAtual) return;
+  function Caixas() {
+    if (!palletAtual) return;
 
-  //   setTotalCaixas((item) =>
-  //     palletAtual.itens.reduce(
-  //       (acc, item) => acc + Number(item.qtd_caixa || 0),
-  //       0
-  //     )
-  //   );
-  //   setCaixasLidas(palletAtual.itens.filter((item) => item.lido).length);
+    setTotalCaixas((item) =>
+      palletAtual.itens.reduce(
+        (acc, item) => acc + Number(item.qtd_caixa || 0),
+        0
+      )
+    );
+    setCaixasLidas(palletAtual.itens.filter((item) => item.lido).length);
 
-  //   if (caixasLidas < totalCaixas) {
-  //     setErro(
-  //       `Caixas lidas: ${caixasLidas}/${totalCaixas} - Ainda faltam caixas para ler.`
-  //     );
-  //   } else {
-  //     console.log(
-  //       `Caixas lidas: ${caixasLidas}/${totalCaixas} - Todas as caixas foram lidas.`
-  //     );
-  //   }
-  // }
+    if (caixasLidas < totalCaixas) {
+      setErro(
+        `Caixas lidas: ${caixasLidas}/${totalCaixas} - Ainda faltam caixas para ler.`
+      );
+    } else {
+      console.log(
+        `Caixas lidas: ${caixasLidas}/${totalCaixas} - Todas as caixas foram lidas.`
+      );
+    }
+  }
 
   //verifica se há paletes não lidos completamente (com itens pendentes)
-  function verificaPalete() {
+   function verificaPalete() {
     if (!palletAtual) return;
 
     const itensPendentes = palletAtual.itens.filter((item) => !item.lido);
@@ -355,7 +387,6 @@ export default function PalletViewSingle() {
           .join(", ")}`
       );
     } else {
-      console.log(`A Carga está completa.`);
     }
   }
 
@@ -549,9 +580,9 @@ export default function PalletViewSingle() {
                   className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
                   disabled={palletIndex === totalPallets - 1}
                   onClick={() => {
-                    handleIniciarPalete()
                     if (palletAtual.stat_pale == "2" || palletAtual.stat_pale == "3") {
                       setPalletIndex((i) => Math.min(i + 1, totalPallets - 1))
+                      handleIniciarPalete()
                     }else if (palletAtual.stat_pale == "0" || palletAtual.stat_pale == "1"){
                       // Caixas();
                       Verificacarga();
