@@ -5,10 +5,7 @@ import { TfiReload } from "react-icons/tfi";
 import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
 import ErrorPopup from '../components/CompErrorPopup.tsx';
-import ConfirmationPopup from "../components/CompConfirmationPopup.tsx";
 import SuccessPopup from "../components/CompSuccessPopup.tsx";
-import { IoEyeSharp } from 'react-icons/io5';
-
 
 // Define tipo de texto com variantes
 const textVariants = {
@@ -109,7 +106,6 @@ export default function PalletViewSingle() {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [success, setSucess] = useState<string | null>(null);
-  const [Confirm, setConfirm] = useState<string | null>(null);
   const [palletIndex, setPalletIndex] = useState(0);
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
@@ -117,48 +113,6 @@ export default function PalletViewSingle() {
   // function chamaAPI("codCarg","codPale","codKanb","codSequ","operac"){
 
   // }
-
-  async function confirmaPallet(response: string) {
-    if (response === "s") {
-      try {
-        setLoading(true);
-
-        const resp = await apiPallets.post("", {
-          "codCarg": carga?.cod_carg,
-          "codPale": palletAtual?.cod_palete,
-          "codKanb": kanbanGDBR.split("|")[1] || "",
-          "codSequ": palletAtual?.itens[0]?.sequen || "",
-          "operac" : "1"
-        });
-        console.log(resp)
-        console.log(palletAtual?.itens[0]?.sequen || "")
-        const data = resp.data;
-
-        if (data && data.codCarg && data.codPale) {
-          setSucess(`Deu certo eba!`);
-          console.log("Enviado pra API");
-        } else if (data && data.Erro) {
-          setErro(data.Erro);
-        } else {
-          setErro("Falha ao atualizar o status do item");
-        }
-      } catch (err) {
-        setErro("Erro ao conectar com a API.");
-      } finally {
-        setLoading(false);
-      }
-    }
-  }
-
-  async function handleIniciarPalete() {
-      if (palletAtual?.cod_palete && palletAtual.cod_palete !== "01" ||  palletAtual?.stat_pale == "0") {
-        setConfirm(`Deseja iniciar o Palete?`);
-      }
-
-      if (Confirm == 's'){
-        confirmaPallet('s');
-      }
-    }
 
   useEffect(() => {
     if (palletIndex > pallets.length - 1) {
@@ -257,12 +211,13 @@ export default function PalletViewSingle() {
       return;
     }
     const kanbanGDBRNumerico = kanbanGDBR.split("|")[1] || "";
+    console.log(kanbanGDBRNumerico)
 
     //array com kanbans de cada pallet
     const todosKanbansPallet: { pallet: string; kanbans: string[] }[] =
       pallets.map((pallet) => {
         const kanbansPallet = pallet.itens.map((item) => item.kanban);
-        return { pallet: pallet.cod_palete, kanbans: kanbansPallet };
+        return { pallet: pallet.cod_palete, kanbans: kanbansPallet};
       });
 
     console.log("Todos os kanbans dos paletes:", todosKanbansPallet);
@@ -276,6 +231,8 @@ export default function PalletViewSingle() {
         const idx = pallets.findIndex((pl) => pl.cod_palete === p.pallet);
         if (idx >= 0) setPalletIndex(idx);
         encontrado = true;
+
+        // verificaItem()
 
         try {
         setLoading(true);
@@ -306,7 +263,6 @@ export default function PalletViewSingle() {
       } finally {
         setLoading(false);
       }
-
         break;
       }
     }
@@ -337,12 +293,24 @@ export default function PalletViewSingle() {
   }
 }
 
+//verifica se há paletes não lidos completamente (com itens pendentes)
+   function verificaPalete() {
+    if (!palletAtual) return;
+
+    const itensPendentes = palletAtual.itens.filter((item) => !item.lido);
+    if (itensPendentes.length > 0) {
+      setErro(`O Palete ${palletAtual.cod_palete} possui itens pendentes.`);
+    } else {
+      console.log(`O Palete ${palletAtual.cod_palete} está completo.`);
+    }
+  }
+
 //Validação se a quantia de caixas lidas é menor que a quantidade de caixas do pallet
   const [totalCaixas, setTotalCaixas] = useState(0);
   const [caixasLidas, setCaixasLidas] = useState(0);
 
   //verifica quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
-  function Caixas() {
+  function caixas() {
     if (!palletAtual) return;
 
     setTotalCaixas((item) =>
@@ -364,20 +332,8 @@ export default function PalletViewSingle() {
     }
   }
 
-  //verifica se há paletes não lidos completamente (com itens pendentes)
-   function verificaPalete() {
-    if (!palletAtual) return;
-
-    const itensPendentes = palletAtual.itens.filter((item) => !item.lido);
-    if (itensPendentes.length > 0) {
-      setErro(`O Palete ${palletAtual.cod_palete} possui itens pendentes.`);
-    } else {
-      console.log(`O Palete ${palletAtual.cod_palete} está completo.`);
-    }
-  }
-
   //verifica se a carga não foi completada (com palletes pendentes)
-  function Verificacarga() {
+  function verificaCarga() {
     if (pallets.length === 0) return;
 
     const palletesPendentes = pallets.filter((pallet) =>
@@ -391,6 +347,17 @@ export default function PalletViewSingle() {
           .join(", ")}`
       );
     } else {
+    }
+  }
+
+   //verifica se item está completo para iniciar a proxima leitura e sequencial dos itens obrigatórios
+
+  console.log(palletAtual?.itens[0]?.sequen)
+  function verificaItem(){
+    if (palletAtual?.itens[0]?.sequen != "0"){
+     
+    }else{
+
     }
   }
 
@@ -440,17 +407,7 @@ export default function PalletViewSingle() {
             </Text>
           )}
 
-
           <ErrorPopup message={erro} onClose={() => setErro("")} />
-
-          <ConfirmationPopup
-            message={Confirm}
-            onRespond={(response: string) => {
-              setConfirm(null);
-              confirmaPallet(response)
-            }}
-            onClose={() => setConfirm(null)}
-          />
 
           {!loading && !erro && palletAtual && (
             <>
@@ -460,7 +417,7 @@ export default function PalletViewSingle() {
                   autoFocus
                   placeholder="Kanban GDBR"
                   className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
-                  onChange={handleKanbanGDBRChange}
+                  onChange= {handleKanbanGDBRChange}
                 />
                 <div className="flex items-center gap-2">
                   <input
@@ -483,12 +440,9 @@ export default function PalletViewSingle() {
                 </div>
               </div>
 
-              <div className="max-w-lg w-full text-xl">
-                <IoEyeSharp className="inline text-gray-500 w-6 h-6 mr-2" />
-                Detalhes do Palete
+               <div className="max-w-lg w-full text-xl">
+                  <strong>Lane: </strong> {palletAtual.cod_lane} | <strong>Grupo: </strong> {palletAtual.cod_grupo}
               </div>
-
-
 
               <div className="max-w-lg w-full">
                 <div className="text-base font-bold text-center mb-2"
@@ -591,18 +545,16 @@ export default function PalletViewSingle() {
                   className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
                   disabled={palletIndex === totalPallets - 1}
                   onClick={() => {
-                    if (palletAtual.stat_pale == "2" || palletAtual.stat_pale == "3") {
+                    if (palletAtual.stat_pale == "2" || palletAtual.stat_pale == "3" || palletAtual.stat_pale == "0") {
                       setPalletIndex((i) => Math.min(i + 1, totalPallets - 1))
-                      handleIniciarPalete()
-                    }else if (palletAtual.stat_pale == "0" || palletAtual.stat_pale == "1"){
-                      // Caixas();
-                      Verificacarga();
-                      verificaPalete()                
+                    }else if (palletAtual.stat_pale == "1"){
+                      verificaCarga();
+                      verificaPalete()               
                     }else {
                       setErro("Não é possível iniciar o próximo palete sem finalizar o anterior. Por favor, finalize a montagem e tente novamente")
                     }
                   }
-                  }
+                }
                 >
                   Próximo
                 </button>
