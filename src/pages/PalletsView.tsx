@@ -3,7 +3,7 @@ import { apiItens, apiPallets } from "../lib/axios";
 import { MdArrowBack } from "react-icons/md";
 import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
-import ErrorPopup from './CompErrorPopup.tsx';
+import ErrorPopup from '../components/CompErrorPopup.tsx';
 
 
 const textVariants = {

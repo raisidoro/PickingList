@@ -6,8 +6,8 @@ import { CiFilter } from "react-icons/ci";
 import { IoEyeSharp } from 'react-icons/io5';
 import { TfiReload } from "react-icons/tfi";
 import { useNavigate } from "react-router-dom";
-import ErrorPopup from "./CompErrorPopup.tsx";
-import ConfirmationPopup from "./CompConfirmationPopup.tsx";
+import ErrorPopup from "../components/CompErrorPopup.tsx";
+import ConfirmationPopup from "../components/CompConfirmationPopup.tsx";
 
 const textVariants = {
   default: "text-xl sm:text-2xl",
