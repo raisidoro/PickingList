@@ -351,15 +351,21 @@ export default function PalletViewSingle() {
   }
 
    //verifica se item está completo para iniciar a proxima leitura e sequencial dos itens obrigatórios
-
   console.log(palletAtual?.itens[0]?.sequen)
-  function verificaItem(){
-    if (palletAtual?.itens[0]?.sequen != "0"){
-     
-    }else{
+  function verificaItem() {
+  const primeiroSequencial = palletAtual?.itens[0]?.sequen;
 
-    }
+  if (primeiroSequencial && primeiroSequencial !== "0") {
+
+
+    console.log("Operador deve começar pelo primeiro item e só pode passar para o próximo após finalizar.");
+   
+    
+  } else {
+    
   }
+}
+
 
   return (
     <main
@@ -441,7 +447,7 @@ export default function PalletViewSingle() {
               </div>
 
                <div className="max-w-lg w-full text-xl">
-                  <strong>Lane: </strong> {palletAtual.cod_lane} | <strong>Grupo: </strong> {palletAtual.cod_grupo}
+                  <strong>Lane: </strong> {palletAtual.cod_lane} | <strong>Group: </strong> {palletAtual.cod_grupo}
               </div>
 
               <div className="max-w-lg w-full">
@@ -545,16 +551,12 @@ export default function PalletViewSingle() {
                   className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
                   disabled={palletIndex === totalPallets - 1}
                   onClick={() => {
-                    if (palletAtual.stat_pale == "2" || palletAtual.stat_pale == "3" || palletAtual.stat_pale == "0") {
-                      setPalletIndex((i) => Math.min(i + 1, totalPallets - 1))
-                    }else if (palletAtual.stat_pale == "1"){
-                      verificaCarga();
-                      verificaPalete()               
-                    }else {
-                      setErro("Não é possível iniciar o próximo palete sem finalizar o anterior. Por favor, finalize a montagem e tente novamente")
+                    if (palletAtual?.stat_pale !== "1") {
+                      setPalletIndex(i => Math.min(i + 1, totalPallets - 1));
+                    } else {
+                      setErro("Pallet está em conferência! Por favor, finalize a montagem antes de passar para o próximo.");
                     }
-                  }
-                }
+                  }}
                 >
                   Próximo
                 </button>

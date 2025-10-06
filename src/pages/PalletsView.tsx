@@ -62,6 +62,8 @@ interface PalletItem {
 interface Pallet {
   cod_palete: string;
   stat_pale: string;
+  cod_lane: string;
+  cod_grupo: string;
   itens: PalletItem[];
 }
 
@@ -145,6 +147,8 @@ export default function PalletViewSingle() {
                 .then((respItens) => ({
                   cod_palete: p.cod_palete,
                   stat_pale: p.stat_pale,
+                  cod_lane: p.cod_lane,
+                  cod_grupo: p.cod_grupo,
                   itens: Array.isArray(respItens.data?.itens)
                     ? respItens.data.itens.map((it: any) => ({
                         kanban: it.kanban ?? it.Kanban ?? "-",
@@ -226,6 +230,9 @@ export default function PalletViewSingle() {
                     Modo de visualização
                   </span>
                 </div>
+                <div className="max-w-lg w-full text-xl">
+                  <strong>Lane: </strong> {palletAtual.cod_lane} | <strong>Group: </strong> {palletAtual.cod_grupo}
+              </div>
                 <div className="text-base font-bold text-center mb-2">
                   Pallet{" "}
                   {palletAtual?.cod_palete ??

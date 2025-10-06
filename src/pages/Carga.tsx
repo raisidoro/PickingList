@@ -140,9 +140,13 @@ export default function CargaList({}: Props) {
     return value?.trim() ?? "";
   }
 
-  const statusOptions = Array.from(
-    new Set(cargas.map((c) => safeTrim(c.stat_col)))
-  );
+  const statusOptions = [
+  { code: "0", label: "Pendente" },
+  { code: "1", label: "Em conferência" },
+  { code: "2", label: "Divergente" },
+  { code: "3", label: "Conferida" }
+];
+
 
   const cargasFiltradas = cargas.filter((carga) => {
     const busca = searchTerm.toLowerCase();
@@ -154,7 +158,7 @@ export default function CargaList({}: Props) {
       safeTrim(carga.stat_col).toLowerCase().includes(busca);
     const matchStatus =
       selectedStatus.length === 0 ||
-      selectedStatus.includes(safeTrim(carga.stat_col));
+      selectedStatus.includes(String(safeTrim(carga.stat_col)));
     return matchSearch && matchStatus;
   });
 
@@ -236,9 +240,10 @@ export default function CargaList({}: Props) {
 
           {/* Search and Filter bar */}
           <div
-            className="flex items-center mb-2 border border-gray-300 rounded-xl overflow-hidden 
+            className="flex items-center mb-2 border border-gray-300 rounded-xl
             focus-within:border-gray-600 transition-colors bg-white shadow px-2 relative"
           >
+
             <input
               type="text"
               placeholder="Buscar cargas..."
@@ -258,10 +263,12 @@ export default function CargaList({}: Props) {
                 ×
               </button>
             )}
-            <button
+           <button
               type="button"
               aria-label="Filtrar por status"
-              onClick={() => setShowStatusFilter((v) => !v)}
+              onClick={() => { 
+                setShowStatusFilter((v) => !v);
+              }}
               className="px-1"
             >
               <CiFilter className="text-gray-500 w-6 h-6 mx-2" />
@@ -269,28 +276,28 @@ export default function CargaList({}: Props) {
 
             {/* Small dropdown filter box */}
             {showStatusFilter && (
-              <div className="absolute top-full right-2 mt-1 w-44 bg-white border border-gray-300 rounded-lg shadow-lg p-3 z-20">
+                <div className="absolute top-full right-2 mt-1 w-44 bg-white border border-gray-300 rounded-lg shadow-lg p-3 z-50">
                 <div className="flex flex-col max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200">
-                  {statusOptions.map((status) => (
+                  {statusOptions.map((opt) => (
                     <label
-                      key={status}
+                      key={opt.code}
                       className="flex items-center gap-2 mb-1 cursor-pointer text-gray-700"
                     >
                       <input
                         type="checkbox"
-                        checked={selectedStatus.includes(status)}
+                        checked={selectedStatus.includes(opt.code)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedStatus((old) => [...old, status]);
+                            setSelectedStatus((old) => [...old, opt.code]);
                           } else {
                             setSelectedStatus((old) =>
-                              old.filter((s) => s !== status)
+                              old.filter((s) => s !== opt.code)
                             );
                           }
                         }}
                         className="form-checkbox h-4 w-4 text-blue-600"
                       />
-                      <span>{getStatusText(status)}</span>
+                      <span>{opt.label}</span>
                     </label>
                   ))}
                 </div>
