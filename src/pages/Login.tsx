@@ -135,21 +135,24 @@ function LoginForm() {
 
     try {
       const params = {
-        cNfc: "-", 
-        cMat: matricula.trim(),
-        cPass: senha.trim(),
+      cNfc: "-", 
+      cMat: matricula.trim(),
+      cPass: senha.trim(),
       };
 
       const resp = await apiOperadores.get("", { params });
       const data = resp.data;
 
       if (data && data.Nome && data.Matricula) {
-        setSucess(`Bem-vindo, ${data.Nome.trim()}`);
+      setSucess(`Bem-vindo, ${data.Nome.trim()}`);
+      setTimeout(() => {
+        setSucess(null);
         navigate("/Carga");
+      }, 1000); 
       } else if (data && data.Erro) {
-        setErro(data.Erro);
+      setErro(data.Erro);
       } else {
-        setErro("Falha de autenticação. Tente novamente.");
+      setErro("Falha de autenticação. Tente novamente.");
       }
     } catch (err) {
       setErro("Erro ao conectar.");
