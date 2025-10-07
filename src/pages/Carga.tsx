@@ -113,7 +113,7 @@ export default function CargaList({}: Props) {
 
         const resp = await apiCarga.post("", { 
           "codCarg": cargaSelecionada?.cod_carg,
-          "status": "2" });
+          "status": "1" });
         console.log(resp)
         const data = resp.data;
 
