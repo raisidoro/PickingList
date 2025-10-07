@@ -109,6 +109,9 @@ export default function PalletViewSingle() {
   const [palletIndex, setPalletIndex] = useState(0);
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
+  const pecas = palletAtual?.itens[0]?.qtd_peca || "";
+
+  console.log(`Peças: ${pecas}`);
 
   // function chamaAPI("codCarg","codPale","codKanb","codSequ","operac"){
 
@@ -230,9 +233,7 @@ export default function PalletViewSingle() {
         );
         const idx = pallets.findIndex((pl) => pl.cod_palete === p.pallet);
         if (idx >= 0) setPalletIndex(idx);
-        encontrado = true;
-
-        // verificaItem()
+        encontrado = true;       
 
         try {
         setLoading(true);
@@ -242,7 +243,8 @@ export default function PalletViewSingle() {
           "codPale": palletAtual?.cod_palete,
           "codKanb": kanbanGDBR.split("|")[1] || "",
           "codSequ": palletAtual?.itens[0]?.sequen || "",
-          "operac" : "1"
+          "operac" : "1" 
+
         });
         console.log(resp)
         console.log(palletAtual?.itens[0]?.sequen || "")
@@ -351,21 +353,18 @@ export default function PalletViewSingle() {
   }
 
    //verifica se item está completo para iniciar a proxima leitura e sequencial dos itens obrigatórios
-  console.log(palletAtual?.itens[0]?.sequen)
+  console.log(`Sequencia: ${palletAtual?.itens[0]?.sequen}`)
   function verificaItem() {
   const primeiroSequencial = palletAtual?.itens[0]?.sequen;
 
   if (primeiroSequencial && primeiroSequencial !== "0") {
 
-
-    console.log("Operador deve começar pelo primeiro item e só pode passar para o próximo após finalizar.");
-   
+    console.log("Operador deve começar pelo primeiro item e só pode passar para o próximo após finalizar.");   
     
   } else {
     
   }
 }
-
 
   return (
     <main

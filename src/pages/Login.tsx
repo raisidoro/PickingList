@@ -124,7 +124,7 @@ function LoginForm() {
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [Sucess, setSucess] = useState<string | null>(null);
+  const [success, setSucess] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -198,18 +198,19 @@ function LoginForm() {
             {erro}
           </Text>
         )}
+
+        <SuccessPopup 
+          message={success} 
+          onClose={() => setSucess(null)} 
+          onRespond={() => setSucess(null)}
+        />
+
         <Button
           variant="primary"
           className="py-3"
           type="submit"
           disabled={loading}
         >
-        <SuccessPopup 
-        message={Sucess} 
-        onRespond={() => {
-          setSucess(null);
-        }}
-        onClose={() => setSucess(null)}/>
           {loading ? "Entrando..." : "Entrar"}
         </Button>
       </form>

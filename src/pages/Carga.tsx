@@ -97,7 +97,7 @@ export default function CargaList({}: Props) {
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const navigate = useNavigate();
   const [Confirm, setConfirm] = useState<string | null>(null);
-  const [, setSucess] = useState<string | null>(null);
+  const [success, setSucess] = useState<string | null>(null);
 
   async function confirmaCarga(response: string, selectedCod: string | null) {
     if (response === "s" && selectedCod) {
