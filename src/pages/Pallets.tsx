@@ -109,9 +109,7 @@ export default function PalletViewSingle() {
   const [palletIndex, setPalletIndex] = useState(0);
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
-  const pecas = palletAtual?.itens[0]?.qtd_peca || "";
 
-  console.log(`Peças: ${pecas}`);
 
   // function chamaAPI("codCarg","codPale","codKanb","codSequ","operac"){
 
@@ -229,43 +227,44 @@ export default function PalletViewSingle() {
     for (const p of todosKanbansPallet) {
       if (p.kanbans.includes(kanbanGDBRNumerico)) {
         console.log(
-          ` Kanban ${kanbanGDBRNumerico} encontrado no palete ${p.pallet}`
+          ` Kanban ${kanbanGDBRNumerico} encontrado no palete ${p.pallet}`,
+          verificaItem()
         );
         const idx = pallets.findIndex((pl) => pl.cod_palete === p.pallet);
         if (idx >= 0) setPalletIndex(idx);
         encontrado = true;       
 
-        try {
-        setLoading(true);
+        // // try {
+        // setLoading(true);
 
-        const resp = await apiPallets.post("", {
-          "codCarg": carga?.cod_carg,
-          "codPale": palletAtual?.cod_palete,
-          "codKanb": kanbanGDBR.split("|")[1] || "",
-          "codSequ": palletAtual?.itens[0]?.sequen || "",
-          "operac" : "1" 
+        // const resp = await apiPallets.post("", {
+        //   "codCarg": carga?.cod_carg,
+        //   "codPale": palletAtual?.cod_palete,
+        //   "codKanb": kanbanGDBR.split("|")[1] || "",
+        //   "codSequ": palletAtual?.itens[0]?.sequen || "",
+        //   "operac" : "1" 
 
-        });
-        console.log(resp)
-        console.log(palletAtual?.itens[0]?.sequen || "")
-        const data = resp.data;
+        // });
+        // console.log(resp)
+        // console.log(palletAtual?.itens[0]?.sequen || "")
+        // const data = resp.data;
 
-        // chamaAPI("codCarg","codPale","codKanb","codSequ","operac")
+        // // chamaAPI("codCarg","codPale","codKanb","codSequ","operac")
 
-        if (data && data.codCarg && data.codPale) {
-          setSucess(`Deu certo eba!`);
-          console.log("Enviado pra API");
-        } else if (data && data.Erro) {
-          setErro(data.Erro);
-        } else {
-          setErro("Falha ao atualizar o status do item");
-        }
-      } catch (err) {
-        setErro("Erro ao conectar com a API.");
-      } finally {
-        setLoading(false);
-      }
-        break;
+        // if (data && data.codCarg && data.codPale) {
+        //   setSucess(`Deu certo eba!`);
+        //   console.log("Enviado pra API");
+        // } else if (data && data.Erro) {
+        //   setErro(data.Erro);
+        // } else {
+        //   setErro("Falha ao atualizar o status do item");
+        // }
+      // } catch (err) {
+      //   setErro("Erro ao conectar com a API.");
+      // } finally {
+      //   setLoading(false);
+      // }
+      //   break;
       }
     }
 
@@ -352,19 +351,60 @@ export default function PalletViewSingle() {
     }
   }
 
-   //verifica se item está completo para iniciar a proxima leitura e sequencial dos itens obrigatórios
-  console.log(`Sequencia: ${palletAtual?.itens[0]?.sequen}`)
+   //Verifica sequencial dos itens
   function verificaItem() {
-  const primeiroSequencial = palletAtual?.itens[0]?.sequen;
-
-  if (primeiroSequencial && primeiroSequencial !== "0") {
-
-    console.log("Operador deve começar pelo primeiro item e só pode passar para o próximo após finalizar.");   
-    
-  } else {
-    
+  if (!palletAtual || !palletAtual.itens) {
+    console.log("verificaItem: palletAtual ou itens não definidos");
+    return () => false;
   }
+  const itens = palletAtual.itens;
+  const temSequencial = (seq: string) => seq && seq !== "-" && seq !== "" && seq !== "0";
+
+  const todosComSequencial = itens.every((item) => temSequencial(item.sequen));
+  const nenhumComSequencial = itens.every((item) => !temSequencial(item.sequen));
+
+  console.log("verificaItem: todosComSequencial =", todosComSequencial);
+  console.log("verificaItem: nenhumComSequencial =", nenhumComSequencial);
+
+  if (todosComSequencial) {
+    const menorSequencialPendente = itens
+      .filter(item => item.status !== "3")
+      .map(item => parseInt(item.sequen, 10))
+      .sort((a, b) => a - b)[0];
+    console.log("verificaItem: menorSequencialPendente (todosComSequencial) =", menorSequencialPendente);
+
+    return (sequencialAtual: string) => {
+      const sequencialNum = parseInt(sequencialAtual, 10);
+      const valida = sequencialNum === menorSequencialPendente;
+      console.log(`verificaItem: validando sequencialAtual=${sequencialAtual} (num=${sequencialNum}) -> ${valida}`);
+      return valida;
+    };
+  }
+
+  if (nenhumComSequencial) {
+    console.log("verificaItem: nenhum item tem sequencial, liberando leitura em qualquer ordem");
+    return () => true;
+  }
+
+  const menorSequencialPendente = itens
+    .filter(item => item.status !== "3" && temSequencial(item.sequen))
+    .map(item => parseInt(item.sequen, 10))
+    .sort((a, b) => a - b)[0];
+  console.log("verificaItem: menorSequencialPendente (misto) =", menorSequencialPendente);
+
+  return (sequencialAtual: string) => {
+    if (temSequencial(sequencialAtual)) {
+      const sequencialNum = parseInt(sequencialAtual, 10);
+      const valida = sequencialNum === menorSequencialPendente;
+      console.log(`verificaItem: validando sequencialAtual (misto)=${sequencialAtual} (num=${sequencialNum}) -> ${valida}`);
+      return valida;
+    }
+    console.log(`verificaItem: sequencialAtual='${sequencialAtual}' sem sequencial válido, liberando leitura`);
+    return true;
+  };
 }
+
+
 
   return (
     <main
