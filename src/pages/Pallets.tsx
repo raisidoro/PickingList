@@ -356,11 +356,8 @@ export default function PalletViewSingle() {
   const primeiroSequencial = palletAtual?.itens[0]?.sequen;
 
   if (primeiroSequencial && primeiroSequencial !== "0") {
-
-
     console.log("Operador deve começar pelo primeiro item e só pode passar para o próximo após finalizar.");
    
-    
   } else {
     
   }
