@@ -163,10 +163,14 @@ export default function CargaList({}: Props) {
   });
 
   function handleSelect(carga: Carga) {
-    setConfirm(null);
-    setSelectedCod(carga.cod_carg)
-    setConfirm(`Deseja iniciar a carga selecionada para o cliente ${carga.nome_cli} com data de coleta para ${carga.data_col} as ${carga.hora_col}?`); 
-  }  
+    if(carga.stat_col == "0"){
+      setConfirm(null);
+      setSelectedCod(carga.cod_carg)
+      setConfirm(`Deseja iniciar a carga selecionada para o cliente ${carga.nome_cli} com data de coleta para ${carga.data_col} as ${carga.hora_col}?`);
+    }else{
+      navigate("/Pallets", { state: { carga } })
+    }
+  }
 
   // Handle confirming filter selection and hiding filter box
   function applyFilter() {
