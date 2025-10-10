@@ -275,34 +275,38 @@ export default function PalletViewSingle() {
   }
 
 //Validação se a quantia de caixas lidas é menor que a quantidade de caixas do pallet
-  var [totalCaixas, setTotalCaixas] = useState(0);
+  const totalCaixasstr = palletAtual?.itens[1]?.qtd_caixa || "";
+  const totalCaixas = Number(totalCaixasstr)
   var [caixasLidas, setCaixasLidas] = useState(0);
+  const caixasLidasn = caixasLidas.toString()
 
   //verifica quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
   async function caixas() {
     if (!palletAtual) return;
 
-    setTotalCaixas((item) =>
-      palletAtual.itens.reduce(
-        (acc, item) => acc + Number(item.qtd_caixa || 0),
-        0
-      )
-    );
-    setCaixasLidas(palletAtual.itens.filter((item) => item.lido).length);
-
     if (caixasLidas < totalCaixas){
       caixasLidas++;
+
+      console.log(`
+          Leitura de Caixa
+          "codCarg": ${carga?.cod_carg},
+          "codPale": ${palletAtual?.cod_palete.trim()},
+          "codKanb": ${kanbanGDBR.split("|")[1] || ""},
+          "codSequ": ${palletAtual?.itens[0]?.sequen || ""},
+          "operac" : "1",
+          "qtdrest": ${caixasLidas}`
+        )
 
       try {
         setLoading(true);
 
-        const resp = await apiPallets.post("", {
+        const resp = await apiItens.post("", {
           "codCarg": carga?.cod_carg,
-          "codPale": palletAtual?.cod_palete,
+          "codPale": palletAtual?.cod_palete.trim(),
           "codKanb": kanbanGDBR.split("|")[1] || "",
           "codSequ": palletAtual?.itens[0]?.sequen || "",
-          "operac" : "1",
-          "qtdrest": caixasLidas
+          "qtdrest": caixasLidasn,
+          "operac" : "1"
         });
         console.log(resp)
         console.log(palletAtual?.itens[0]?.sequen || "")
@@ -324,20 +328,29 @@ export default function PalletViewSingle() {
         setLoading(false);
       }
         
-    }else if (caixasLidas === totalCaixas){
+    }else if (caixasLidas === totalCaixas && palletAtual?.itens[0]?.status === "1"){
       //mandar para API p item finalizado
-      setSucess("Todas as caixas foram lidas com suceso, item finalizado!")
 
       try {
         setLoading(true);
 
-        const resp = await apiPallets.post("", {
+        console.log(`
+          Finalização de item
+          "codCarg": ${carga?.cod_carg},
+          "codPale": ${palletAtual?.cod_palete},
+          "codKanb": ${kanbanGDBR.split("|")[1] || ""},
+          "codSequ": ${palletAtual?.itens[0]?.sequen || ""},
+          "qtdrest": ${caixasLidasn},
+          "operac" : "3"`
+        )
+
+        const resp = await apiItens.post("", {
           "codCarg": carga?.cod_carg,
           "codPale": palletAtual?.cod_palete,
           "codKanb": kanbanGDBR.split("|")[1] || "",
           "codSequ": palletAtual?.itens[0]?.sequen || "",
-          "operac" : "2",
-          "qtdrest": caixasLidas
+          "qtdrest": caixasLidasn,
+          "operac" : "3"
         });
         console.log(resp)
         console.log(palletAtual?.itens[0]?.sequen || "")
@@ -346,7 +359,7 @@ export default function PalletViewSingle() {
         // chamaAPI("codCarg","codPale","codKanb","codSequ","operac")
 
         if (data && data.codCarg && data.codPale) {
-          setSucess(`Deu certo eba!`);
+          setSucess("Todas as caixas foram lidas com suceso, item finalizado!")
           console.log("Enviado pra API");
         } else if (data && data.Erro) {
           setErro(data.Erro);
@@ -444,7 +457,6 @@ export default function PalletViewSingle() {
 }
 }
 
-
   return (
     <main
       className="
@@ -521,6 +533,7 @@ export default function PalletViewSingle() {
                     onClose={() => setSucess(null)} 
                     onRespond={() => setSucess(null)}
                   />
+                  <ErrorPopup message={erro} onClose={() => setErro("")} />
                 </div>
               </div>
 
