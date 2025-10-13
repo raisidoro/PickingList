@@ -109,6 +109,10 @@ export default function PalletViewSingle() {
   const [palletIndex, setPalletIndex] = useState(0);
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
+  const totalCaixasstr = palletAtual?.itens[1]?.qtd_caixa || "";
+  const totalCaixas = Number(totalCaixasstr)
+  var [caixasLidas, setCaixasLidas] = useState(0);
+  const caixasLidasn = caixasLidas.toString()
 
   // function chamaAPI("codCarg","codPale","codKanb","codSequ","operac"){
 
@@ -246,7 +250,7 @@ export default function PalletViewSingle() {
   function verificaKanban(etiqueta: string) {
   if (!kanbanGDBR || !etiqueta) return;
 
-  if (etiqueta.length === 5) {
+  if (etiqueta.length === 5 && caixasLidas < totalCaixas) {
     etiquetaClienteRef.current?.blur(); 
     if (kanbanGDBR.includes(etiqueta)) {
       setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
@@ -273,12 +277,6 @@ export default function PalletViewSingle() {
       console.log(`O Palete ${palletAtual.cod_palete} está completo.`);
     }
   }
-
-//Validação se a quantia de caixas lidas é menor que a quantidade de caixas do pallet
-  const totalCaixasstr = palletAtual?.itens[1]?.qtd_caixa || "";
-  const totalCaixas = Number(totalCaixasstr)
-  var [caixasLidas, setCaixasLidas] = useState(0);
-  const caixasLidasn = caixasLidas.toString()
 
   //verifica quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
   async function caixas() {
@@ -373,7 +371,7 @@ export default function PalletViewSingle() {
       }
 
     }else{ 
-      console.log("Todas as caixas do item já foram lidas, não foi possível ler mais caixas")
+      console.log(`Todas as caixas ${totalCaixas} do item já foram lidas ${caixasLidas}, não foi possível ler mais caixas`)
       setErro("Todas as caixas do item já foram lidas, não foi possível ler mais caixas!")
     }
   }
