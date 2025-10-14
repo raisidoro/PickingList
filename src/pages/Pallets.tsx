@@ -109,8 +109,9 @@ export default function PalletViewSingle() {
   const [palletIndex, setPalletIndex] = useState(0);
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
-  const i = palletAtual?.itens.length;
-  const totalCaixas = Number(palletAtual?.itens[0]?.qtd_caixa)
+  const [itemIndex, setItemIndex] = useState(0);
+  const itemAtual = palletAtual?.itens[itemIndex];
+  const totalCaixas = Number(itemAtual?.qtd_caixa)
   var [caixasLidas] = useState(0);
 
   // function chamaAPI("codCarg","codPale","codKanb","codSequ","operac"){
@@ -121,6 +122,7 @@ export default function PalletViewSingle() {
     if (palletIndex > pallets.length - 1) {
       setPalletIndex(Math.max(0, pallets.length - 1));
     }
+    setItemIndex(0);
   }, [pallets, palletIndex]);
 
   if (!carga) {
@@ -188,7 +190,7 @@ export default function PalletViewSingle() {
         setLoading(false);
       });
   }, [carga]);
-  
+
   //Validação se a etiqueta do cliente confere o kanban GDBR
   const [kanbanGDBR, setKanbanGDBR] = useState("");
   const [, setEtiquetaCliente] = useState("");
@@ -286,14 +288,13 @@ export default function PalletViewSingle() {
 
       console.log(`
           Leitura de Caixa
-          I: ${i}
           "codCarg": ${carga?.cod_carg},
           "codPale": ${palletAtual?.cod_palete.trim()},
           "codKanb": ${kanbanGDBR.split("|")[1] || ""},
-          "codSequ": ${palletAtual?.itens[0]?.sequen},
+          "codSequ": ${itemAtual?.sequen},
           "operac" : 1,
           "qtdrest": ${caixasLidas.toString()}
-          Total caixas: ${totalCaixas}`
+          Total caixas: ${itemAtual?.qtd_caixa}`
         )
 
       try {
@@ -303,12 +304,11 @@ export default function PalletViewSingle() {
           "codCarg": carga?.cod_carg,
           "codPale": palletAtual?.cod_palete.trim(),
           "codKanb": kanbanGDBR.split("|")[0] || "",
-          "codSequ": palletAtual?.itens[0]?.sequen,
+          "codSequ": itemAtual?.sequen,
           "qtdrest": caixasLidas.toString(),
           "operac" : 1
         });
         console.log(resp)
-        console.log(palletAtual?.itens[0]?.sequen || "")
         const data = resp.data;
 
         // chamaAPI("codCarg","codPale","codKanb","codSequ","operac")
@@ -338,7 +338,7 @@ export default function PalletViewSingle() {
           "codCarg": ${carga?.cod_carg},
           "codPale": ${palletAtual?.cod_palete},
           "codKanb": ${kanbanGDBR.split("|")[0] || ""},
-          "codSequ": ${palletAtual?.itens[0]?.sequen},
+          "codSequ": ${itemAtual?.sequen},
           "qtdrest": ${caixasLidas.toString()},
           "operac" : 3`
         )
@@ -347,7 +347,7 @@ export default function PalletViewSingle() {
           "codCarg": carga?.cod_carg,
           "codPale": palletAtual?.cod_palete,
           "codKanb": kanbanGDBR.split("|")[0] || "",
-          "codSequ": palletAtual?.itens[0]?.sequen,
+          "codSequ": itemAtual?.sequen,
           "qtdrest": caixasLidas.toString(),
           "operac" : 3
         });
