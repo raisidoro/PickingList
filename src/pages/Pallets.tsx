@@ -111,7 +111,7 @@ export default function PalletViewSingle() {
   const totalPallets = pallets.length;
   const totalCaixasstr = palletAtual?.itens[1]?.qtd_caixa || "";
   const totalCaixas = Number(totalCaixasstr)
-  var [caixasLidas, setCaixasLidas] = useState(0);
+  var [caixasLidas] = useState(0);
   const caixasLidasn = caixasLidas.toString()
 
   // function chamaAPI("codCarg","codPale","codKanb","codSequ","operac"){
@@ -290,9 +290,10 @@ export default function PalletViewSingle() {
           "codCarg": ${carga?.cod_carg},
           "codPale": ${palletAtual?.cod_palete.trim()},
           "codKanb": ${kanbanGDBR.split("|")[1] || ""},
-          "codSequ": ${palletAtual?.itens[0]?.sequen || ""},
+          "codSequ": ${palletAtual?.itens[0]?.sequen},
           "operac" : "1",
-          "qtdrest": ${caixasLidas}`
+          "qtdrest": ${caixasLidasn}
+          Total caixas: ${totalCaixas}`
         )
 
       try {
@@ -302,7 +303,7 @@ export default function PalletViewSingle() {
           "codCarg": carga?.cod_carg,
           "codPale": palletAtual?.cod_palete.trim(),
           "codKanb": kanbanGDBR.split("|")[1] || "",
-          "codSequ": palletAtual?.itens[0]?.sequen || "",
+          "codSequ": palletAtual?.itens[0]?.sequen,
           "qtdrest": caixasLidasn,
           "operac" : "1"
         });
@@ -337,7 +338,7 @@ export default function PalletViewSingle() {
           "codCarg": ${carga?.cod_carg},
           "codPale": ${palletAtual?.cod_palete},
           "codKanb": ${kanbanGDBR.split("|")[1] || ""},
-          "codSequ": ${palletAtual?.itens[0]?.sequen || ""},
+          "codSequ": ${palletAtual?.itens[0]?.sequen},
           "qtdrest": ${caixasLidasn},
           "operac" : "3"`
         )
@@ -346,12 +347,12 @@ export default function PalletViewSingle() {
           "codCarg": carga?.cod_carg,
           "codPale": palletAtual?.cod_palete,
           "codKanb": kanbanGDBR.split("|")[1] || "",
-          "codSequ": palletAtual?.itens[0]?.sequen || "",
+          "codSequ": palletAtual?.itens[0]?.sequen,
           "qtdrest": caixasLidasn,
           "operac" : "3"
         });
         console.log(resp)
-        console.log(palletAtual?.itens[0]?.sequen || "")
+        console.log(palletAtual?.itens[0]?.sequen)
         const data = resp.data;
 
         // chamaAPI("codCarg","codPale","codKanb","codSequ","operac")
@@ -531,7 +532,12 @@ export default function PalletViewSingle() {
                     onClose={() => setSucess(null)} 
                     onRespond={() => setSucess(null)}
                   />
-                  <ErrorPopup message={erro} onClose={() => setErro("")} />
+                  <ErrorPopup 
+                    message={erro} 
+                    onClose={() => setErro(null)}
+
+                  />
+
                 </div>
               </div>
 
