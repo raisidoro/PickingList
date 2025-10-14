@@ -109,10 +109,9 @@ export default function PalletViewSingle() {
   const [palletIndex, setPalletIndex] = useState(0);
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
-  const totalCaixasstr = palletAtual?.itens[1]?.qtd_caixa || "";
-  const totalCaixas = Number(totalCaixasstr)
+  const i = palletAtual?.itens.length;
+  const totalCaixas = Number(palletAtual?.itens[0]?.qtd_caixa)
   var [caixasLidas] = useState(0);
-  const caixasLidasn = caixasLidas.toString()
 
   // function chamaAPI("codCarg","codPale","codKanb","codSequ","operac"){
 
@@ -283,16 +282,17 @@ export default function PalletViewSingle() {
     if (!palletAtual) return;
 
     if (caixasLidas < totalCaixas){
-      caixasLidas++;
+      caixasLidas ++;
 
       console.log(`
           Leitura de Caixa
+          I: ${i}
           "codCarg": ${carga?.cod_carg},
           "codPale": ${palletAtual?.cod_palete.trim()},
           "codKanb": ${kanbanGDBR.split("|")[1] || ""},
           "codSequ": ${palletAtual?.itens[0]?.sequen},
-          "operac" : "1",
-          "qtdrest": ${caixasLidasn}
+          "operac" : 1,
+          "qtdrest": ${caixasLidas.toString()}
           Total caixas: ${totalCaixas}`
         )
 
@@ -302,10 +302,10 @@ export default function PalletViewSingle() {
         const resp = await apiItens.post("", {
           "codCarg": carga?.cod_carg,
           "codPale": palletAtual?.cod_palete.trim(),
-          "codKanb": kanbanGDBR.split("|")[1] || "",
+          "codKanb": kanbanGDBR.split("|")[0] || "",
           "codSequ": palletAtual?.itens[0]?.sequen,
-          "qtdrest": caixasLidasn,
-          "operac" : "1"
+          "qtdrest": caixasLidas.toString(),
+          "operac" : 1
         });
         console.log(resp)
         console.log(palletAtual?.itens[0]?.sequen || "")
@@ -337,19 +337,19 @@ export default function PalletViewSingle() {
           Finalização de item
           "codCarg": ${carga?.cod_carg},
           "codPale": ${palletAtual?.cod_palete},
-          "codKanb": ${kanbanGDBR.split("|")[1] || ""},
+          "codKanb": ${kanbanGDBR.split("|")[0] || ""},
           "codSequ": ${palletAtual?.itens[0]?.sequen},
-          "qtdrest": ${caixasLidasn},
-          "operac" : "3"`
+          "qtdrest": ${caixasLidas.toString()},
+          "operac" : 3`
         )
 
         const resp = await apiItens.post("", {
           "codCarg": carga?.cod_carg,
           "codPale": palletAtual?.cod_palete,
-          "codKanb": kanbanGDBR.split("|")[1] || "",
+          "codKanb": kanbanGDBR.split("|")[0] || "",
           "codSequ": palletAtual?.itens[0]?.sequen,
-          "qtdrest": caixasLidasn,
-          "operac" : "3"
+          "qtdrest": caixasLidas.toString(),
+          "operac" : 3
         });
         console.log(resp)
         console.log(palletAtual?.itens[0]?.sequen)
@@ -400,6 +400,7 @@ export default function PalletViewSingle() {
   const primeiroSequencial = palletAtual?.itens[0]?.sequen;
 
   if (primeiroSequencial && primeiroSequencial !== "0") {
+    setErro("Operador deve começar pelo primeiro item e só pode passar para o próximo após finalizar.");
     console.log("Operador deve começar pelo primeiro item e só pode passar para o próximo após finalizar.");
   } else {
     console.log("Não existe sequencia para está operação!")
@@ -532,10 +533,10 @@ export default function PalletViewSingle() {
                     onClose={() => setSucess(null)} 
                     onRespond={() => setSucess(null)}
                   />
+                  
                   <ErrorPopup 
-                    message={erro} 
-                    onClose={() => setErro(null)}
-
+                  message={erro} 
+                  onClose={() => setErro("")} 
                   />
 
                 </div>
