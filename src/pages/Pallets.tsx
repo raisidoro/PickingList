@@ -30,6 +30,7 @@ type CardProps = React.HTMLAttributes<HTMLDivElement> & {
   className?: string;
 };
 
+// Dados da carga
 export interface Carga {
   cod_carg: string;
   cod_cli: string;
@@ -40,6 +41,7 @@ export interface Carga {
   stat_col: string;
 }
 
+//Formato dos dados retornados pela API de paletes
 interface PalletApi {
   cod_palete: string;
   num_order: string;
@@ -50,6 +52,7 @@ interface PalletApi {
   stat_pale: string;
 }
 
+// Formato dos itens dentro do pallet
 interface PalletItem {
   lido: unknown;
   kanban: string;
@@ -61,6 +64,7 @@ interface PalletItem {
   status: string;
 }
 
+// Formato do pallet com seus itens
 interface Pallet {
   cod_palete: string;
   stat_pale: string;
@@ -114,10 +118,7 @@ export default function PalletViewSingle() {
   const totalCaixas = Number(itemAtual?.qtd_caixa)
   const [caixasLidas, setCaixasLidas] = useState(0);
 
-  // function chamaAPI("codCarg","codPale","codKanb","codSequ","operac"){
-
-  // }
-
+  // Ajusta o índice do pallet se necessário ao mudar a lista de pallets
   useEffect(() => {
     if (palletIndex > pallets.length - 1) {
       setPalletIndex(Math.max(0, pallets.length - 1));
@@ -133,6 +134,7 @@ export default function PalletViewSingle() {
     );
   }
 
+  // Carrega os paletes da API de acordo com a carga
   useEffect(() => {
     setLoading(true);
     setErro(null);
@@ -191,88 +193,233 @@ export default function PalletViewSingle() {
       });
   }, [carga]);
 
+  // Reseta a contagem de caixas lidas ao mudar de item ou pallet
   useEffect(() => {
     setCaixasLidas(0);
   }, [itemAtual, palletAtual]);
 
-  //Validação se a etiqueta do cliente confere o kanban GDBR
+  //Inicio das validações do processo de montagem de carga
+  //Constantes para validação se a etiqueta do cliente confere o kanban GDBR
   const [kanbanGDBR, setKanbanGDBR] = useState("");
   const [, setEtiquetaCliente] = useState("");
   const etiquetaClienteRef = useRef<HTMLInputElement>(null);
 
-  // verifica etiqueta cliente e kanban GDBR
+  // Funções que verificam etiqueta cliente e kanban GDBR
   function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
     setKanbanGDBR(e.target.value);
     if (e.target.value.length === 12) {
       etiquetaClienteRef.current?.focus();
     }
   }
+
   function handleEtiquetaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
     const etiquetaCliente = e.target.value;
     setEtiquetaCliente(etiquetaCliente);
     verificaKanban(etiquetaCliente);
   }
+  
+  // Validação se Kanban GDBR confere com a Etiqueta do Cliente
+  function verificaKanban(etiqueta: string) {
+    if (!kanbanGDBR || !etiqueta) return;
 
-  //Verifica se item pertence ao pallet
+    if (etiqueta.length === 5 && caixasLidas < totalCaixas) {
+      etiquetaClienteRef.current?.blur(); 
+      if (kanbanGDBR.includes(etiqueta)) {
+        setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
+        kanbanPallet();
+        setErro(null); 
+      } else {
+        setErro(`Kanban GDBR ${kanbanGDBR} não confere Etiqueta Cliente ${etiqueta}`);
+        setSucess(null);
+      }
+    } else {
+      setErro(null);
+      setSucess(null);
+    }
+  }
+
+  // Validação se o kanban lido existe no pallet atual
   async function kanbanPallet() {
-  if (!kanbanGDBR || pallets.length === 0) {
-    setErro("Nenhum palete ou Kanban informado.");
+  if (!kanbanGDBR || !palletAtual) {
+    setErro("Nenhum Kanban ou pallet atual informado.");
     return;
   }
 
   const kanbanGDBRNumerico = kanbanGDBR.split("|")[1] || "";
-  console.log("Kanban lido:", kanbanGDBRNumerico);
+  const itemIdx = palletAtual.itens.findIndex((item) => item.kanban === kanbanGDBRNumerico);
 
-  let encontrado = false;
+  if (itemIdx === -1) {
+    setErro(`Kanban ${kanbanGDBRNumerico} não encontrado no pallet atual.`);
+    return;
+  }
 
-  for (const pallet of pallets) {
-    const itemIdx = pallet.itens.findIndex((item) => item.kanban === kanbanGDBRNumerico);
+  setItemIndex(itemIdx);
 
-    if (itemIdx !== -1) {
-      console.log(`Kanban ${kanbanGDBRNumerico} encontrado no palete ${pallet.cod_palete}`);
+  const validator = verificaItem();
+  if (!validator(itemAtual?.sequen ?? "")) {
+    // O erro já foi setado dentro de verificaItem
+    return;
+  }
 
-      const palletIdx = pallets.findIndex((p) => p.cod_palete === pallet.cod_palete);
+  await caixas(palletAtual, itemAtual!, itemIdx);
+}
 
-      if (palletIdx !== -1) {
-        setPalletIndex(palletIdx);
-        setItemIndex(itemIdx);
 
-        // ✅ Chame caixas passando os dados diretamente
-        verificaItem();
-        await caixas(pallet, pallet.itens[itemIdx], itemIdx);
+  //Verifica sequencial dos itens
+  function verificaItem(): (sequencialAtual: string) => boolean {
+  if (!palletAtual || !palletAtual.itens) {
+    setErro("Pallet ou itens não definidos");
+    return () => false;
+  }
 
-        encontrado = true;
-        break;
+  const temSequencial = (seq: string) => seq && seq !== "-" && seq !== "" && seq !== "0";
+
+  const todosComSequencial = palletAtual.itens.every((item) => temSequencial(item.sequen));
+  const nenhumComSequencial = palletAtual.itens.every((item) => !temSequencial(item.sequen));
+
+  if (todosComSequencial) {
+    const menorSequencialPendente = palletAtual.itens
+      .filter(item => item.status !== "3")
+      .map(item => parseInt(item.sequen, 10))
+      .sort((a, b) => a - b)[0];
+
+    return (sequencialAtual: string) => {
+      const sequencialNum = parseInt(sequencialAtual, 10);
+      const valido = sequencialNum === menorSequencialPendente;
+      if (!valido) {
+        setErro("Operador deve seguir a sequência correta. Por favor, finalize o item atual antes de continuar.");
+      } else {
+        setErro(null);
       }
-    }
+      return valido;
+    };
   }
 
-  if (kanbanGDBRNumerico.length === 5 && !encontrado) {
-    setErro(`Kanban ${kanbanGDBRNumerico} não encontrado em nenhum palete.`);
-  }
-}
-
-
-  function verificaKanban(etiqueta: string) {
-  if (!kanbanGDBR || !etiqueta) return;
-
-  if (etiqueta.length === 5 && caixasLidas < totalCaixas) {
-    etiquetaClienteRef.current?.blur(); 
-    if (kanbanGDBR.includes(etiqueta)) {
-      setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
-      kanbanPallet();
-      setErro(null); 
-    } else {
-      setErro(`Kanban GDBR ${kanbanGDBR} não confere Etiqueta Cliente ${etiqueta}`);
-      setSucess(null);
-    }
-  } else {
+  if (nenhumComSequencial) {
     setErro(null);
-    setSucess(null);
+    return () => true;
   }
+
+  const menorSequencialPendente = palletAtual.itens
+    .filter(item => item.status !== "3" && temSequencial(item.sequen))
+    .map(item => parseInt(item.sequen, 10))
+    .sort((a, b) => a - b)[0];
+
+  return (sequencialAtual: string) => {
+    if (temSequencial(sequencialAtual)) {
+      const sequencialNum = parseInt(sequencialAtual, 10);
+      const valido = sequencialNum === menorSequencialPendente;
+      if (!valido) {
+        setErro("Operador deve seguir a sequência correta. Por favor, finalize o item atual antes de continuar.");
+      } else {
+        setErro(null);
+      }
+      return valido;
+    }
+    setErro(null);
+    return true;
+  };
 }
 
-//verifica se há paletes não lidos completamente (com itens pendentes)
+
+  //Valida quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
+  async function caixas(pallet: Pallet, item: PalletItem, itemIdx: number) {
+    if (!palletAtual || !itemAtual) return;
+    
+    const total = parseInt(itemAtual.qtd_caixa || "0", 10);
+
+    if (caixasLidas >= total || itemAtual?.status === "2") {
+      setErro("Todas as caixas do item já foram lidas ou há divergência. Não é possível continuar.");
+      return;
+    }
+
+    const qtdLidasAtual = caixasLidas + 1;
+
+    if (caixasLidas < totalCaixas) {
+      setCaixasLidas((prev) => prev + 1); 
+
+      console.log(`
+        Leitura de Caixa
+        "Item index": ${itemIdx}
+        "codCarg": ${carga?.cod_carg},
+        "codPale": ${palletAtual?.cod_palete.trim()},
+        "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
+        "codSequ": ${itemAtual?.sequen},
+        "operac" : 1,
+        "qtdrest": ${qtdLidasAtual.toString()}
+        Embalagem: ${itemAtual.embalagem}
+        Total caixas: ${itemAtual?.qtd_caixa}
+        Caixas Lidas: ${qtdLidasAtual.toString()}
+      `);
+
+      try {
+        setLoading(true);
+        const resp = await apiItens.post("", {
+          codCarg: carga?.cod_carg,
+          codPale: palletAtual?.cod_palete.trim(),
+          codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[0] : "",
+          codSequ: itemAtual?.sequen,
+          qtdrest: qtdLidasAtual.toString(), 
+          operac: 1,
+        });
+
+        const data = resp.data;
+        if (data?.codCarg && data?.codPale) {
+          setSucess("Deu certo eba!");
+        } else if (data?.Erro) {
+          setErro(data.Erro);
+        } else {
+          setErro("Falha ao atualizar o status do item");
+        }
+      } catch {
+        setErro("Erro ao conectar com a API.");
+      } finally {
+        setLoading(false);
+      }
+    } else if (caixasLidas === totalCaixas && itemAtual?.status === "1") {
+      try {
+        setLoading(true);
+        console.log(`
+          Finalização de item:
+          "Item": ${itemAtual}, ${itemIndex}
+          "codCarg": ${carga?.cod_carg},
+          "codPale": ${palletAtual?.cod_palete},
+          "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[0] : ""},
+          "codSequen": ${itemAtual?.sequen},
+          "qtdrest": ${caixasLidas},
+          "operac": 3`
+        );
+
+        const resp = await apiItens.post("", {
+          codCarg: carga?.cod_carg,
+          codPale: palletAtual?.cod_palete,
+          codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[0] : "",
+          codSequ: itemAtual?.sequen,
+          qtdrest: caixasLidas.toString(), 
+          operac: 3,
+        });
+
+        const data = resp.data;
+        if (data?.codCarg && data?.codPale) {
+          setSucess("Todas as caixas foram lidas com sucesso, item finalizado!");
+        } else if (data?.Erro) {
+          setErro(data.Erro);
+        } else {
+          setErro("Falha ao atualizar o status do item");
+        }
+      } catch {
+        setErro("Erro ao conectar com a API.");
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      console.log(`Todas as caixas ${totalCaixas} do item já foram lidas ${caixasLidas}, não foi possível ler mais caixas`);
+      setErro("Todas as caixas do item já foram lidas, não foi possível ler mais caixas!");
+    }
+  }
+
+  //Inicio das validações de finalização da montagem de carga
+  //verifica se há paletes não lidos completamente (com itens pendentes)
    function verificaPalete() {
     if (!palletAtual) return;
 
@@ -283,102 +430,6 @@ export default function PalletViewSingle() {
       console.log(`O Palete ${palletAtual.cod_palete} está completo.`);
     }
   }
-
-  //verifica quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
-  async function caixas(pallet: Pallet, item: PalletItem, itemIdx: number) {
-  if (!palletAtual || !itemAtual) return;
-  
-  const total = parseInt(itemAtual.qtd_caixa || "0", 10);
-
-  if (caixasLidas >= total || itemAtual?.status === "2") {
-    setErro("Todas as caixas do item já foram lidas ou há divergência. Não é possível continuar.");
-    return;
-  }
-
-  const qtdLidasAtual = caixasLidas + 1;
-
-  if (caixasLidas < totalCaixas) {
-    setCaixasLidas((prev) => prev + 1); 
-
-    console.log(`
-      Leitura de Caixa
-      "Item index": ${itemIdx}
-      "codCarg": ${carga?.cod_carg},
-      "codPale": ${palletAtual?.cod_palete.trim()},
-      "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
-      "codSequ": ${itemAtual?.sequen},
-      "operac" : 1,
-      "qtdrest": ${qtdLidasAtual.toString()}
-      Embalagem: ${itemAtual.embalagem}
-      Total caixas: ${itemAtual?.qtd_caixa}
-      Caixas Lidas: ${qtdLidasAtual.toString()}
-    `);
-
-    try {
-      setLoading(true);
-      const resp = await apiItens.post("", {
-        codCarg: carga?.cod_carg,
-        codPale: palletAtual?.cod_palete.trim(),
-        codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[0] : "",
-        codSequ: itemAtual?.sequen,
-        qtdrest: qtdLidasAtual.toString(), 
-        operac: 1,
-      });
-
-      const data = resp.data;
-      if (data?.codCarg && data?.codPale) {
-        setSucess("Deu certo eba!");
-      } else if (data?.Erro) {
-        setErro(data.Erro);
-      } else {
-        setErro("Falha ao atualizar o status do item");
-      }
-    } catch {
-      setErro("Erro ao conectar com a API.");
-    } finally {
-      setLoading(false);
-    }
-  } else if (caixasLidas === totalCaixas && itemAtual?.status === "1") {
-    try {
-      setLoading(true);
-      console.log(`
-        Finalização de item:
-        "Item": ${itemAtual}, ${itemIndex}
-        "codCarg": ${carga?.cod_carg},
-        "codPale": ${palletAtual?.cod_palete},
-        "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[0] : ""},
-        "codSequen": ${itemAtual?.sequen},
-        "qtdrest": ${caixasLidas},
-        "operac": 3`
-      );
-
-      const resp = await apiItens.post("", {
-        codCarg: carga?.cod_carg,
-        codPale: palletAtual?.cod_palete,
-        codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[0] : "",
-        codSequ: itemAtual?.sequen,
-        qtdrest: caixasLidas.toString(), 
-        operac: 3,
-      });
-
-      const data = resp.data;
-      if (data?.codCarg && data?.codPale) {
-        setSucess("Todas as caixas foram lidas com sucesso, item finalizado!");
-      } else if (data?.Erro) {
-        setErro(data.Erro);
-      } else {
-        setErro("Falha ao atualizar o status do item");
-      }
-    } catch {
-      setErro("Erro ao conectar com a API.");
-    } finally {
-      setLoading(false);
-    }
-  } else {
-    console.log(`Todas as caixas ${totalCaixas} do item já foram lidas ${caixasLidas}, não foi possível ler mais caixas`);
-    setErro("Todas as caixas do item já foram lidas, não foi possível ler mais caixas!");
-  }
-}
 
   //verifica se a carga não foi completada (com palletes pendentes)
   function verificaCarga() {
@@ -397,68 +448,6 @@ export default function PalletViewSingle() {
     } else {
     }
   }
-
-   //Verifica sequencial dos itens
-  function verificaItem() {
-  const primeiroSequencial = palletAtual?.itens[0]?.sequen;
-
-  if (primeiroSequencial && primeiroSequencial !== "0") {
-    setErro("Operador deve começar pelo primeiro item e só pode passar para o próximo após finalizar.");
-    console.log("Operador deve começar pelo primeiro item e só pode passar para o próximo após finalizar.");
-  } else {
-    console.log("Não existe sequencia para está operação!")
-
-  if (!palletAtual || !palletAtual.itens) {
-    console.log("verificaItem: palletAtual ou itens não definidos");
-    return () => false;
-  }
-  const itens = palletAtual.itens;
-  const temSequencial = (seq: string) => seq && seq !== "-" && seq !== "" && seq !== "0";
-
-  const todosComSequencial = itens.every((item) => temSequencial(item.sequen));
-  const nenhumComSequencial = itens.every((item) => !temSequencial(item.sequen));
-
-  console.log("verificaItem: todosComSequencial =", todosComSequencial);
-  console.log("verificaItem: nenhumComSequencial =", nenhumComSequencial);
-
-  if (todosComSequencial) {
-    const menorSequencialPendente = itens
-      .filter(item => item.status !== "3")
-      .map(item => parseInt(item.sequen, 10))
-      .sort((a, b) => a - b)[0];
-    console.log("verificaItem: menorSequencialPendente (todosComSequencial) =", menorSequencialPendente);
-
-    return (sequencialAtual: string) => {
-      const sequencialNum = parseInt(sequencialAtual, 10);
-      const valida = sequencialNum === menorSequencialPendente;
-      console.log(`verificaItem: validando sequencialAtual=${sequencialAtual} (num=${sequencialNum}) -> ${valida}`);
-      return valida;
-    };
-  }
-
-  if (nenhumComSequencial) {
-    console.log("verificaItem: nenhum item tem sequencial, liberando leitura em qualquer ordem");
-    return () => true;
-  }
-
-  const menorSequencialPendente = itens
-    .filter(item => item.status !== "3" && temSequencial(item.sequen))
-    .map(item => parseInt(item.sequen, 10))
-    .sort((a, b) => a - b)[0];
-  console.log("verificaItem: menorSequencialPendente (misto) =", menorSequencialPendente);
-
-  return (sequencialAtual: string) => {
-    if (temSequencial(sequencialAtual)) {
-      const sequencialNum = parseInt(sequencialAtual, 10);
-      const valida = sequencialNum === menorSequencialPendente;
-      console.log(`verificaItem: validando sequencialAtual (misto)=${sequencialAtual} (num=${sequencialNum}) -> ${valida}`);
-      return valida;
-    }
-    console.log(`verificaItem: sequencialAtual='${sequencialAtual}' sem sequencial válido, liberando leitura`);
-    return true;
-  };
-}
-}
 
   return (
     <main
