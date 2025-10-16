@@ -256,17 +256,13 @@ export default function PalletViewSingle() {
   function verificaKanban(etiqueta: string) {
   if (!kanbanGDBR || !etiqueta) return;
 
-  if (etiqueta.length === 5) {
+  if (etiqueta.length === 5 && caixasLidas < totalCaixas) {
     etiquetaClienteRef.current?.blur(); 
-    if (kanbanGDBR.includes(etiqueta) && caixasLidas < totalCaixas) {
+    if (kanbanGDBR.includes(etiqueta)) {
       setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
       kanbanPallet();
       setErro(null); 
-    } else if (caixasLidas >= totalCaixas || itemAtual?.status == "2") {
-      setErro(`Kanban GDBR ${kanbanGDBR} já contabilizou todas as 
-        caixas do item, não é possível ler mais caixas.`);
-      setSucess(null);
-    } else{
+    } else {
       setErro(`Kanban GDBR ${kanbanGDBR} não confere Etiqueta Cliente ${etiqueta}`);
       setSucess(null);
     }

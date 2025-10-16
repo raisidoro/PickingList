@@ -79,9 +79,7 @@ function getStatusText(code: string) {
     case "1":
       return "Em montagem";
     case "2":
-      return "Concluída com divergência";
-    case "3":
-      return "Concluída";
+      return "Concluída ";
     default:
       return code;
   }
@@ -143,8 +141,7 @@ export default function CargaList({}: Props) {
   const statusOptions = [
   { code: "0", label: "Pendente" },
   { code: "1", label: "Em conferência" },
-  { code: "2", label: "Divergente" },
-  { code: "3", label: "Conferida" }
+  { code: "2", label: "Concluída" }
 ];
 
 
