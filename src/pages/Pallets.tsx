@@ -222,13 +222,13 @@ export default function PalletViewSingle() {
   function verificaKanban(etiqueta: string) {
     if (!kanbanGDBR || !etiqueta) return;
 
-    if (etiqueta.length === 5 && caixasLidas < totalCaixas) {
+    if (etiqueta.length === 5 && itemAtual?.status != "2") {
       etiquetaClienteRef.current?.blur(); 
       if (kanbanGDBR.includes(etiqueta)) {
         setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
         kanbanPallet();
         setErro(null); 
-      } else {
+      }else {
         setErro(`Kanban GDBR ${kanbanGDBR} não confere Etiqueta Cliente ${etiqueta}`);
         setSucess(null);
       }
@@ -321,7 +321,6 @@ export default function PalletViewSingle() {
   };
 }
 
-
   //Valida quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
   async function caixas(pallet: Pallet, item: PalletItem, itemIdx: number) {
     if (!palletAtual || !itemAtual) return;
@@ -344,11 +343,11 @@ export default function PalletViewSingle() {
         "codCarg": ${carga?.cod_carg},
         "codPale": ${palletAtual?.cod_palete.trim()},
         "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
-        "codSequ": ${itemAtual?.sequen},
+        "codSequ": ${palletAtual?.itens[itemIdx]?.sequen},
         "operac" : 1,
         "qtdrest": ${qtdLidasAtual.toString()}
-        Embalagem: ${itemAtual.embalagem}
-        Total caixas: ${itemAtual?.qtd_caixa}
+        Embalagem: ${palletAtual?.itens[itemIdx]?.embalagem}
+        Total caixas: ${palletAtual?.itens[itemIdx]?.qtd_caixa}
         Caixas Lidas: ${qtdLidasAtual.toString()}
       `);
 
@@ -358,7 +357,7 @@ export default function PalletViewSingle() {
           codCarg: carga?.cod_carg,
           codPale: palletAtual?.cod_palete.trim(),
           codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[0] : "",
-          codSequ: itemAtual?.sequen,
+          codSequ: palletAtual?.itens[itemIdx]?.sequen,
           qtdrest: qtdLidasAtual.toString(), 
           operac: 1,
         });
@@ -376,7 +375,8 @@ export default function PalletViewSingle() {
       } finally {
         setLoading(false);
       }
-    } else if (caixasLidas === totalCaixas && itemAtual?.status === "1") {
+    } 
+    if (caixasLidas === totalCaixas && itemAtual?.status === "1") {
       try {
         setLoading(true);
         console.log(`
@@ -394,7 +394,7 @@ export default function PalletViewSingle() {
           codCarg: carga?.cod_carg,
           codPale: palletAtual?.cod_palete,
           codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[0] : "",
-          codSequ: itemAtual?.sequen,
+          codSequ: palletAtual?.itens[itemIdx]?.sequen,
           qtdrest: caixasLidas.toString(), 
           operac: 3,
         });
