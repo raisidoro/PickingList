@@ -115,8 +115,8 @@ export default function PalletViewSingle() {
   const totalPallets = pallets.length;
   const [itemIndex, setItemIndex] = useState(0);
   const itemAtual = palletAtual?.itens[itemIndex];
-  const totalCaixas = Number(itemAtual?.qtd_caixa)
   const [caixasLidas, setCaixasLidas] = useState(0);
+  const cxs_lidas = 0;
 
   // Ajusta o índice do pallet se necessário ao mudar a lista de pallets
   useEffect(() => {
@@ -261,9 +261,8 @@ export default function PalletViewSingle() {
     return;
   }
 
-  await caixas(palletAtual, itemAtual!, itemIdx);
+  await caixas(palletAtual, itemAtual!, itemIdx, cxs_lidas);
 }
-
 
   //Verifica sequencial dos itens
   function verificaItem(): (sequencialAtual: string) => boolean {
@@ -322,20 +321,24 @@ export default function PalletViewSingle() {
 }
 
   //Valida quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
-  async function caixas(pallet: Pallet, item: PalletItem, itemIdx: number) {
+  async function caixas(pallet: Pallet, item: PalletItem, itemIdx: number, cxs_lidas : number) {
     if (!palletAtual || !itemAtual) return;
     
-    const total = parseInt(itemAtual.qtd_caixa || "0", 10);
+    const totalCaixas = Number(itemAtual?.qtd_caixa)
 
-    if (caixasLidas >= total || itemAtual?.status === "2") {
+    if (caixasLidas > totalCaixas || itemAtual?.status === "2") {
       setErro("Todas as caixas do item já foram lidas ou há divergência. Não é possível continuar.");
       return;
     }
 
-    const qtdLidasAtual = caixasLidas + 1;
+    const qtdLidasAtual = caixasLidas;
+    console.log('caixas lidas' + cxs_lidas)
+    console.log('total caixas' + totalCaixas)
+    console.log('caixas lidas' + caixasLidas)
 
     if (caixasLidas < totalCaixas) {
-      setCaixasLidas((prev) => prev + 1); 
+      console.log('IF 1')
+      setCaixasLidas((cxs_lidas) => cxs_lidas + 1); 
 
       console.log(`
         Leitura de Caixa
@@ -348,7 +351,7 @@ export default function PalletViewSingle() {
         "qtdrest": ${qtdLidasAtual.toString()}
         Embalagem: ${palletAtual?.itens[itemIdx]?.embalagem}
         Total caixas: ${palletAtual?.itens[itemIdx]?.qtd_caixa}
-        Caixas Lidas: ${qtdLidasAtual.toString()}
+        Caixas Lidas: ${caixasLidas}
       `);
 
       try {
@@ -361,6 +364,8 @@ export default function PalletViewSingle() {
           qtdrest: qtdLidasAtual.toString(), 
           operac: 1,
         });
+
+        setCaixasLidas(0);
 
         const data = resp.data;
         if (data?.codCarg && data?.codPale) {
@@ -377,6 +382,8 @@ export default function PalletViewSingle() {
       }
     } 
     if (caixasLidas === totalCaixas && itemAtual?.status === "1") {
+      console.log('IF 2')
+
       try {
         setLoading(true);
         console.log(`
@@ -386,7 +393,7 @@ export default function PalletViewSingle() {
           "codPale": ${palletAtual?.cod_palete},
           "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[0] : ""},
           "codSequen": ${itemAtual?.sequen},
-          "qtdrest": ${caixasLidas},
+          "qtdrest": ${caixasLidas.toString()},
           "operac": 3`
         );
 
@@ -398,6 +405,8 @@ export default function PalletViewSingle() {
           qtdrest: caixasLidas.toString(), 
           operac: 3,
         });
+
+        setCaixasLidas(0);
 
         const data = resp.data;
         if (data?.codCarg && data?.codPale) {
@@ -413,11 +422,14 @@ export default function PalletViewSingle() {
         setLoading(false);
       }
     } else {
+      console.log('IF 3')
+
       console.log(`Todas as caixas ${totalCaixas} do item já foram lidas ${caixasLidas}, não foi possível ler mais caixas`);
       setErro("Todas as caixas do item já foram lidas, não foi possível ler mais caixas!");
     }
   }
 
+  
   //Inicio das validações de finalização da montagem de carga
   //verifica se há paletes não lidos completamente (com itens pendentes)
    function verificaPalete() {
