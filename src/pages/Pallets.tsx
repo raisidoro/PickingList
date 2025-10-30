@@ -222,7 +222,6 @@ export default function PalletViewSingle() {
   function handleEtiquetaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
     const etiquetaCliente = e.target.value;
     setEtiquetaCliente(etiquetaCliente);
-    verificaKanban(etiquetaCliente);
   }
 
   // Validação se Kanban GDBR está no Pallet atual e confere com a Etiqueta do Cliente
@@ -312,7 +311,7 @@ export default function PalletViewSingle() {
       setErro(null);
       return true;
     };
-}
+  }
 
   //Valida quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
   async function caixas(pallet: Pallet, item: PalletItem, itemIdx: number) {
@@ -328,30 +327,77 @@ export default function PalletViewSingle() {
     const qtdLidasAtual = caixasLidas;
     console.log("Caixas Lidas atual: ", qtdLidasAtual);
 
+    if (caixasLidas < totalCaixas){
+
+      setCaixasLidas((prev) => prev + 1);
+      console.log(caixasLidas)
+
+      try {
+        setLoading(true);
+        console.log(`
+          Leitura de item:
+          "codCarg": ${carga?.cod_carg},
+          "codPale": ${palletAtual?.cod_palete},
+          "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
+          "codSequen": ${itemAtual?.sequen},
+          "qtdrest": ${qtdLidasAtual.toString()},
+          "operac": 1
+        `);
+
+        const resp = await apiItens.post("", {
+          codCarg: carga?.cod_carg,
+          codPale: palletAtual?.cod_palete.trim(),
+          codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
+          codSequ: palletAtual?.itens[itemIndex]?.sequen,
+          qtdrest: qtdLidasAtual.toString(),
+          operac: 1,
+        });
+
+        const data = resp.data;
+        if (data?.codCarg && data?.codPale) {
+          setSucess("Deu certo eba!");
+        } else if (data?.Erro) {
+          setErro(data.Erro);
+        } else {
+          setErro("Falha ao atualizar o status do item");
+        }
+      } catch {
+        setErro("Erro ao conectar com a API.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  } 
+
+  async function finalizarItem() {
+    if (!palletAtual || !itemAtual) return;
+
     try {
       setLoading(true);
       console.log(`
-        Leitura de item:
+        Finalização de item:
+        "Item": ${itemAtual}, ${itemIndex}
         "codCarg": ${carga?.cod_carg},
         "codPale": ${palletAtual?.cod_palete},
         "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
         "codSequen": ${itemAtual?.sequen},
-        "qtdrest": ${qtdLidasAtual.toString()},
-        "operac": 1
+        "qtdrest": ${caixasLidas.toString()},
+        "operac": 3
       `);
 
       const resp = await apiItens.post("", {
         codCarg: carga?.cod_carg,
-        codPale: palletAtual?.cod_palete.trim(),
+        codPale: palletAtual?.cod_palete,
         codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
         codSequ: palletAtual?.itens[itemIndex]?.sequen,
-        qtdrest: qtdLidasAtual.toString(),
-        operac: 1,
+        qtdrest: caixasLidas.toString(),
+        operac: 3
       });
 
+      setCaixasLidas(0);
       const data = resp.data;
       if (data?.codCarg && data?.codPale) {
-        setSucess("Deu certo eba!");
+        setSucess("Todas as caixas foram lidas com sucesso, item finalizado!");
       } else if (data?.Erro) {
         setErro(data.Erro);
       } else {
@@ -362,10 +408,7 @@ export default function PalletViewSingle() {
     } finally {
       setLoading(false);
     }
-
-    setCaixasLidas((prev) => prev + 1);
 }
-
 
   //Inicio das validações de finalização da montagem de carga
   //verifica se há paletes não lidos completamente (com itens pendentes)
@@ -397,47 +440,6 @@ export default function PalletViewSingle() {
     } else {
     }
   }
-
-  async function finalizarItem() {
-    if (!palletAtual || !itemAtual) return;
-
-    try {
-      setLoading(true);
-      console.log(`
-        Finalização de item:
-        "Item": ${itemAtual}, ${itemIndex}
-        "codCarg": ${carga?.cod_carg},
-        "codPale": ${palletAtual?.cod_palete},
-        "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
-        "codSequen": ${itemAtual?.sequen},
-        "qtdrest": caixasLidas.toString(),
-        "operac": 3
-      `);
-
-      const resp = await apiItens.post("", {
-        codCarg: carga?.cod_carg,
-        codPale: palletAtual?.cod_palete,
-        codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
-        codSequ: palletAtual?.itens[itemIndex]?.sequen,
-        qtdrest: caixasLidas.toString(),
-        operac: 3,
-      });
-
-      setCaixasLidas(0);
-      const data = resp.data;
-      if (data?.codCarg && data?.codPale) {
-        setSucess("Todas as caixas foram lidas com sucesso, item finalizado!");
-      } else if (data?.Erro) {
-        setErro(data.Erro);
-      } else {
-        setErro("Falha ao atualizar o status do item");
-      }
-    } catch {
-      setErro("Erro ao conectar com a API.");
-    } finally {
-      setLoading(false);
-    }
-}
 
   return (
     <main
