@@ -394,10 +394,10 @@ export default function PalletViewSingle() {
         operac: 3
       });
 
-      setCaixasLidas(0);
       const data = resp.data;
       if (data?.codCarg && data?.codPale) {
         setSucess("Todas as caixas foram lidas com sucesso, item finalizado!");
+        setCaixasLidas(0);
       } else if (data?.Erro) {
         setErro(data.Erro);
       } else {
