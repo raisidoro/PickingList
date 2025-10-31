@@ -56,9 +56,9 @@ interface PalletApi {
 interface PalletItem {
   lido: unknown;
   kanban: string;
-  sequen: string;
-  qtd_caixa: string;
-  qtd_peca: string;
+  sequen: number;
+  qtd_caixa: number;
+  qtd_peca: number;
   embalagem: string;
   multiplo: string;
   status: string;
@@ -258,13 +258,13 @@ export default function PalletViewSingle() {
 
 
   //Verifica sequencial dos itens
-  function verificaItem(): (sequencialAtual: string) => boolean {
+  function verificaItem(): (sequencialAtual: number) => boolean {
     if (!palletAtual || !palletAtual.itens) {
       setErro("Pallet ou itens não definidos");
       return () => false;
     }
 
-    const temSequencial = (seq: string) => seq && seq !== "-" && seq !== "" && seq !== "0";
+    const temSequencial = (seq: number) => seq && !seq;
 
     const todosComSequencial = palletAtual.itens.every((item) => temSequencial(item.sequen));
     const nenhumComSequencial = palletAtual.itens.every((item) => !temSequencial(item.sequen));
@@ -272,11 +272,11 @@ export default function PalletViewSingle() {
     if (todosComSequencial) {
       const menorSequencialPendente = palletAtual.itens
         .filter(item => item.status !== "3")
-        .map(item => parseInt(item.sequen, 10))
+        .map(item => (item.sequen, 10))
         .sort((a, b) => a - b)[0];
 
-      return (sequencialAtual: string) => {
-        const sequencialNum = parseInt(sequencialAtual, 10);
+      return (sequencialAtual: number) => {
+        const sequencialNum = sequencialAtual;
         const valido = sequencialNum === menorSequencialPendente;
         if (!valido) {
           setErro("Operador deve seguir a sequência correta. Por favor, finalize o item atual antes de continuar.");
@@ -294,12 +294,12 @@ export default function PalletViewSingle() {
 
     const menorSequencialPendente = palletAtual.itens
       .filter(item => item.status !== "3" && temSequencial(item.sequen))
-      .map(item => parseInt(item.sequen, 10))
+      .map(item => (item.sequen, 10))
       .sort((a, b) => a - b)[0];
 
-    return (sequencialAtual: string) => {
+    return (sequencialAtual: number) => {
       if (temSequencial(sequencialAtual)) {
-        const sequencialNum = parseInt(sequencialAtual, 10);
+        const sequencialNum = sequencialAtual;
         const valido = sequencialNum === menorSequencialPendente;
         if (!valido) {
           setErro("Operador deve seguir a sequência correta. Por favor, finalize o item atual antes de continuar.");
@@ -339,18 +339,18 @@ export default function PalletViewSingle() {
           "codCarg": ${carga?.cod_carg},
           "codPale": ${palletAtual?.cod_palete},
           "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
-          "codSequen": ${itemAtual?.sequen},
-          "qtdrest": ${qtdLidasAtual.toString()},
+          "codSequen": ${Number(itemAtual?.sequen)},
+          "qtdrest": ${caixasLidas},
           "operac": 1
         `);
 
         const resp = await apiItens.post("", {
-          codCarg: carga?.cod_carg,
-          codPale: palletAtual?.cod_palete.trim(),
-          codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
-          codSequ: palletAtual?.itens[itemIndex]?.sequen,
-          qtdrest: qtdLidasAtual.toString(),
-          operac: 1,
+          "codCarg": carga?.cod_carg,
+          "codPale": palletAtual?.cod_palete.trim(),
+          "codKanb": kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
+          "codSequ": Number(palletAtual?.itens[itemIndex]?.sequen),
+          "qtdrest": caixasLidas,
+          "operac": 1,
         });
 
         const data = resp.data;
@@ -381,17 +381,17 @@ export default function PalletViewSingle() {
         "codPale": ${palletAtual?.cod_palete},
         "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
         "codSequen": ${itemAtual?.sequen},
-        "qtdrest": ${caixasLidas.toString()},
+        "qtdrest": ${caixasLidas},
         "operac": 3
       `);
 
       const resp = await apiItens.post("", {
-        codCarg: carga?.cod_carg,
-        codPale: palletAtual?.cod_palete,
-        codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
-        codSequ: palletAtual?.itens[itemIndex]?.sequen,
-        qtdrest: caixasLidas.toString(),
-        operac: 3
+        "codCarg": carga?.cod_carg,
+        "codPale": palletAtual?.cod_palete.trim(),
+        "codKanb": kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
+        "codSequ": palletAtual?.itens[itemIndex]?.sequen,
+        "qtdrest": caixasLidas,
+        "operac": 3,
       });
 
       const data = resp.data;
