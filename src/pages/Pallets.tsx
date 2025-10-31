@@ -329,6 +329,32 @@ export default function PalletViewSingle() {
 
     if (caixasLidas < totalCaixas){
 
+      if(palletAtual.stat_pale != "1"){
+        try {
+          setLoading(true);
+
+          const resp = await apiPallets.post("", {
+            "codCarg": carga?.cod_carg,
+            "codPale" : palletAtual?.cod_palete,
+            "status": 1
+          });
+
+          const data = resp.data;
+          if (data?.codCarg && data?.codPale) {
+            setSucess("Todas as caixas foram lidas com sucesso, item finalizado!");
+            setCaixasLidas(0);
+          } else if (data?.Erro) {
+            setErro(data.Erro);
+          } else {
+            setErro("Falha ao atualizar o status do item");
+          }
+        } catch {
+          setErro("Erro ao conectar com a API.");
+        } finally {
+          setLoading(false);
+        }
+      }
+
       setCaixasLidas((prev) => prev + 1);
       console.log(caixasLidas)
 
@@ -339,16 +365,16 @@ export default function PalletViewSingle() {
           "codCarg": ${carga?.cod_carg},
           "codPale": ${palletAtual?.cod_palete},
           "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
-          "codSequen": ${Number(itemAtual?.sequen)},
+          "codSequen": ${itemAtual?.sequen},
           "qtdrest": ${caixasLidas},
           "operac": 1
         `);
 
         const resp = await apiItens.post("", {
           "codCarg": carga?.cod_carg,
-          "codPale": palletAtual?.cod_palete.trim(),
+          "codPale": palletAtual?.cod_palete,
           "codKanb": kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
-          "codSequ": Number(palletAtual?.itens[itemIndex]?.sequen),
+          "codSequ": itemAtual?.sequen,
           "qtdrest": caixasLidas,
           "operac": 1,
         });
@@ -376,7 +402,6 @@ export default function PalletViewSingle() {
       setLoading(true);
       console.log(`
         Finalização de item:
-        "Item": ${itemAtual}, ${itemIndex}
         "codCarg": ${carga?.cod_carg},
         "codPale": ${palletAtual?.cod_palete},
         "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
@@ -387,9 +412,9 @@ export default function PalletViewSingle() {
 
       const resp = await apiItens.post("", {
         "codCarg": carga?.cod_carg,
-        "codPale": palletAtual?.cod_palete.trim(),
+        "codPale": palletAtual?.cod_palete,
         "codKanb": kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
-        "codSequ": palletAtual?.itens[itemIndex]?.sequen,
+        "codSequ": itemAtual?.sequen,
         "qtdrest": caixasLidas,
         "operac": 3,
       });
@@ -412,19 +437,44 @@ export default function PalletViewSingle() {
 
   //Inicio das validações de finalização da montagem de carga
   //verifica se há paletes não lidos completamente (com itens pendentes)
-   function verificaPalete() {
+  async function verificaPalete() {
     if (!palletAtual) return;
 
     const itensPendentes = palletAtual.itens.filter((item) => !item.lido);
     if (itensPendentes.length > 0) {
       setErro(`O Palete ${palletAtual.cod_palete} possui itens pendentes.`);
-    } else {
+    }else if(itensPendentes.length === 0 && palletAtual.stat_pale != "3"){
+
+      try {
+      setLoading(true);
+
+      const resp = await apiPallets.post("", {
+        "codCarg": carga?.cod_carg,
+        "codPale" : palletAtual?.cod_palete,
+        "status": 3
+      });
+
+      const data = resp.data;
+      if (data?.codCarg && data?.codPale) {
+        setSucess("Todas as caixas foram lidas com sucesso, item finalizado!");
+        setCaixasLidas(0);
+      } else if (data?.Erro) {
+        setErro(data.Erro);
+      } else {
+        setErro("Falha ao atualizar o status do item");
+      }
+    } catch {
+      setErro("Erro ao conectar com a API.");
+    } finally {
+      setLoading(false);
+    }
+    }else {
       console.log(`O Palete ${palletAtual.cod_palete} está completo.`);
     }
   }
 
   //verifica se a carga não foi completada (com palletes pendentes)
-  function verificaCarga() {
+  async function verificaCarga() {
     if (pallets.length === 0) return;
 
     const palletesPendentes = pallets.filter((pallet) =>
@@ -437,7 +487,30 @@ export default function PalletViewSingle() {
           .map((p) => p.cod_palete)
           .join(", ")}`
       );
-    } else {
+    } else if(palletesPendentes.length === 0){
+      try {
+        setLoading(true);
+
+        const resp = await apiPallets.post("", {
+          "codCarg": carga?.cod_carg,
+          "codPale" : palletAtual?.cod_palete,
+          "status": 3
+        });
+
+        const data = resp.data;
+        if (data?.codCarg && data?.codPale) {
+          setSucess("Todas as caixas foram lidas com sucesso, item finalizado!");
+          setCaixasLidas(0);
+        } else if (data?.Erro) {
+          setErro(data.Erro);
+        } else {
+          setErro("Falha ao atualizar o status do item");
+        }
+      } catch {
+        setErro("Erro ao conectar com a API.");
+      } finally {
+        setLoading(false);
+      }
     }
   }
 
