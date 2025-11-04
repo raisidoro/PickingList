@@ -322,12 +322,8 @@ export default function PalletViewSingle() {
     if (caixasLidas >= totalCaixas || itemAtual?.status === "2") {
       setErro("Todas as caixas do item já foram lidas ou há divergência. Não é possível continuar.");
       return;
-    }
 
-    const qtdLidasAtual = caixasLidas;
-    console.log("Caixas Lidas atual: ", qtdLidasAtual);
-
-    if (caixasLidas < totalCaixas){
+    }else if (caixasLidas < totalCaixas){
 
       if(palletAtual.stat_pale != "1"){
         try {
@@ -335,8 +331,8 @@ export default function PalletViewSingle() {
 
           const resp = await apiPallets.post("", {
             "codCarg": carga?.cod_carg,
-            "codPale" : palletAtual?.cod_palete,
-            "status": 1
+            "codPale" : palletAtual?.cod_palete.trim(),
+            "status": "1"
           });
 
           const data = resp.data;
@@ -351,19 +347,16 @@ export default function PalletViewSingle() {
         } catch {
           setErro("Erro ao conectar com a API.");
         } finally {
-          setLoading(false);
+          setLoading(false); 
         }
       }
-
-      setCaixasLidas((prev) => prev + 1);
-      console.log(caixasLidas)
 
       try {
         setLoading(true);
         console.log(`
           Leitura de item:
           "codCarg": ${carga?.cod_carg},
-          "codPale": ${palletAtual?.cod_palete},
+          "codPale": ${palletAtual?.cod_palete.trim()},
           "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
           "codSequen": ${itemAtual?.sequen},
           "qtdrest": ${caixasLidas},
@@ -372,11 +365,11 @@ export default function PalletViewSingle() {
 
         const resp = await apiItens.post("", {
           "codCarg": carga?.cod_carg,
-          "codPale": palletAtual?.cod_palete,
+          "codPale": palletAtual?.cod_palete.trim(),
           "codKanb": kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
           "codSequ": itemAtual?.sequen,
-          "qtdrest": caixasLidas,
-          "operac": 1,
+          "qtdrest": setCaixasLidas((prev) => prev + 1),
+          "operac": "1"
         });
 
         const data = resp.data;
@@ -395,6 +388,8 @@ export default function PalletViewSingle() {
     }
   } 
 
+  console.log("Quantia de caixas lidas fora da função: ",caixasLidas)
+
   async function finalizarItem() {
     if (!palletAtual || !itemAtual) return;
 
@@ -403,7 +398,7 @@ export default function PalletViewSingle() {
       console.log(`
         Finalização de item:
         "codCarg": ${carga?.cod_carg},
-        "codPale": ${palletAtual?.cod_palete},
+        "codPale": ${palletAtual?.cod_palete.trim()},
         "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
         "codSequen": ${itemAtual?.sequen},
         "qtdrest": ${caixasLidas},
@@ -412,11 +407,11 @@ export default function PalletViewSingle() {
 
       const resp = await apiItens.post("", {
         "codCarg": carga?.cod_carg,
-        "codPale": palletAtual?.cod_palete,
+        "codPale": palletAtual?.cod_palete.trim(),
         "codKanb": kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
         "codSequ": itemAtual?.sequen,
         "qtdrest": caixasLidas,
-        "operac": 3,
+        "operac": "3"
       });
 
       const data = resp.data;
@@ -450,8 +445,8 @@ export default function PalletViewSingle() {
 
       const resp = await apiPallets.post("", {
         "codCarg": carga?.cod_carg,
-        "codPale" : palletAtual?.cod_palete,
-        "status": 3
+        "codPale" : palletAtual?.cod_palete.trim(),
+        "status": "3"
       });
 
       const data = resp.data;
@@ -493,8 +488,8 @@ export default function PalletViewSingle() {
 
         const resp = await apiPallets.post("", {
           "codCarg": carga?.cod_carg,
-          "codPale" : palletAtual?.cod_palete,
-          "status": 3
+          "codPale" : palletAtual?.cod_palete.trim(),
+          "status": "3"
         });
 
         const data = resp.data;
@@ -703,13 +698,9 @@ export default function PalletViewSingle() {
                 <button
                   className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
                   disabled={palletIndex === totalPallets - 1}
-                  onClick={() => {
-                    if (palletAtual?.stat_pale !== "1") {
-                      setPalletIndex(i => Math.min(i + 1, totalPallets - 1));
-                    } else {
-                      setErro("Pallet está em conferência! Por favor, finalize a montagem antes de passar para o próximo.");
-                    }
-                  }}
+                  onClick={() =>
+                    setPalletIndex((i) => Math.min(i + 1, totalPallets - 1))
+                  }
                 >
                   Próximo
                 </button>
