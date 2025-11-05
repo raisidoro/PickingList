@@ -54,7 +54,7 @@ interface PalletApi {
 
 // Formato dos itens dentro do pallet
 interface PalletItem {
-  lido: unknown;
+  lido: boolean;
   kanban: string;
   sequen: number;
   qtd_caixa: number;
@@ -235,17 +235,21 @@ export default function PalletViewSingle() {
     return;
     }else{
       if (etiqueta.length === 5 && itemAtual?.status != "2") {
-      etiquetaClienteRef.current?.blur(); 
-     if (kanbanGDBR.includes(etiqueta)) {
-      setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
-      const sequencialValido = verificaItem()(palletAtual.itens[itemIdx].sequen);
+        etiquetaClienteRef.current?.blur(); 
+      if (kanbanGDBR.includes(etiqueta) && itemAtual?.status != "3") {
+        setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
+        const sequencialValido = verificaItem()(palletAtual.itens[itemIdx].sequen);
       if (sequencialValido) {
         caixas(palletAtual, palletAtual.itens[itemIdx], itemIdx);
       }
       setErro(null);
     } else {
-      setErro(`Kanban GDBR ${kanbanGDBR} não confere Etiqueta Cliente ${etiqueta}`);
-      setSucess(null);
+      if(itemAtual?.status == "3"){
+        setErro("Todas as caixas do item ja foram lidas, não foi possível realizar mais leituras!")
+      }else{
+        setErro(`Kanban GDBR ${kanbanGDBR} não confere Etiqueta Cliente ${etiqueta}`);
+        setSucess(null);
+      }
     }
     } else {
       setErro(null);
@@ -363,13 +367,14 @@ export default function PalletViewSingle() {
   try {
     setLoading(true);
     console.log(`
-      Leitura de item:
+      Leitura de caixa:
       "codCarg": ${carga?.cod_carg},
       "codPale": ${palletAtual?.cod_palete.trim()},
       "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
       "codSequen": ${itemAtual?.sequen},
       "qtdrest": ${novaQtdCaixasLidas},
-      "operac": 1
+      "operac": 1,
+      "status": ${itemAtual.status}
     `);
 
     const resp = await apiItens.post("", {
@@ -383,8 +388,11 @@ export default function PalletViewSingle() {
 
     const data = resp.data;
     if (data === "Gravado com sucesso") {
-      setSucess("Deu certo eba!");
-      finalizarItem();
+      setSucess("Leitura realizada com sucesso!");
+      if(novaQtdCaixasLidas == totalCaixas){
+      
+        finalizarItem();
+      }
     } else if (data?.Erro) {
       setErro(data.Erro);
     } else {
@@ -400,83 +408,92 @@ export default function PalletViewSingle() {
   async function finalizarItem() {
     if (!palletAtual || !itemAtual) return;
 
-    try {
-      setLoading(true);
-      console.log(`
-        Finalização de item:
-        "codCarg": ${carga?.cod_carg},
-        "codPale": ${palletAtual?.cod_palete.trim()},
-        "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
-        "codSequen": ${itemAtual?.sequen},
-        "qtdrest": ${caixasLidas},
-        "operac": 3
-      `);
+    if (itemAtual.status != "3"){
 
-      const resp = await apiItens.post("", {
-        "codCarg": carga?.cod_carg,
-        "codPale": palletAtual?.cod_palete.trim(),
-        "codKanb": kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
-        "codSequ": itemAtual?.sequen,
-        "qtdrest": caixasLidas,
-        "operac": "3"
-      });
+      try {
+        setLoading(true);
+        console.log(`
+          Finalização de itens:
+          "codCarg": ${carga?.cod_carg},
+          "codPale": ${palletAtual?.cod_palete.trim()},
+          "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
+          "codSequen": ${itemAtual?.sequen},
+          "qtdrest": ${caixasLidas},
+          "operac": 3,
+        `);
 
-      const data = resp.data;
-      if (resp.data == "Kanban finalizado") {
-        setSucess("Todas as caixas foram lidas com sucesso, item finalizado!");
-        setCaixasLidas(0);
-        atualizarItensDoPallet();
-      } else if (data?.Erro) {
-        setErro(data.Erro);
-      } else {
-        setErro("Falha ao atualizar o status do item Finalização");
+        const resp = await apiItens.post("", {
+          "codCarg": carga?.cod_carg,
+          "codPale": palletAtual?.cod_palete.trim(),
+          "codKanb": kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
+          "codSequ": itemAtual?.sequen,
+          "qtdrest": caixasLidas,
+          "operac": "3"
+        });
+
+        const data = resp.data;
+        console.log(resp.data)
+        if (resp.data == "Kanban finalizado") {
+          setSucess("Todas as caixas foram lidas com sucesso, item finalizado com sucesso!");
+          setCaixasLidas(0);7
+          atualizarItensDoPallet();
+          verificaPalete();
+        } else if (data?.Erro) {
+          setErro(data.Erro);
+        } else {
+          setErro("Falha ao atualizar o status do item Finalização");
+        }
+      } catch {
+        setErro("Erro ao conectar com a API.");
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setErro("Erro ao conectar com a API.");
-    } finally {
-      setLoading(false);
     }
-}
+  }
 
   //Inicio das validações de finalização da montagem de carga
   //verifica se há paletes não lidos completamente (com itens pendentes)
   async function verificaPalete() {
-    if (!palletAtual) return;
+  if (!palletAtual) return;
 
-    const itensPendentes = palletAtual.itens.filter((item) => !item.lido);
-    if (itensPendentes.length != 0) {
-      setErro(`O Palete ${palletAtual.cod_palete} possui itens pendentes.`);
-    }else if(itensPendentes.length === 0 && palletAtual.stat_pale != "3"){
+  const todosFinalizados = palletAtual.itens.every(item => item.status === "3");
 
-      try {
+  if (!todosFinalizados) {
+    setErro(`O Palete ${palletAtual.cod_palete} possui itens pendentes.`);
+    return;
+  }
+
+
+  if (palletAtual.stat_pale !== "3") {
+    try {
       setLoading(true);
-
       const resp = await apiPallets.post("", {
-        "codCarg": carga?.cod_carg,
-        "codPale" : palletAtual?.cod_palete.trim(),
-        "status": "3"
+        codCarg: carga?.cod_carg,
+        codPale: palletAtual?.cod_palete.trim(),
+        status: "3"
       });
 
       const data = resp.data;
-      console.log(resp.data)
-      if (resp.data == "") {
-        setSucess("Todos os itens foram concluidos com sucesso, palete finalizado!");
+      console.log(resp.data);
+
+      if (resp.data === "") {
+        setSucess("Todos os itens foram concluídos com sucesso, palete finalizado!");
         verificaCarga();
         setCaixasLidas(0);
       } else if (data?.Erro) {
         setErro(data.Erro);
       } else {
-        setErro("Falha ao atualizar o status do palete no Verifica palete");
+        setErro("Falha ao atualizar o status do palete.");
       }
     } catch {
       setErro("Erro ao conectar com a API.");
     } finally {
       setLoading(false);
     }
-    }else {
-      console.log(`O Palete ${palletAtual.cod_palete} está completo.`);
-    }
+  } else {
+    console.log(`O Palete ${palletAtual.cod_palete} já está finalizado.`);
   }
+}
 
   //verifica se a carga não foi completada (com palletes pendentes)
   async function verificaCarga() {
@@ -509,7 +526,7 @@ export default function PalletViewSingle() {
         } else if (data?.Erro) {
           setErro(data.Erro);
         } else {
-          setErro("Falha ao alterar status do palete.");
+          setErro("Falha ao alterar status da carga.");
         }
       } catch {
         setErro("Erro ao conectar com a API.");
@@ -530,7 +547,6 @@ async function atualizarItensDoPallet() {
 
     const novosItens = resp.data?.itens ?? [];
 
-    // Atualiza apenas os itens do pallet atual
     setPallets((prevPallets) => {
       const atualizados = [...prevPallets];
       atualizados[palletIndex] = {
@@ -735,12 +751,11 @@ async function atualizarItensDoPallet() {
                   className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
                   disabled={palletIndex === totalPallets - 1}
                   onClick={() => {
-                    verificaPalete();
-                    if (palletAtual?.stat_pale !== "1") {
+                  //   if (palletAtual?.stat_pale !== "1") {
                       setPalletIndex(i => Math.min(i + 1, totalPallets - 1));
-                    } else {
-                      setErro("Pallet está em conferência! Por favor, finalize a montagem antes de passar para o próximo.");
-                    }
+                  //   } else {
+                  //     setErro("Pallet está em conferência! Por favor, finalize a montagem antes de passar para o próximo.");
+                  //   }
                   }}
                 >
                   Próximo
