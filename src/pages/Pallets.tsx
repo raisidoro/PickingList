@@ -390,8 +390,7 @@ export default function PalletViewSingle() {
       const data = resp.data;
       if (data === "Gravado com sucesso") {
         setSucess("Leitura realizada com sucesso!");
-        if(novaQtdCaixasLidas == totalCaixas){
-        
+        if(novaQtdCaixasLidas == totalCaixas){       
           finalizarItem();
         }
       } else if (data?.Erro) {
@@ -536,26 +535,29 @@ export default function PalletViewSingle() {
   if (!palletAtual || !carga) return;
 
     try {
-      setLoading(true);
-      const resp = await apiPallets.post("", {
-        codCarg: carga.cod_carg,
-        codPale: palletAtual.cod_palete.trim(),
-        status
-      });
+        setLoading(true);
 
-      const data = resp.data;
-      if (data === "" || data === "Gravado com sucesso") {
-        setSucess(`Status do palete atualizado para ${status}`);
-      } else if (data?.Erro) {
-        setErro(data.Erro);
-      } else {
-        setErro("Falha ao atualizar o status do palete.");
+        const resp = await apiPallets.post("", {
+          codCarg: carga?.cod_carg,
+          codPale: palletAtual?.cod_palete.trim(),
+          status: "3"
+        });
+
+        const data = resp.data;
+        if (data === "Gravado com sucesso") {
+          console.log("deu certo eba");
+          atualizarItensDoPallet();
+          setCaixasLidas(0);
+        } else if (data?.Erro) {
+          setErro(data.Erro);
+        } else {
+          setErro("Falha ao atualizar o status da finalização do palete");
+        }
+      } catch {
+        setErro("Erro ao conectar com a API.");
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setErro("Erro ao conectar com a API.");
-    } finally {
-      setLoading(false);
-    }
   }
 
   return (
