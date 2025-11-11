@@ -338,35 +338,6 @@ export default function PalletViewSingle() {
     setCaixasLidas(novaQtdCaixasLidas);
     console.log("Nova quantidade de caixas lidas:", novaQtdCaixasLidas);
 
-    if (palletAtual.stat_pale === "0") {
-      try {
-        setLoading(true);
-
-        const resp = await apiPallets.post("", {
-          codCarg: carga?.cod_carg,
-          codPale: palletAtual?.cod_palete.trim(),
-          status: "1"
-        });
-
-        const data = resp.data;
-        console.log(resp.data);
-        if (data === "Gravado com sucesso") {
-          atualizarItensDoPallet();
-          console.log("deu certo eba");
-          setCaixasLidas(0);
-        } else if (data?.Erro) {
-          setErro(data.Erro);
-        } else {
-          setErro("Falha ao atualizar o status do palete caixas");
-        }
-      } catch {
-        setErro("Erro ao conectar com a API.");
-      } finally {
-        setLoading(false);
-      }
-    }
-    console.log(`depois do if ${palletAtual.stat_pale}`)
-
     try {
       setLoading(true);
       console.log(`
@@ -392,6 +363,9 @@ export default function PalletViewSingle() {
       const data = resp.data;
       if (data === "Gravado com sucesso") {
         setSucess("Leitura realizada com sucesso!");
+        if(palletAtual.stat_pale === "0"){
+          atualizarStatusPalete("1");
+        }
         if(novaQtdCaixasLidas === totalCaixas){
           finalizarItem();
         }
@@ -439,6 +413,7 @@ export default function PalletViewSingle() {
           setSucess("Todas as caixas foram lidas com sucesso, item finalizado com sucesso!");
           setCaixasLidas(0);
           atualizarItensDoPallet();
+          verificaPalete();
         } else if (data?.Erro) {
           setErro(data.Erro);
         } else {
@@ -531,30 +506,34 @@ export default function PalletViewSingle() {
   async function atualizarStatusPalete(status: string) {
   if (!palletAtual || !carga) return;
 
+    console.log("Entrou no if de atualizar status do palete")
+
     try {
-        setLoading(true);
+      setLoading(true);
+      const resp = await apiPallets.post("", {
+        codCarg: carga.cod_carg,
+        codPale: palletAtual.cod_palete.trim(),
+        status
+      });
 
-        const resp = await apiPallets.post("", {
-          codCarg: carga?.cod_carg,
-          codPale: palletAtual?.cod_palete.trim(),
-          status: "3"
+      const data = resp.data;
+      if (data === "Gravado com sucesso") {
+        setPallets(prev => {
+            const updated = [...prev];
+            updated[palletIndex] = { ...updated[palletIndex], stat_pale: status };
+            return updated;
         });
-
-        const data = resp.data;
-        if (data === "Gravado com sucesso") {
-          console.log("deu certo eba");
-          atualizarItensDoPallet();
-          setCaixasLidas(0);
-        } else if (data?.Erro) {
-          setErro(data.Erro);
-        } else {
-          setErro("Falha ao atualizar o status da finalização do palete");
-        }
-      } catch {
-        setErro("Erro ao conectar com a API.");
-      } finally {
-        setLoading(false);
+        console.log(`Status do palete atualizado para ${palletAtual.stat_pale}`);
+      } else if (data?.Erro) {
+        setErro(data.Erro);
+      } else {
+        setErro("Falha ao atualizar o status do palete.");
       }
+    } catch {
+      setErro("Erro ao conectar com a API.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
