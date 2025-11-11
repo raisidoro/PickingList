@@ -349,9 +349,10 @@ export default function PalletViewSingle() {
         });
 
         const data = resp.data;
+        console.log(resp.data);
         if (data === "Gravado com sucesso") {
-          console.log("deu certo eba");
           atualizarItensDoPallet();
+          console.log("deu certo eba");
           setCaixasLidas(0);
         } else if (data?.Erro) {
           setErro(data.Erro);
@@ -365,6 +366,7 @@ export default function PalletViewSingle() {
       }
     }
     console.log(`depois do if ${palletAtual.stat_pale}`)
+
     try {
       setLoading(true);
       console.log(`
@@ -390,7 +392,7 @@ export default function PalletViewSingle() {
       const data = resp.data;
       if (data === "Gravado com sucesso") {
         setSucess("Leitura realizada com sucesso!");
-        if(novaQtdCaixasLidas == totalCaixas){       
+        if(novaQtdCaixasLidas === totalCaixas){
           finalizarItem();
         }
       } else if (data?.Erro) {
@@ -404,11 +406,6 @@ export default function PalletViewSingle() {
       setLoading(false);
     }
 
-    const todosFinalizados = palletAtual.itens.every(item => item.status === "3");
-    if(todosFinalizados){
-      verificaPalete();
-    }
-    
   }
 
   async function finalizarItem() {
@@ -440,7 +437,7 @@ export default function PalletViewSingle() {
         const data = resp.data;
         if (resp.data == "Kanban finalizado") {
           setSucess("Todas as caixas foram lidas com sucesso, item finalizado com sucesso!");
-          setCaixasLidas(0);7
+          setCaixasLidas(0);
           atualizarItensDoPallet();
         } else if (data?.Erro) {
           setErro(data.Erro);
