@@ -365,6 +365,7 @@ export default function PalletViewSingle() {
         setSucess("Leitura realizada com sucesso!");
         if(palletAtual.stat_pale === "0"){
           atualizarStatusPalete("1");
+          atualizarItensDoPallet();
         }
         if(novaQtdCaixasLidas === totalCaixas){
           finalizarItem();
@@ -379,7 +380,6 @@ export default function PalletViewSingle() {
     } finally {
       setLoading(false);
     }
-
   }
 
   async function finalizarItem() {
@@ -413,7 +413,15 @@ export default function PalletViewSingle() {
           setSucess("Todas as caixas foram lidas com sucesso, item finalizado com sucesso!");
           setCaixasLidas(0);
           atualizarItensDoPallet();
-          verificaPalete();
+
+          const todosFinalizados = palletAtual.itens.every(item => item.status === "3");
+          console.log(todosFinalizados);
+
+          if (todosFinalizados && palletAtual.stat_pale !== "3") {
+            atualizarStatusPalete("1");
+            atualizarItensDoPallet();
+          }
+
         } else if (data?.Erro) {
           setErro(data.Erro);
         } else {
@@ -424,17 +432,6 @@ export default function PalletViewSingle() {
       } finally {
         setLoading(false);
       }
-    }
-  }
-
-  //verifica se há paletes não lidos completamente (com itens pendentes)
-  async function verificaPalete() {
-    if (!palletAtual) return;
-
-    const todosFinalizados = palletAtual.itens.every(item => item.status === "3");
-
-    if (todosFinalizados && palletAtual.stat_pale !== "3") {
-      await atualizarStatusPalete("3");
     }
   }
 
