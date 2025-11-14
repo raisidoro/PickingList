@@ -426,47 +426,6 @@ export default function PalletViewSingle() {
     }
   }
 
-  //verifica se a carga não foi completada (com palletes pendentes)
-  async function verificaCarga() {
-    if (pallets.length === 0) return;
-
-    const palletesPendentes = pallets.filter((pallet) =>
-      pallet.itens.some((item) => !item.lido)
-    );
-
-    if (palletesPendentes.length > 0) {
-      console.log(
-        `A Carga possui palete(s) pendentes: ${palletesPendentes
-          .map((p) => p.cod_palete)
-          .join(", ")}`
-      );
-    } else if(palletesPendentes.length === 0){
-      try {
-        setLoading(true);
-
-        const resp = await apiCarga.post("", {
-          "codCarg": carga?.cod_carg,
-          "codPale" : palletAtual?.cod_palete.trim(),
-          "status": "3"
-        });
-
-        const data = resp.data;
-        if (data?.codCarg && data?.codPale) {
-          setSucess("Todos os paletes foram concluidos com sucesso, carga finalizada!");
-          setCaixasLidas(0);
-        } else if (data?.Erro) {
-          setErro(data.Erro);
-        } else {
-          setErro("Falha ao alterar status da carga.");
-        }
-      } catch {
-        setErro("Erro ao conectar com a API.");
-      } finally {
-        setLoading(false);
-      }
-    }
-  }
-
   async function atualizarItensDoPallet() {
     try {
       const resp = await apiItens.get("", {
@@ -479,9 +438,9 @@ export default function PalletViewSingle() {
       const novosItens = resp.data?.itens ?? [];
 
       setPallets((prevPallets) => {
-        const atualizados = [...prevPallets];
-        atualizados[palletIndex] = {
-          ...atualizados[palletIndex],
+        const updated = [...prevPallets];
+        updated[palletIndex] = {
+          ...updated[palletIndex],
           itens: novosItens
         };
 
@@ -489,10 +448,10 @@ export default function PalletViewSingle() {
 
         if (todosFinalizados) {
           atualizarStatusPalete("3");
-          verificaCarga();
+          verificaCarga(updated);
         }
 
-        return atualizados;
+        return updated;
       });
 
     } catch {
@@ -516,15 +475,58 @@ export default function PalletViewSingle() {
       const data = resp.data;
       if (data === "Gravado com sucesso") {
         setPallets(prev => {
-            const updated = [...prev];
-            updated[palletIndex] = { ...updated[palletIndex], stat_pale: status };
-            return updated;
+          const updated = [...prev];
+          updated[palletIndex] = {
+            ...updated[palletIndex],
+            stat_pale: status
+          };
+
+          const todosPaletesFinalizados = updated.every(p => p.stat_pale === "3");
+          if (todosPaletesFinalizados) {
+            verificaCarga(updated);
+          }
+
+          return updated;
         });
         console.log(`Status do palete atualizado para ${palletAtual.stat_pale}`);
       } else if (data?.Erro) {
         setErro(data.Erro);
       } else {
         setErro("Falha ao atualizar o status do palete.");
+      }
+    } catch {
+      setErro("Erro ao conectar com a API.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+   //verifica se a carga não foi completada (com palletes pendentes)
+  async function verificaCarga(palletsAtualizados?: Pallet[]) {
+    const lista = palletsAtualizados ?? pallets;
+
+    if (lista.length === 0) return;
+
+    const pendentes = lista.filter(p => p.stat_pale !== "3");
+
+    if (pendentes.length > 0) {
+      console.log("Existem paletes pendentes:", pendentes.map(p => p.cod_palete).join(", "));
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const resp = await apiCarga.post("", {
+        codCarg: carga?.cod_carg,
+        status: "3"
+      });
+
+      const data = resp.data;
+
+      if (data === "Gravado com sucesso") {
+        setSucess("Carga finalizada com sucesso! Todos os paletes concluídos.");
+      } else if (data?.Erro) {
+        setErro(data.Erro);
       }
     } catch {
       setErro("Erro ao conectar com a API.");
@@ -610,10 +612,10 @@ export default function PalletViewSingle() {
                     onRespond={() => setSucess(null)}
                   />
                   
-                  <ErrorPopup 
+                  {/* <ErrorPopup 
                   message={erro} 
                   onClose={() => setErro(null)} 
-                  />
+                  /> */}
 
                 </div>
               </div>
