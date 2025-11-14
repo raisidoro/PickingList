@@ -413,15 +413,6 @@ export default function PalletViewSingle() {
           setSucess("Todas as caixas foram lidas com sucesso, item finalizado com sucesso!");
           setCaixasLidas(0);
           atualizarItensDoPallet();
-
-          const todosFinalizados = palletAtual.itens.every(item => item.status === "3");
-          console.log(todosFinalizados);
-
-          if (todosFinalizados && palletAtual.stat_pale !== "3") {
-            atualizarStatusPalete("1");
-            atualizarItensDoPallet();
-          }
-
         } else if (data?.Erro) {
           setErro(data.Erro);
         } else {
@@ -493,8 +484,17 @@ export default function PalletViewSingle() {
           ...atualizados[palletIndex],
           itens: novosItens
         };
+
+        const todosFinalizados = novosItens.every((item: any) => item.status == "3");
+
+        if (todosFinalizados) {
+          atualizarStatusPalete("3");
+          verificaCarga();
+        }
+
         return atualizados;
       });
+
     } catch {
       setErro("Erro ao atualizar itens do palete.");
     }
@@ -675,7 +675,7 @@ export default function PalletViewSingle() {
                           className={`font-bold text-xs ${item.status === "0"
                               ? "text-red-700"
                               : item.status === "1"
-                                ? "text-orange-700"
+                                ? "text-yellow-700"
                                 : item.status === "2"
                                   ? "text-orange-700"
                                   : item.status === "3"
