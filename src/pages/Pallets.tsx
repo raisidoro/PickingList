@@ -237,12 +237,12 @@ export default function PalletViewSingle() {
       if (etiqueta.length === 5 && itemAtual?.status != "2") {
         etiquetaClienteRef.current?.blur(); 
       if (kanbanGDBR.includes(etiqueta) && itemAtual?.status != "3") {
-        setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
         const sequencialValido = verificaItem()(palletAtual.itens[itemIdx].sequen);
-      if (sequencialValido) {
-        caixas(palletAtual, palletAtual.itens[itemIdx], itemIdx);
-      }
-      setErro(null);
+        if (sequencialValido) {
+          setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
+          caixas(palletAtual, palletAtual.itens[itemIdx], itemIdx);
+        }
+        setErro(null);
     } else {
       if(itemAtual?.status == "3"){
         setErro("Todas as caixas do item ja foram lidas, não foi possível realizar mais leituras!")
@@ -281,6 +281,7 @@ export default function PalletViewSingle() {
         const valido = Number(sequencialAtual) === menorSequencialPendente;
         if (!valido) {
           setErro("Operador deve seguir a sequência correta. Finalize o item atual antes de continuar.");
+          console.log("Operador deve seguir a sequência correta. Finalize o item atual antes de continuar.");
         } else {
           setErro(null);
         }
@@ -302,7 +303,8 @@ export default function PalletViewSingle() {
       if (temSequencial(sequencialAtual)) {
         const valido = Number(sequencialAtual) === menorSequencialPendente;
         if (!valido) {
-          setErro("Siga a ordem dos itens com sequencial antes de montar os sem sequência.");
+          setErro("O item atual não segue a ordem sequencial do palete.");
+          console.log("O item atual não segue a ordem sequencial do palete.");
         } else {
           setErro(null);
         }
@@ -315,6 +317,7 @@ export default function PalletViewSingle() {
 
       if (aindaTemSequencialPendente) {
         setErro("Finalize os itens com sequência antes de montar os sem sequência.");
+        console.log("Finalize os itens com sequência antes de montar os sem sequência.");
         return false;
       }
 
@@ -581,7 +584,12 @@ export default function PalletViewSingle() {
             </Text>
           )}
 
-          <ErrorPopup message={erro} onClose={() => setErro("")} />
+          {erro && (
+          <ErrorPopup
+              message={erro}
+              onClose={() => setErro(null)}
+            />
+          )}
 
           {!loading && !erro && palletAtual && (
             <>
@@ -606,16 +614,14 @@ export default function PalletViewSingle() {
                     }}
                   />
 
-                  <SuccessPopup 
-                    message={success} 
-                    onClose={() => setSucess(null)} 
-                    onRespond={() => setSucess(null)}
-                  />
+                  {success && (<SuccessPopup message={success} onClose={() => setSucess(null)} onRespond={() => setSucess(null)} />)}
                   
-                  {/* <ErrorPopup 
-                  message={erro} 
-                  onClose={() => setErro(null)} 
-                  /> */}
+                  {erro && (
+                  <ErrorPopup
+                      message={erro}
+                      onClose={() => setErro(null)}
+                    />
+                  )}
 
                 </div>
               </div>
