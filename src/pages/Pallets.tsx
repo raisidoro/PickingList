@@ -242,7 +242,6 @@ export default function PalletViewSingle() {
           setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
           caixas(palletAtual, palletAtual.itens[itemIdx], itemIdx);
         }
-        setErro(null);
     } else {
       if(itemAtual?.status == "3"){
         setErro("Todas as caixas do item ja foram lidas, não foi possível realizar mais leituras!")
@@ -615,13 +614,6 @@ export default function PalletViewSingle() {
                   />
 
                   {success && (<SuccessPopup message={success} onClose={() => setSucess(null)} onRespond={() => setSucess(null)} />)}
-                  
-                  {erro && (
-                  <ErrorPopup
-                      message={erro}
-                      onClose={() => setErro(null)}
-                    />
-                  )}
 
                 </div>
               </div>
