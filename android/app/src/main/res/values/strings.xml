@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">pickinglistV20</string>
-    <string name="title_activity_main">pickinglistV20</string>
-    <string name="package_name">com.example.app</string>
-    <string name="custom_url_scheme">com.example.app</string>
+    <string name="app_name">pickinglist</string>
+    <string name="title_activity_main">pickinglist</string>
+    <string name="package_name">picking.list</string>
+    <string name="custom_url_scheme">picking.list</string>
 </resources>

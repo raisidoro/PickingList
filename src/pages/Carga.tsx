@@ -95,7 +95,7 @@ export default function CargaList({}: Props) {
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const navigate = useNavigate();
   const [Confirm, setConfirm] = useState<string | null>(null);
-  const [success, setSucess] = useState<string | null>(null);
+  const [, setSucess] = useState<string | null>(null);
 
   async function confirmaCarga(response: string, selectedCod: string | null) {
     if (response === "s" && selectedCod) {
@@ -197,6 +197,15 @@ export default function CargaList({}: Props) {
     fetchCargas();
   }, []);
 
+  function getStatusColor(status: string) {
+  switch (status) {
+    case "0": return "bg-red-200 border-red-400";    
+    case "1": return "bg-orange-200 border-orange-400";
+    case "3": return "bg-green-200 border-green-400";   
+    default:  return "bg-gray-100";
+  }
+}
+
   return (
     <main
       className="
@@ -230,13 +239,6 @@ export default function CargaList({}: Props) {
                 <TfiReload className="text-gray-500 w-6 h-6 cursor-pointer" />
               </span>
             </div>
-          </Text>
-          <Text
-            as="h1"
-            variant="blast"
-            className="text-center mb-2 sm:mb-6 text-gray-900"
-          >
-            Selecione a Carga
           </Text>
 
           {/* Search and Filter bar */}
@@ -313,6 +315,12 @@ export default function CargaList({}: Props) {
             )}
           </div>
 
+          <button
+            className="text-right text-gray-900"
+          >
+            Histórico de Cargas
+          </button>
+
           {loading && (
             <Text className="text-center text-gray-600">
               Carregando cargas...
@@ -352,8 +360,8 @@ export default function CargaList({}: Props) {
                 key={carga.cod_carg}
                 className={`
                   p-4 sm:p-6 cursor-pointer border rounded-2xl transition-shadow duration-300
-                  ${
-                    selectedCod === carga.cod_carg
+                  ${getStatusColor(safeTrim(carga.stat_col))}
+                  ${selectedCod === carga.cod_carg
                       ? "border-black-600 shadow-black-300 shadow-lg"
                       : "border-transparent hover:shadow-md hover:border-black-400"
                   }
