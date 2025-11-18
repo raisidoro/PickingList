@@ -722,11 +722,11 @@ export default function PalletViewSingle() {
                   className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
                   disabled={palletIndex === totalPallets - 1}
                   onClick={() => {
-                  //   if (palletAtual?.stat_pale !== "1") {
+                    if (palletAtual?.stat_pale !== "1") {
                       setPalletIndex(i => Math.min(i + 1, totalPallets - 1));
-                  //   } else {
-                  //     setErro("Pallet está em conferência! Por favor, finalize a montagem antes de passar para o próximo.");
-                  //   }
+                    } else {
+                      setErro("Pallet está em conferência! Por favor, finalize a montagem antes de passar para o próximo.");
+                    }
                   }}
                 >
                   Próximo
