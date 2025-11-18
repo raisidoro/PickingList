@@ -326,7 +326,7 @@ export default function PalletViewSingle() {
   }
 
   //Valida quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
-  async function caixas(pallet: Pallet, item: PalletItem, itemIdx: number) {
+  async function caixas(_pallet: Pallet, _item: PalletItem, _itemIdx: number) {
     if (!palletAtual || !itemAtual) return;
 
     const totalCaixas = Number(itemAtual?.qtd_caixa);
