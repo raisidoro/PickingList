@@ -96,8 +96,9 @@ export default function CargaList({}: Props) {
   const navigate = useNavigate();
   const [Confirm, setConfirm] = useState<string | null>(null);
   const [, setSucess] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
-  async function confirmaCarga(response: string, selectedCod: string | null) {
+  async function confirmaCarga(response: string, selectedCod: string | null){
     if (response === "s" && selectedCod) {
       const cargaSelecionada = cargas.find(
         (c) => c.cod_carg === selectedCod
@@ -133,7 +134,6 @@ export default function CargaList({}: Props) {
     }
   }
 
-
   function safeTrim(value?: string) {
     return value?.trim() ?? "";
   }
@@ -143,7 +143,6 @@ export default function CargaList({}: Props) {
   { code: "1", label: "Em conferência" },
   { code: "3", label: "Concluída" }
 ];
-
 
   const cargasFiltradas = cargas.filter((carga) => {
     const busca = searchTerm.toLowerCase();
@@ -156,7 +155,12 @@ export default function CargaList({}: Props) {
     const matchStatus =
       selectedStatus.length === 0 ||
       selectedStatus.includes(String(safeTrim(carga.stat_col)));
-    return matchSearch && matchStatus;
+      
+      const matchHistory = showHistory
+        ? safeTrim(carga.stat_col) === "3" 
+        : safeTrim(carga.stat_col) !== "3"; 
+
+    return matchSearch && matchStatus && matchHistory;
   });
 
   function handleSelect(carga: Carga) {
@@ -316,9 +320,14 @@ export default function CargaList({}: Props) {
           </div>
 
           <button
-            className="text-right text-gray-900"
-          >
+          className="text-right text-gray-900"
+            type="button"
+            onClick={() => {
+              setShowHistory((v) => !v);
+            }}
+           >
             Histórico de Cargas
+            {showHistory ? " - Pendentes" : " - Concluídas"}
           </button>
 
           {loading && (
