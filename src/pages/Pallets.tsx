@@ -592,31 +592,33 @@ export default function PalletViewSingle() {
 
           {!loading && !erro && palletAtual && (
             <>
-              <div className="w-full flex flex-col gap-4 mb-6 max-w-lg">
-                <input
+              {palletAtual.stat_pale !== "3" && (
+                <div className="w-full flex flex-col gap-4 mb-6 max-w-lg">
+                  <input
                   type="text"
                   autoFocus
                   placeholder="Kanban GDBR"
                   className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
-                  onChange= {handleKanbanGDBRChange}
+                  onChange={handleKanbanGDBRChange}
                 />
-              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <input
-                    type="text"
-                    maxLength={5}
-                    ref={etiquetaClienteRef}
-                    placeholder="Etiqueta Cliente"
-                    className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
-                    onChange={(e) => {
-                      handleEtiquetaClienteChange(e);
-                      verificaKanban(e.target.value);
-                    }}
-                  />
+                  type="text"
+                  maxLength={5}
+                  ref={etiquetaClienteRef}
+                  placeholder="Etiqueta Cliente"
+                  className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
+                  onChange={(e) => {
+                  handleEtiquetaClienteChange(e);
+                  verificaKanban(e.target.value);
+                  }}
+                />
 
                   {success && (<SuccessPopup message={success} onClose={() => setSucess(null)} onRespond={() => setSucess(null)} />)}
 
                 </div>
-              </div>
+                </div>
+                )}
 
                <div className="max-w-lg w-full text-xl">
                   <strong>Lane: </strong> {palletAtual.cod_lane} | <strong>Group: </strong> {palletAtual.cod_grupo}
