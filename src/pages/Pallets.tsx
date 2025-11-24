@@ -280,7 +280,6 @@ export default function PalletViewSingle() {
         const valido = Number(sequencialAtual) === menorSequencialPendente;
         if (!valido) {
           setErro("Operador deve seguir a sequência correta. Finalize o item atual antes de continuar.");
-          console.log("Operador deve seguir a sequência correta. Finalize o item atual antes de continuar.");
         } else {
           setErro(null);
         }
@@ -316,7 +315,6 @@ export default function PalletViewSingle() {
 
       if (aindaTemSequencialPendente) {
         setErro("Finalize os itens com sequência antes de montar os sem sequência.");
-        console.log("Finalize os itens com sequência antes de montar os sem sequência.");
         return false;
       }
 
@@ -338,20 +336,9 @@ export default function PalletViewSingle() {
 
     const novaQtdCaixasLidas = caixasLidas + 1;
     setCaixasLidas(novaQtdCaixasLidas);
-    console.log("Nova quantidade de caixas lidas:", novaQtdCaixasLidas);
 
     try {
       setLoading(true);
-      console.log(`
-        Leitura de caixa:
-        "codCarg": ${carga?.cod_carg},
-        "codPale": ${palletAtual?.cod_palete.trim()},
-        "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
-        "codSequen": ${itemAtual?.sequen},
-        "qtdrest": ${novaQtdCaixasLidas},
-        "operac": 1,
-        "status": ${itemAtual.status}
-      `);
 
       const resp = await apiItens.post("", {
         codCarg: carga?.cod_carg,
@@ -391,16 +378,6 @@ export default function PalletViewSingle() {
 
       try {
         setLoading(true);
-        console.log(`
-          Finalização de itens:
-          "codCarg": ${carga?.cod_carg},
-          "codPale": ${palletAtual?.cod_palete.trim()},
-          "codKanb": ${kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : ""},
-          "codSequen": ${itemAtual?.sequen},
-          "qtdrest": ${caixasLidas},
-          "operac": 3,
-        `);
-
         const resp = await apiItens.post("", {
           "codCarg": carga?.cod_carg,
           "codPale": palletAtual?.cod_palete.trim(),
@@ -464,8 +441,6 @@ export default function PalletViewSingle() {
   async function atualizarStatusPalete(status: string) {
   if (!palletAtual || !carga) return;
 
-    console.log("Entrou no if de atualizar status do palete")
-
     try {
       setLoading(true);
       const resp = await apiPallets.post("", {
@@ -490,7 +465,6 @@ export default function PalletViewSingle() {
 
           return updated;
         });
-        console.log(`Status do palete atualizado para ${palletAtual.stat_pale}`);
       } else if (data?.Erro) {
         setErro(data.Erro);
       } else {
