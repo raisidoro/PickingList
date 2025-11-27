@@ -119,7 +119,7 @@ export default function CargaList({}: Props) {
 
         console.log("cCarga : " + data.codCarg + "status: " + data.status)
         if (data && data.cCarga && data.status) {
-          setSucess(`Deu certo eba!`);
+          setSucess("Deu certo eba!");
           console.log("Emviado pra API");
         } else if (data && data.Erro) {
           setErro(data.Erro);

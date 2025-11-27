@@ -227,35 +227,49 @@ export default function PalletViewSingle() {
   function verificaKanban(etiqueta: string) {
     if (!kanbanGDBR || !etiqueta || !palletAtual) return;
 
-    const kanbanGDBRNumerico = kanbanGDBR.split("|")[1] || "";
-    const itemIdx = palletAtual.itens.findIndex((item) => item.kanban === kanbanGDBRNumerico);
+    const kanbanRegex = /^X\|(\d{5})\|(\d{4})$/;
+    const match = kanbanGDBR.match(kanbanRegex);
 
-    if (itemIdx === -1) {
-    setErro(`Kanban ${kanbanGDBRNumerico} não encontrado no pallet atual.`);
-    return;
-    }else{
-      if (etiqueta.length === 5 && itemAtual?.status != "2") {
-        etiquetaClienteRef.current?.blur(); 
-      if (kanbanGDBR.includes(etiqueta) && itemAtual?.status != "3") {
-        const sequencialValido = verificaItem()(palletAtual.itens[itemIdx].sequen);
-        if (sequencialValido) {
-          setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
-          caixas(palletAtual, palletAtual.itens[itemIdx], itemIdx);
+    if (!match) {
+      setErro("Formato do Kanban GDBR inválido.");
+      setSucess(null);
+      return;
+    }
+
+    const etiquetaKanban = match[1];
+    // const numerosFinais = match[2];
+
+    if (etiqueta.length === 5) {
+      etiquetaClienteRef.current?.blur();
+
+      if (etiqueta === etiquetaKanban) {
+        const kanbanGDBRNumerico = kanbanGDBR;
+        const itemIdx = palletAtual.itens.findIndex((item) => item.kanban === kanbanGDBRNumerico);
+
+        if (itemIdx === -1) {
+          setErro(`Kanban ${kanbanGDBRNumerico} não encontrado no pallet atual.`);
+          setSucess(null);
+        } else {
+          if (itemAtual?.status === "3") {
+            setErro("Todas as caixas do item já foram lidas, não foi possível realizar mais leituras!");
+            setSucess(null);
+          } else if (itemAtual?.status !== "2") {
+            const sequencialValido = verificaItem()(palletAtual.itens[itemIdx].sequen);
+            if (sequencialValido) {
+              setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
+              caixas(palletAtual, palletAtual.itens[itemIdx], itemIdx);
+            }
+          }
         }
-    } else {
-      if(itemAtual?.status == "3"){
-        setErro("Todas as caixas do item ja foram lidas, não foi possível realizar mais leituras!")
-      }else{
-        setErro(`Kanban GDBR ${kanbanGDBR} não confere Etiqueta Cliente ${etiqueta}`);
+        setItemIndex(itemIdx);
+      } else {
+        setErro(`Kanban GDBR não confere Etiqueta Cliente ${etiqueta}`);
         setSucess(null);
       }
-    }
     } else {
       setErro(null);
       setSucess(null);
     }
-    }
-    setItemIndex(itemIdx);
   }
 
   //Verifica sequencial dos itens
@@ -352,6 +366,8 @@ export default function PalletViewSingle() {
       const data = resp.data;
       if (data === "Gravado com sucesso") {
         setSucess("Leitura realizada com sucesso!");
+        setKanbanGDBR("");
+        setEtiquetaCliente("");
         if(palletAtual.stat_pale === "0"){
           atualizarStatusPalete("1");
           atualizarItensDoPallet();
@@ -511,6 +527,16 @@ export default function PalletViewSingle() {
     }
   }
 
+  //Função para definir a cor da borda 
+  function getStatusColor(status: string) {
+  switch (status) {
+    case "0": return "bg-red-200 border-red-400";    
+    case "1": return "bg-orange-200 border-orange-400";
+    case "3": return "bg-green-200 border-green-400";   
+    default:  return "bg-gray-100";
+  }
+}
+
   return (
     <main
       className="
@@ -609,7 +635,7 @@ export default function PalletViewSingle() {
                   {palletAtual.itens.map((item, idx) => (
                     <Card
                       key={idx}
-                      className="p-2 rounded-xl bg-white border border-gray-300 shadow-sm"
+                      className={`p-2 rounded-xl bg-white border ${getStatusColor(item.status)} shadow-sm`}
                     >
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="font-semibold text-xs">Seq</span>
