@@ -203,10 +203,9 @@ export default function CargaList({}: Props) {
 
   function getStatusColor(status: string) {
   switch (status) {
-    case "0": return "bg-red-200 border-red-400";    
+    case "0": return "bg-gray-200 border-gray-400";    
     case "1": return "bg-orange-200 border-orange-400";
     case "3": return "bg-green-200 border-green-400";   
-    default:  return "bg-gray-100";
   }
 }
 

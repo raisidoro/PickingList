@@ -117,6 +117,19 @@ export default function PalletViewSingle() {
   const itemAtual = palletAtual?.itens[itemIndex];
   const [caixasLidas, setCaixasLidas] = useState(0);
 
+  // ordenar itens: pendentes/ativos primeiro, finalizados ("3") por último
+  const sortedItems = palletAtual
+    ? [...palletAtual.itens].sort((a, b) => {
+        // itens finalizados devem ficar por último
+        if (a.status === "3" && b.status !== "3") return 1;
+        if (a.status !== "3" && b.status === "3") return -1;
+        // mantenha ordem por sequencial quando possível
+        const sa = Number(a.sequen) || 0;
+        const sb = Number(b.sequen) || 0;
+        return sa - sb;
+      })
+    : [];
+
   // Ajusta o índice do pallet se necessário ao mudar a lista de pallets
   useEffect(() => {
     if (palletIndex > pallets.length - 1) {
@@ -237,7 +250,6 @@ export default function PalletViewSingle() {
     }
 
     const etiquetaKanban = match[1];
-    // const numerosFinais = match[2];
 
     if (etiqueta.length === 5) {
       etiquetaClienteRef.current?.blur();
@@ -273,24 +285,31 @@ export default function PalletViewSingle() {
   }
 
   //Verifica sequencial dos itens
-  function verificaItem(): (sequencialAtual: number) => boolean {
+  function verificaItem(): (sequencialAtual: number | string) => boolean {
     if (!palletAtual || !palletAtual.itens) {
       setErro("Pallet ou itens não definidos");
       return () => false;
     }
 
-    const temSequencial = (seq: number) => Number(seq) > 0;
+    const temSequencial = (seq: any) => {
+      const n = Number(seq);
+      return !isNaN(n) && n > 0;
+    };
 
-    const todosComSequencial = palletAtual.itens.every(item => temSequencial(item.sequen));
-    const nenhumComSequencial = palletAtual.itens.every(item => !temSequencial(item.sequen));
+    const todosComSequencial = palletAtual.itens.every((item) =>
+      temSequencial(item.sequen)
+    );
+    const nenhumComSequencial = palletAtual.itens.every(
+      (item) => !temSequencial(item.sequen)
+    );
 
     if (todosComSequencial) {
       const menorSequencialPendente = palletAtual.itens
-        .filter(item => item.status !== "3")
-        .map(item => Number(item.sequen))
+        .filter((item) => item.status !== "3")
+        .map((item) => Number(item.sequen))
         .sort((a, b) => a - b)[0];
 
-      return (sequencialAtual: number) => {
+      return (sequencialAtual: number | string) => {
         const valido = Number(sequencialAtual) === menorSequencialPendente;
         if (!valido) {
           setErro("Operador deve seguir a sequência correta. Finalize o item atual antes de continuar.");
@@ -307,11 +326,11 @@ export default function PalletViewSingle() {
     }
 
     const menorSequencialPendente = palletAtual.itens
-      .filter(item => item.status !== "3" && temSequencial(item.sequen))
-      .map(item => Number(item.sequen))
+      .filter((item) => item.status !== "3" && temSequencial(item.sequen))
+      .map((item) => Number(item.sequen))
       .sort((a, b) => a - b)[0];
 
-    return (sequencialAtual: number) => {
+    return (sequencialAtual: number | string) => {
       if (temSequencial(sequencialAtual)) {
         const valido = Number(sequencialAtual) === menorSequencialPendente;
         if (!valido) {
@@ -324,7 +343,7 @@ export default function PalletViewSingle() {
       }
 
       const aindaTemSequencialPendente = palletAtual.itens.some(
-        item => item.status !== "3" && temSequencial(item.sequen)
+        (item) => item.status !== "3" && temSequencial(item.sequen)
       );
 
       if (aindaTemSequencialPendente) {
@@ -529,13 +548,15 @@ export default function PalletViewSingle() {
 
   //Função para definir a cor da borda 
   function getStatusColor(status: string) {
-  switch (status) {
-    case "0": return "bg-red-200 border-red-400";    
-    case "1": return "bg-orange-200 border-orange-400";
-    case "3": return "bg-green-200 border-green-400";   
-    default:  return "bg-gray-100";
+    switch (status) {
+      case "0":
+        return "bg-gray-100 border-gray-300 text-black";
+      case "1":
+        return "bg-orange-200 border-orange-400 text-black";
+      case "3":
+        return "bg-green-200 border-green-400 text-black";
+    }
   }
-}
 
   return (
     <main
@@ -632,14 +653,16 @@ export default function PalletViewSingle() {
                     String(palletIndex + 1).padStart(2, "0")}/{totalPallets.toString().padStart(2, "0")}
                 </div>
                 <div className="flex flex-col gap-2">
-                  {palletAtual.itens.map((item, idx) => (
+                  {sortedItems.map((item, idx) => (
                     <Card
                       key={idx}
-                      className={`p-2 rounded-xl bg-white border ${getStatusColor(item.status)} shadow-sm`}
+                      className={`p-2 rounded-xl  ${getStatusColor(item.status)} shadow-sm`}
                     >
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="font-semibold text-xs">Seq</span>
-                        <span className="text-xs">{item.sequen}</span>
+                        <span className="text-xs">
+                          {item.sequen === 0 ? "-" : item.sequen}
+                        </span>
                       </div>
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="font-semibold text-xs">Kanban</span>
