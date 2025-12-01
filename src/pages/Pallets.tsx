@@ -151,6 +151,11 @@ export default function PalletViewSingle() {
     setItemIndex(0);
   }, [pallets, palletIndex]);
 
+
+  useEffect(() => {
+    setCaixasLidas(0);
+  }, [itemIndex, palletIndex]);
+
   if (!carga) {
     return (
       <main className="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-gray-200 to-gray-300">
@@ -292,8 +297,9 @@ export default function PalletViewSingle() {
 
       const foundItem = palletAtual.itens[itemIdx];
 
-      // atualiza índice para o item encontrado
+      // atualiza índice para o item encontrado e zera caixas lidas
       setItemIndex(itemIdx);
+      setCaixasLidas(0);
 
       if (foundItem.status === "3") {
         setErro("Todas as caixas do item já foram lidas, não foi possível realizar mais leituras!");
@@ -419,17 +425,19 @@ export default function PalletViewSingle() {
 
   //Valida quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
   async function caixas(_pallet: Pallet, _item: PalletItem, _itemIdx: number) {
-    if (!palletAtual || !itemAtual) return;
+    const itemSelecionado = palletAtual?.itens[_itemIdx];
+    if (!itemSelecionado) return;
 
-    const totalCaixas = Number(itemAtual?.qtd_caixa);
+    const totalCaixas = Number(itemSelecionado.qtd_caixa);
 
-    if (caixasLidas >= totalCaixas || itemAtual?.status === "3") {
-      setErro("Todas as caixas do item já foram lidas. Não é possível continuar.");
+    if (caixasLidas >= totalCaixas || itemSelecionado.status === "3") {
+      setErro("Todas as caixas desse item já foram lidas.");
+      setSucess(null);
       return;
     }
 
-    const novaQtdCaixasLidas = caixasLidas + 1;
-    setCaixasLidas(novaQtdCaixasLidas);
+    const novaQtd = caixasLidas + 1;  
+    setCaixasLidas(novaQtd);
 
     try {
       setLoading(true);
@@ -438,68 +446,89 @@ export default function PalletViewSingle() {
         codCarg: carga?.cod_carg,
         codPale: palletAtual?.cod_palete.trim(),
         codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
-        codSequ: itemAtual?.sequen,
-        qtdrest: novaQtdCaixasLidas,
+        codSequ: itemSelecionado.sequen,
+        qtdrest: novaQtd,   
         operac: "1"
       });
 
-      const data = resp.data;
-      if (data === "Gravado com sucesso") {
-        setSucess("Leitura realizada com sucesso!");
+      if (resp.data === "Gravado com sucesso") {
+        setErro(null);
+        setSucess("Leitura registrada!");
+
         setKanbanGDBR("");
         setEtiquetaCliente("");
-        if(palletAtual.stat_pale === "0"){
-          atualizarStatusPalete("1");
-          atualizarItensDoPallet();
+
+        if (novaQtd === totalCaixas) {
+          await finalizarItem(novaQtd); 
         }
-        if(novaQtdCaixasLidas === totalCaixas){
-          finalizarItem();
-        }
-      } else if (data?.Erro) {
-        setErro(data.Erro);
+
+      } else if (resp.data?.Erro) {
+        setSucess(null);
+        setErro(resp.data.Erro);
       } else {
-        setErro("Falha ao atualizar o status do item Leitura de caixa");
+        setErro("Falha ao gravar leitura de caixa.");
+        setSucess(null);
       }
+
     } catch {
       setErro("Erro ao conectar com a API.");
+      setSucess(null);
     } finally {
       setLoading(false);
     }
   }
 
-  async function finalizarItem() {
+
+
+  async function finalizarItem(qtdFinal: number) {
     if (!palletAtual || !itemAtual) return;
 
-    if (itemAtual.status != "3"){
+    if (qtdFinal <= 0) return;
 
-      try {
-        setLoading(true);
-        const resp = await apiItens.post("", {
-          "codCarg": carga?.cod_carg,
-          "codPale": palletAtual?.cod_palete.trim(),
-          "codKanb": kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
-          "codSequ": itemAtual?.sequen,
-          "qtdrest": caixasLidas,
-          "operac": "3"
-        });
+    try {
+      setLoading(true);
 
-        const data = resp.data;
-        if (resp.data == "Kanban finalizado") {
-          setSucess("Todas as caixas foram lidas com sucesso, item finalizado com sucesso!");
-          setCaixasLidas(0);
-          atualizarItensDoPallet();
-        } else if (data?.Erro) {
-          setErro(data.Erro);
-        } else {
-          setErro("Falha ao atualizar o status do item Finalização");
-        }
-      } catch {
-        setErro("Erro ao conectar com a API.");
-      } finally {
-        setLoading(false);
+      const resp = await apiItens.post("", {
+        codCarg: carga?.cod_carg,
+        codPale: palletAtual?.cod_palete.trim(),
+        codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
+        codSequ: itemAtual.sequen,
+        qtdrest: qtdFinal,
+        operac: "3"
+      });
+
+      if (resp.data === "Kanban finalizado") {
+        setErro(null);
+        setSucess("Item finalizado com sucesso!");
+
+        // limpa dados
+        setCaixasLidas(0);
+        setKanbanGDBR("");
+        setEtiquetaCliente("");
+
+        // avança para o próximo item
+        setItemIndex(prev => prev + 1);
+
+        // atualiza lista
+        atualizarItensDoPallet();
+
+      } else if (resp.data?.Erro) {
+        setSucess(null);
+        setErro(resp.data.Erro);
+      } else {
+        setErro("Falha ao atualizar o status do item.");
+        setSucess(null);
       }
+
+    } catch (e) {
+      setErro("Erro ao conectar com a API.");
+      setSucess(null);
+    } finally {
+      setLoading(false);
     }
   }
+
+
 
   async function atualizarItensDoPallet() {
     try {
