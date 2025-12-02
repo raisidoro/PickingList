@@ -114,7 +114,7 @@ export default function PalletViewSingle() {
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
   const [itemIndex, setItemIndex] = useState(0);
-  const itemAtual = palletAtual?.itens[itemIndex];
+  //const itemAtual = palletAtual?.itens[itemIndex];
   const [caixasLidas, setCaixasLidas] = useState(0);
 
   // ordem de visuali8zação dos itens 
@@ -220,15 +220,9 @@ export default function PalletViewSingle() {
 
   // Reseta a contagem de caixas lidas ao mudar de item ou pallet
   useEffect(() => {
-    if (
-      palletAtual &&
-      itemAtual &&
-      Number(itemAtual.qtd_caixa) > 0 &&
-      caixasLidas === Number(itemAtual.qtd_caixa) &&
-      itemAtual.status === "1"
-    ) {
-    }
-  }, [caixasLidas, palletAtual, itemAtual]);
+    setCaixasLidas(0);
+  }, [itemIndex, palletIndex]);
+
 
   //Inicio das validações do processo de montagem de carga
   //Constantes para validação se a etiqueta do cliente confere o kanban GDBR
@@ -250,64 +244,78 @@ export default function PalletViewSingle() {
   }
 
   // Validação se Kanban GDBR está no Pallet atual e confere com a Etiqueta do Cliente
-  function verificaKanban({ etiqueta }: { etiqueta: string; }) {
+
+  function verificaKanban({ etiqueta }: { etiqueta: string }) {
     if (!kanbanGDBR || !etiqueta || !palletAtual) return;
 
-    const kanbanRegex = /^X\|([A-Z0-9\-]{5})\|(\d{4})(?:\|.*)?$/i;
-    const match = kanbanGDBR.match(kanbanRegex);
+    if (etiqueta.length < 5) {
+        setErro(null);
+        setSucess(null);
+        return;
+    }
 
-    if (!match) {
-      setErro("Formato do Kanban GDBR inválido.");
+    // Valida formato da etiqueta
+    const etiquetaRegex = /^[A-Z]-\d{3}$/i;
+    if (!etiquetaRegex.test(etiqueta)) {
+      setErro("Formato da etiqueta inválido. Use L-XXX");
       setSucess(null);
       return;
     }
 
-    const etiquetaKanban = match[1];
-    const kanbanConcatenado = `${match[1]}${match[2]}`; 
+    // Valida formato do Kanban GDBR
+    const kanbanRegex = /^X\|([A-Z]-\d{3})\|(\d{4})(?:\|.*)?$/i;
+    const match = kanbanGDBR.match(kanbanRegex);
+    if (!match) {
+      setErro("Formato do Kanban GDBR inválido. Use X|KANBAN|SEQUENCIAL.");
+      setSucess(null);
+      return;
+    }
+
+    const kanbanClienteEsperado = match[1]; 
+    const kanbanConcatenado = `${match[1]}${match[2]}`;
     const kanbanOriginal = kanbanGDBR;
 
-    if (etiqueta.length === 5) {
-      etiquetaClienteRef.current?.blur();
-
-      // procura o item tentando várias formas normalizadas
-      const itemIdx = palletAtual.itens.findIndex((item) => {
-        const itemKanbanRaw = (item.kanban ?? "").toString();
-        const itemDigits = itemKanbanRaw.replace(/\D/g, ""); 
-
-        return (
-          itemKanbanRaw === kanbanOriginal || 
-          itemDigits === kanbanConcatenado || 
-          itemDigits.endsWith(kanbanConcatenado) || 
-          itemDigits === etiquetaKanban || 
-          itemKanbanRaw.includes(etiquetaKanban) || 
-          itemKanbanRaw === etiqueta 
-        );
-      });
-
-      if (itemIdx === -1) {
-        setErro(`Kanban ${kanbanOriginal} não encontrado no pallet atual.`);
-        setSucess(null);
-        return;
-      }
-
-      const foundItem = palletAtual.itens[itemIdx];
-
-      // atualiza índice para o item encontrado
-      setItemIndex(itemIdx);
-
-      if (foundItem.status === "3") {
-        setErro("Todas as caixas do item já foram lidas, não foi possível realizar mais leituras!");
-        setSucess(null);
-      } else if (foundItem.status !== "2") {
-        const sequencialValido = verificaItem()(foundItem.sequen);
-        if (sequencialValido) {
-          setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
-          caixas(palletAtual, foundItem, itemIdx);
-        }
-      }
-    } else {
-      setErro(null);
+    // Confere se etiqueta bate com Kanban
+    if (etiqueta !== kanbanClienteEsperado) {
+      setErro(`Etiqueta ${etiqueta} não confere com o Kanban esperado (${kanbanClienteEsperado}).`);
       setSucess(null);
+      return;
+    }
+
+    etiquetaClienteRef.current?.blur();
+
+    // Procura item no pallet
+    const itemIdx = palletAtual.itens.findIndex((item) => {
+      const itemKanbanRaw = (item.kanban ?? "").toString();
+      const itemDigits = itemKanbanRaw.replace(/\D/g, "");
+      return (
+        itemKanbanRaw === kanbanOriginal ||
+        itemDigits === kanbanConcatenado ||
+        itemDigits.endsWith(kanbanConcatenado) ||
+        itemDigits === kanbanClienteEsperado ||
+        itemKanbanRaw.includes(kanbanClienteEsperado) ||
+        itemKanbanRaw === etiqueta
+      );
+    });
+
+    if (itemIdx === -1) {
+      setErro(`Kanban ${kanbanOriginal} não encontrado no pallet atual.`);
+      setSucess(null);
+      return;
+    }
+
+    const foundItem = palletAtual.itens[itemIdx];
+    setItemIndex(itemIdx);
+
+    if (foundItem.status === "3") {
+      setErro("Todas as caixas do item já foram lidas, não foi possível realizar mais leituras!");
+      setSucess(null);
+    } else if (foundItem.status !== "2") {
+      const sequencialValido = verificaItem()(foundItem.sequen);
+      if (sequencialValido) {
+        setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
+        caixas(palletAtual, foundItem, itemIdx);
+      }
     }
   }
 
@@ -323,30 +331,25 @@ export default function PalletViewSingle() {
       return Number.isFinite(n) && n > 0;
     };
 
-    // itens COM sequencial antes dos SEM sequencial
+    // Ordena itens: finalizados por último, depois sequenciais
     setPallets((prev) => {
       const updated = [...prev];
       if (!updated[palletIndex]) return prev;
 
       const itens = [...updated[palletIndex].itens];
       itens.sort((a, b) => {
-        // finalizados por último
         if (a.status === "3" && b.status !== "3") return 1;
         if (a.status !== "3" && b.status === "3") return -1;
 
         const aHas = temSequencial(a.sequen);
         const bHas = temSequencial(b.sequen);
 
-        // itens com sequencial válidos antes dos que não têm
         if (aHas && !bHas) return -1;
         if (!aHas && bHas) return 1;
 
-        // ambos têm sequencial: ordenar pelo número
         if (aHas && bHas) {
           return Number(a.sequen) - Number(b.sequen);
         }
-
-        // nenhum tem sequencial: manter ordem relativa
         return 0;
       });
 
@@ -354,14 +357,11 @@ export default function PalletViewSingle() {
       return updated;
     });
 
-    // Lógica de validação de sequência
-    const todosComSequencial = palletAtual.itens.every((item) =>
-      temSequencial(item.sequen)
-    );
-    const nenhumComSequencial = palletAtual.itens.every(
-      (item) => !temSequencial(item.sequen)
-    );
+    // Lógica de validação
+    const todosComSequencial = palletAtual.itens.every((item) => temSequencial(item.sequen));
+    const nenhumComSequencial = palletAtual.itens.every((item) => !temSequencial(item.sequen));
 
+    // Caso todos tenham sequencial
     if (todosComSequencial) {
       const menorSequencialPendente = palletAtual.itens
         .filter((item) => item.status !== "3")
@@ -371,9 +371,7 @@ export default function PalletViewSingle() {
       return (sequencialAtual: number | string) => {
         const valido = Number(sequencialAtual) === menorSequencialPendente;
         if (!valido) {
-          setErro(
-            "Operador deve seguir a sequência correta. Finalize o item atual antes de continuar."
-          );
+          setErro("Operador deve seguir a sequência correta. Finalize o item atual antes de continuar.");
         } else {
           setErro(null);
         }
@@ -381,11 +379,13 @@ export default function PalletViewSingle() {
       };
     }
 
+    // Caso nenhum tenha sequencial
     if (nenhumComSequencial) {
       setErro(null);
-      return () => true;
+      return () => true; // Permite qualquer ordem
     }
 
+    // Caso misto (alguns com sequencial)
     const menorSequencialPendente = palletAtual.itens
       .filter((item) => item.status !== "3" && temSequencial(item.sequen))
       .map((item) => Number(item.sequen))
@@ -396,7 +396,6 @@ export default function PalletViewSingle() {
         const valido = Number(sequencialAtual) === menorSequencialPendente;
         if (!valido) {
           setErro("O item atual não segue a ordem sequencial do palete.");
-          console.log("O item atual não segue a ordem sequencial do palete.");
         } else {
           setErro(null);
         }
@@ -417,13 +416,14 @@ export default function PalletViewSingle() {
     };
   }
 
+
   //Valida quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
   async function caixas(_pallet: Pallet, _item: PalletItem, _itemIdx: number) {
-    if (!palletAtual || !itemAtual) return;
+    if (!_pallet || !_item) return;
 
-    const totalCaixas = Number(itemAtual?.qtd_caixa);
+    const totalCaixas = Number(_item.qtd_caixa);
 
-    if (caixasLidas >= totalCaixas || itemAtual?.status === "3") {
+    if (caixasLidas >= totalCaixas || _item.status === "3") {
       setErro("Todas as caixas do item já foram lidas. Não é possível continuar.");
       return;
     }
@@ -436,9 +436,9 @@ export default function PalletViewSingle() {
 
       const resp = await apiItens.post("", {
         codCarg: carga?.cod_carg,
-        codPale: palletAtual?.cod_palete.trim(),
+        codPale: _pallet.cod_palete.trim(),
         codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
-        codSequ: itemAtual?.sequen,
+        codSequ: _item.sequen,
         qtdrest: novaQtdCaixasLidas,
         operac: "1"
       });
@@ -448,12 +448,16 @@ export default function PalletViewSingle() {
         setSucess("Leitura realizada com sucesso!");
         setKanbanGDBR("");
         setEtiquetaCliente("");
-        if(palletAtual.stat_pale === "0"){
+
+        // Se o pallet estava pendente, muda para "em montagem"
+        if (_pallet.stat_pale === "0") {
           atualizarStatusPalete("1");
           atualizarItensDoPallet();
         }
-        if(novaQtdCaixasLidas === totalCaixas){
-          finalizarItem();
+
+        // Se todas as caixas foram lidas, finaliza o item   
+        if (novaQtdCaixasLidas >= totalCaixas) {
+          finalizarItem(_pallet, _item);
         }
       } else if (data?.Erro) {
         setErro(data.Erro);
@@ -467,24 +471,23 @@ export default function PalletViewSingle() {
     }
   }
 
-  async function finalizarItem() {
-    if (!palletAtual || !itemAtual) return;
+  async function finalizarItem(_pallet: Pallet, _item: PalletItem) {
+    if (!_pallet || !_item) return;
 
-    if (itemAtual.status != "3"){
-
+    if (_item.status !== "3") {
       try {
         setLoading(true);
         const resp = await apiItens.post("", {
-          "codCarg": carga?.cod_carg,
-          "codPale": palletAtual?.cod_palete.trim(),
-          "codKanb": kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
-          "codSequ": itemAtual?.sequen,
-          "qtdrest": caixasLidas,
-          "operac": "3"
+          codCarg: carga?.cod_carg,
+          codPale: _pallet.cod_palete.trim(),
+          codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
+          codSequ: _item.sequen,
+          qtdrest: caixasLidas,
+          operac: "3"
         });
 
         const data = resp.data;
-        if (resp.data == "Kanban finalizado") {
+        if (data === "Kanban finalizado") {
           setSucess("Todas as caixas foram lidas com sucesso, item finalizado com sucesso!");
           setCaixasLidas(0);
           atualizarItensDoPallet();
@@ -501,6 +504,8 @@ export default function PalletViewSingle() {
     }
   }
 
+
+
   async function atualizarItensDoPallet() {
     try {
       const resp = await apiItens.get("", {
@@ -514,12 +519,18 @@ export default function PalletViewSingle() {
 
       setPallets((prevPallets) => {
         const updated = [...prevPallets];
+
         updated[palletIndex] = {
           ...updated[palletIndex],
-          itens: novosItens
+          itens: novosItens.map((it: any) => ({
+            ...it,
+            status: it.status ?? "0" 
+          }))
         };
 
-        const todosFinalizados = novosItens.every((item: any) => item.status == "3");
+        const todosFinalizados = updated[palletIndex].itens.every(
+          (item) => item.status === "3"
+        );
 
         if (todosFinalizados) {
           atualizarStatusPalete("3");
@@ -528,11 +539,11 @@ export default function PalletViewSingle() {
 
         return updated;
       });
-
     } catch {
       setErro("Erro ao atualizar itens do palete.");
     }
   }
+
 
   async function atualizarStatusPalete(status: string) {
   if (!palletAtual || !carga) return;
