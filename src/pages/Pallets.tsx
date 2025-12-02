@@ -151,6 +151,10 @@ export default function PalletViewSingle() {
     setItemIndex(0);
   }, [pallets, palletIndex]);
 
+  useEffect(() => {
+    setSucess(null);
+  }, [palletIndex]);
+
   if (!carga) {
     return (
       <main className="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-gray-200 to-gray-300">
