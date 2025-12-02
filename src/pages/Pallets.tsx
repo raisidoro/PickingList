@@ -113,7 +113,7 @@ export default function PalletViewSingle() {
   const [palletIndex, setPalletIndex] = useState(0);
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
-  const [itemIndex, setItemIndex] = useState(0);
+  const [, setItemIndex] = useState(0);
   //const itemAtual = palletAtual?.itens[itemIndex];
   const [caixasLidas, setCaixasLidas] = useState(0);
 
@@ -217,12 +217,6 @@ export default function PalletViewSingle() {
         setLoading(false);
       });
   }, [carga]);
-
-  // Reseta a contagem de caixas lidas ao mudar de item ou pallet
-  useEffect(() => {
-    setCaixasLidas(0);
-  }, [itemIndex, palletIndex]);
-
 
   //Inicio das validações do processo de montagem de carga
   //Constantes para validação se a etiqueta do cliente confere o kanban GDBR
@@ -457,7 +451,7 @@ export default function PalletViewSingle() {
 
         // Se todas as caixas foram lidas, finaliza o item   
         if (novaQtdCaixasLidas >= totalCaixas) {
-          finalizarItem(_pallet, _item);
+          finalizarItem(_pallet, _item, novaQtdCaixasLidas);
         }
       } else if (data?.Erro) {
         setErro(data.Erro);
@@ -471,7 +465,7 @@ export default function PalletViewSingle() {
     }
   }
 
-  async function finalizarItem(_pallet: Pallet, _item: PalletItem) {
+  async function finalizarItem(_pallet: Pallet, _item: PalletItem, qtdFinal: number) {
     if (!_pallet || !_item) return;
 
     if (_item.status !== "3") {
@@ -482,7 +476,7 @@ export default function PalletViewSingle() {
           codPale: _pallet.cod_palete.trim(),
           codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
           codSequ: _item.sequen,
-          qtdrest: caixasLidas,
+          qtdrest: qtdFinal,
           operac: "3"
         });
 
