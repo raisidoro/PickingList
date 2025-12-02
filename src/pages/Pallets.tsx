@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
 import ErrorPopup from '../components/CompErrorPopup.tsx';
 import SuccessPopup from "../components/CompSuccessPopup.tsx";
+import { set } from "zod";
 
 // Define tipo de texto com variantes
 const textVariants = {
@@ -255,65 +256,65 @@ export default function PalletViewSingle() {
   }
 
   // Validação se Kanban GDBR está no Pallet atual e confere com a Etiqueta do Cliente
-  function verificaKanban({ etiqueta }: { etiqueta: string; }) {
+  
+  function verificaKanban({ etiqueta }: { etiqueta: string }) {
     if (!kanbanGDBR || !etiqueta || !palletAtual) return;
 
-    const kanbanRegex = /^X\|([A-Z0-9\-]{5})\|(\d{4})(?:\|.*)?$/i;
+    const kanbanRegex = /^X\|([A-Z0-9\-]+)\|(\d{4})$/i;
     const match = kanbanGDBR.match(kanbanRegex);
-
     if (!match) {
       setErro("Formato do Kanban GDBR inválido.");
       setSucess(null);
       return;
     }
 
-    const etiquetaKanban = match[1];
-    const kanbanConcatenado = `${match[1]}${match[2]}`; 
     const kanbanOriginal = kanbanGDBR;
+    const kanbanParte1 = match[1]; 
+    const kanbanParte2 = match[2]; 
+    const kanbanConcatenado = `${kanbanParte1}${kanbanParte2}`;
 
-    if (etiqueta.length === 5) {
-      etiquetaClienteRef.current?.blur();
+    const itensComKanban = palletAtual.itens.filter(item => {
+      const itemKanbanRaw = (item.kanban ?? "").toString();
+      const itemDigits = itemKanbanRaw.replace(/\D/g, "");
+      return (
+        itemKanbanRaw === kanbanOriginal ||
+        itemDigits === kanbanConcatenado ||
+        itemKanbanRaw.includes(kanbanParte1)
+      );
+    });
 
-      // procura o item tentando várias formas normalizadas
-      const itemIdx = palletAtual.itens.findIndex((item) => {
-        const itemKanbanRaw = (item.kanban ?? "").toString();
-        const itemDigits = itemKanbanRaw.replace(/\D/g, ""); 
-
-        return (
-          itemKanbanRaw === kanbanOriginal || 
-          itemDigits === kanbanConcatenado || 
-          itemDigits.endsWith(kanbanConcatenado) || 
-          itemDigits === etiquetaKanban || 
-          itemKanbanRaw.includes(etiquetaKanban) || 
-          itemKanbanRaw === etiqueta 
-        );
-      });
-
-      if (itemIdx === -1) {
-        setErro(`Kanban ${kanbanOriginal} não encontrado no pallet atual.`);
-        setSucess(null);
-        return;
-      }
-
-      const foundItem = palletAtual.itens[itemIdx];
-
-      // atualiza índice para o item encontrado e zera caixas lidas
-      setItemIndex(itemIdx);
-      setCaixasLidas(0);
-
-      if (foundItem.status === "3") {
-        setErro("Todas as caixas do item já foram lidas, não foi possível realizar mais leituras!");
-        setSucess(null);
-      } else if (foundItem.status !== "2") {
-        const sequencialValido = verificaItem()(foundItem.sequen);
-        if (sequencialValido) {
-          setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
-          caixas(palletAtual, foundItem, itemIdx);
-        }
-      }
-    } else {
-      setErro(null);
+    if (itensComKanban.length === 0) {
+      setErro(`Kanban ${kanbanOriginal} não encontrado no pallet atual.`);
       setSucess(null);
+      return;
+    }
+
+    let foundItem: PalletItem | undefined;
+
+    if (etiqueta.length === 5 && kanbanOriginal.includes(etiqueta)) {
+      foundItem = itensComKanban.find(item => String(item.sequen) === etiqueta);
+    }else{
+      setErro("Etiqueta do cliente não confere com o kanban GDBR");
+    }
+
+    if (!foundItem) {
+      foundItem = itensComKanban.find(item => item.status !== "3");
+    }
+
+    if (!foundItem) {
+      setErro("Todos os itens com este Kanban já foram finalizados.");
+      setSucess(null);
+      return;
+    }
+
+    const itemIdx = palletAtual.itens.indexOf(foundItem);
+    setItemIndex(itemIdx);
+    setCaixasLidas(0);
+
+    const sequencialValido = verificaItem()(foundItem.sequen);
+    if (sequencialValido) {
+      setSucess(`Kanban ${kanbanOriginal} vinculado ao item sequencial ${foundItem.sequen}`);
+      caixas(palletAtual, foundItem, itemIdx);
     }
   }
 
@@ -423,45 +424,41 @@ export default function PalletViewSingle() {
     };
   }
 
-  //Valida quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
+  //Valida quantidade de caixas lidas 
   async function caixas(_pallet: Pallet, _item: PalletItem, _itemIdx: number) {
     const itemSelecionado = palletAtual?.itens[_itemIdx];
     if (!itemSelecionado) return;
 
     const totalCaixas = Number(itemSelecionado.qtd_caixa);
-
     if (caixasLidas >= totalCaixas || itemSelecionado.status === "3") {
       setErro("Todas as caixas desse item já foram lidas.");
       setSucess(null);
       return;
     }
 
-    const novaQtd = caixasLidas + 1;  
+    const novaQtd = caixasLidas + 1;
     setCaixasLidas(novaQtd);
 
     try {
       setLoading(true);
-
       const resp = await apiItens.post("", {
         codCarg: carga?.cod_carg,
         codPale: palletAtual?.cod_palete.trim(),
-        codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
-        codSequ: itemSelecionado.sequen,
-        qtdrest: novaQtd,   
+        codKanb: itemSelecionado.kanban, 
+        codSequ: itemSelecionado.sequen, 
+        qtdrest: novaQtd,
         operac: "1"
       });
 
       if (resp.data === "Gravado com sucesso") {
         setErro(null);
         setSucess("Leitura registrada!");
-
         setKanbanGDBR("");
         setEtiquetaCliente("");
 
         if (novaQtd === totalCaixas) {
-          await finalizarItem(novaQtd); 
+          await finalizarItem(novaQtd, itemSelecionado);
         }
-
       } else if (resp.data?.Erro) {
         setSucess(null);
         setErro(resp.data.Erro);
@@ -469,7 +466,6 @@ export default function PalletViewSingle() {
         setErro("Falha ao gravar leitura de caixa.");
         setSucess(null);
       }
-
     } catch {
       setErro("Erro ao conectar com a API.");
       setSucess(null);
@@ -478,40 +474,30 @@ export default function PalletViewSingle() {
     }
   }
 
-
-
-  async function finalizarItem(qtdFinal: number) {
-    if (!palletAtual || !itemAtual) return;
-
+  async function finalizarItem(qtdFinal: number, itemParaFinalizar: PalletItem) {
+    if (!palletAtual || !itemParaFinalizar) return;
     if (qtdFinal <= 0) return;
 
     try {
       setLoading(true);
-
       const resp = await apiItens.post("", {
         codCarg: carga?.cod_carg,
         codPale: palletAtual?.cod_palete.trim(),
-        codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
-        codSequ: itemAtual.sequen,
+        codKanb: itemParaFinalizar.kanban, 
+        codSequ: itemParaFinalizar.sequen, 
         qtdrest: qtdFinal,
         operac: "3"
       });
 
       if (resp.data === "Kanban finalizado") {
         setErro(null);
-        setSucess("Item finalizado com sucesso!");
-
-        // limpa dados
+        setSucess(`Item ${itemParaFinalizar.sequen} finalizado com sucesso!`);
         setCaixasLidas(0);
         setKanbanGDBR("");
         setEtiquetaCliente("");
 
-        // avança para o próximo item
-        setItemIndex(prev => prev + 1);
-
-        // atualiza lista
-        atualizarItensDoPallet();
-
+        // Atualiza lista de itens do pallet
+        await atualizarItensDoPallet();
       } else if (resp.data?.Erro) {
         setSucess(null);
         setErro(resp.data.Erro);
@@ -519,16 +505,13 @@ export default function PalletViewSingle() {
         setErro("Falha ao atualizar o status do item.");
         setSucess(null);
       }
-
-    } catch (e) {
+    } catch {
       setErro("Erro ao conectar com a API.");
       setSucess(null);
     } finally {
       setLoading(false);
     }
   }
-
-
 
   async function atualizarItensDoPallet() {
     try {
