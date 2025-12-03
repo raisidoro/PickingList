@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { apiItens, apiPallets } from "../lib/axios";
 import { MdArrowBack } from "react-icons/md";
+import { GoChevronLeft, GoChevronRight } from "react-icons/go";
+import { TfiReload } from "react-icons/tfi";
 import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
 import ErrorPopup from '../components/CompErrorPopup.tsx';
-
 
 const textVariants = {
   default: "text-xl sm:text-2xl",
@@ -49,7 +50,6 @@ interface PalletApi {
 }
 
 interface PalletItem {
-  lido: unknown;
   kanban: string;
   sequen: string;
   qtd_caixa: string;
@@ -62,9 +62,10 @@ interface PalletItem {
 interface Pallet {
   cod_palete: string;
   stat_pale: string;
+  itens: PalletItem[];
   cod_lane: string;
   cod_grupo: string;
-  itens: PalletItem[];
+  num_order: string;
 }
 
 function Text({
@@ -100,12 +101,40 @@ export default function PalletViewSingle() {
   const navigate = useNavigate();
   const location = useLocation();
   const carga = location.state?.carga as Carga | undefined;
-
   const [pallets, setPallets] = useState<Pallet[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [palletIndex, setPalletIndex] = useState(0);
+  const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
+  const totalPallets = pallets.length;
 
+  // ordem de visualização dos itens 
+  const sortedItems = palletAtual
+    ? (() => {
+        const temSequencial = (it: PalletItem) => {
+          const n = Number(it.sequen);
+          return Number.isFinite(n) && n > 0;
+        };
+
+        return [...palletAtual.itens].sort((a, b) => {
+          // finalizados por último
+          if (a.status === "3" && b.status !== "3") return 1;
+          if (a.status !== "3" && b.status === "3") return -1;
+
+          const aHas = temSequencial(a);
+          const bHas = temSequencial(b);
+
+          if (aHas && !bHas) return -1;
+          if (!aHas && bHas) return 1;
+
+          if (aHas && bHas) return Number(a.sequen) - Number(b.sequen);
+
+          return 0;
+        });
+      })()
+    : [];
+
+  // Ajusta o índice do pallet se necessário ao mudar a lista de pallets
   useEffect(() => {
     if (palletIndex > pallets.length - 1) {
       setPalletIndex(Math.max(0, pallets.length - 1));
@@ -120,6 +149,7 @@ export default function PalletViewSingle() {
     );
   }
 
+  // Carrega os paletes da API de acordo com a carga
   useEffect(() => {
     setLoading(true);
     setErro(null);
@@ -148,6 +178,7 @@ export default function PalletViewSingle() {
                   cod_palete: p.cod_palete,
                   stat_pale: p.stat_pale,
                   cod_lane: p.cod_lane,
+                  num_order: p.num_order,
                   cod_grupo: p.cod_grupo,
                   itens: Array.isArray(respItens.data?.itens)
                     ? respItens.data.itens.map((it: any) => ({
@@ -166,7 +197,9 @@ export default function PalletViewSingle() {
           .then((palletsDetalhados) => {
             setPallets(palletsDetalhados);
           })
-          .catch(() => setErro("Erro ao buscar itens dos paletes."))
+          .catch(() => {
+            setErro("Erro ao buscar itens dos paletes.");
+          })
           .finally(() => setLoading(false));
       })
       .catch(() => {
@@ -176,9 +209,17 @@ export default function PalletViewSingle() {
       });
   }, [carga]);
 
-  //Validação se o item pertence ao pallet
-  const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
-  const totalPallets = pallets.length;
+  //Função para definir a cor da borda 
+  function getStatusColor(status: string) {
+    switch (status) {
+      case "0":
+        return "bg-gray-100 border-gray-300 text-black";
+      case "1":
+        return "bg-orange-200 border-orange-400 text-black";
+      case "3":
+        return "bg-green-200 border-green-400 text-black";
+    }
+  }
 
   return (
     <main
@@ -189,7 +230,7 @@ export default function PalletViewSingle() {
       "
     >
       <Card
-        className="</main>
+        className="
         w-full h-full max-w-full max-h-full flex flex-col items-center justify-start
         p-0 shadow-lg bg-white rounded-none
         sm:rounded-3xl sm:max-w-lg sm:max-h-[90vh] overflow-hidden
@@ -207,48 +248,102 @@ export default function PalletViewSingle() {
             <Text
               as="span"
               variant="muted"
-              className="text-sm sm:text-base t</Text>ext-gray-900 truncate"
+              className="text-sm sm:text-base text-gray-900 truncate"
             >
               <b>Carga:</b> {carga.cod_carg} – {carga.nome_cli} |{" "}
               {carga.data_col} – {carga.hora_col}
             </Text>
           </div>
 
+          <div className="flex justify-between items-center px-4">
+            <span onClick={() => window.location.reload()}>
+              <TfiReload className="text-gray-500 w-6 h-6 cursor-pointer" />
+            </span>
+          </div>
+
           {loading && (
             <Text className="text-center text-gray-600">
-              Carregando palletes...
+              Carregando paletes...
             </Text>
           )}
-          <ErrorPopup message={erro} onClose={() => setErro("")} />
+
+          {erro && (
+            <ErrorPopup
+              message={erro}
+              onClose={() => setErro(null)}
+            />
+          )}
 
           {!loading && !erro && palletAtual && (
             <>
+              <div className="flex items-center justify-center">
+                <span className="text-blue-800 text-sm"> MODO DE VISUALIZAÇÃO </span>
+              </div>
+              <div className="max-w-lg w-full flex items-center justify-between gap-4">
+                <button
+                  onClick={() => {
+                    setPalletIndex(i => Math.max(i - 1, 0));
+                  }}
+                  className="text-blue-600 hover:text-blue-800 flex-shrink-0 disabled:opacity-50"
+                  disabled={palletIndex === 0}
+                  title="Palete Anterior"
+                >
+                  <GoChevronLeft className="w-6 h-6 text-gray-600" />
+                </button>
+                <div className="flex flex-col gap-2">
+                  <div className="text-xl">
+                    <strong>Lane: </strong> {palletAtual.cod_lane} | <strong>Group: </strong> {palletAtual.cod_grupo}
+                  </div>
+                  <div className="text-xl">
+                    <strong>Order: </strong> {palletAtual.num_order}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setPalletIndex(i => Math.min(i + 1, totalPallets - 1));
+                  }}
+                  className="text-blue-600 hover:text-blue-800 flex-shrink-0 disabled:opacity-50"
+                  disabled={palletIndex === totalPallets - 1}
+                  title="Próximo Palete"
+                >
+                  <GoChevronRight className="w-6 h-6 text-gray-600" />
+                </button>
+              </div>
 
               <div className="max-w-lg w-full">
-                <div className="flex justify-center mb-2">
-                  <span className="text-blue-700 text-center font-bold text-lg">
-                    Modo de visualização
-                  </span>
-                </div>
-                <div className="max-w-lg w-full text-xl">
-                  <strong>Lane: </strong> {palletAtual.cod_lane} | <strong>Group: </strong> {palletAtual.cod_grupo}
-              </div>
                 <div className="text-base font-bold text-center mb-2">
-                  Pallet{" "}
+                  Palete{" "}
                   {palletAtual?.cod_palete ??
-                    String(palletIndex + 1).padStart(2, "0")}
-                  /{totalPallets.toString().padStart(2, "0")}
+                    String(palletIndex + 1).padStart(2, "0")}/{totalPallets.toString().padStart(2, "0")}
+                </div>
+                <div className="text-center font-bold text-lg mt-2 select-none">
+                  {palletAtual.stat_pale === "0" && (
+                    <span className="text-red-700">Pendente</span>
+                  )}
+                  {palletAtual.stat_pale === "1" && (
+                    <span className="text-orange-700">Em montagem</span>
+                  )}
+                  {palletAtual.stat_pale === "2" && (
+                    <span className="text-orange-700">
+                      Finalizado com divergência
+                    </span>
+                  )}
+                  {palletAtual.stat_pale === "3" && (
+                    <span className="text-green-700">Finalizado</span>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  {palletAtual.itens.map((item, idx) => (
+                  {sortedItems.map((item, idx) => (
                     <Card
                       key={idx}
-                      className="p-2 rounded-xl bg-white border border-gray-300 shadow-sm"
+                      className={`p-2 rounded-xl ${getStatusColor(item.status)} shadow-sm`}
                     >
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="font-semibold text-xs">Seq</span>
-                        <span className="text-xs">{item.sequen}</span>
+                        <span className="text-xs">
+                          {item.sequen === "0" ? "-" : item.sequen}
+                        </span>
                       </div>
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="font-semibold text-xs">Kanban</span>
@@ -287,11 +382,11 @@ export default function PalletViewSingle() {
                             item.status === "0"
                               ? "text-red-700"
                               : item.status === "1"
-                              ? "text-orange-700"
+                              ? "text-yellow-700"
                               : item.status === "2"
-                              ? "text-green-700"
-                              : item.status === "3"
                               ? "text-orange-700"
+                              : item.status === "3"
+                              ? "text-green-700"
                               : ""
                           }`}
                         >
@@ -304,41 +399,6 @@ export default function PalletViewSingle() {
                     </Card>
                   ))}
                 </div>
-
-                <div className="text-center font-bold text-lg mt-2 select-none">
-                  {palletAtual.stat_pale === "0" && (
-                    <span className="text-red-700">Pendente</span>
-                  )}
-                  {palletAtual.stat_pale === "1" && (
-                    <span className="text-orange-700">Em montagem</span>
-                  )}
-                  {palletAtual.stat_pale === "2" && (
-                    <span className="text-green-700">
-                      Finalizado com divergência
-                    </span>
-                  )}
-                  {palletAtual.stat_pale === "3" && (
-                    <span className="text-orange-700">Finalizado</span>
-                  )}
-                </div>
-              </div>
-              <div className="flex justify-between mt-6 gap-4 max-w-xs mx-auto w-full px-4">
-                <button
-                  className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
-                  disabled={palletIndex === 0}
-                  onClick={() => setPalletIndex((i) => Math.max(i - 1, 0))}
-                >
-                  Anterior
-                </button>
-                <button
-                  className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
-                  disabled={palletIndex === totalPallets - 1}
-                  onClick={() =>
-                    setPalletIndex((i) => Math.min(i + 1, totalPallets - 1))
-                  }
-                >
-                  Próximo
-                </button>
               </div>
             </>
           )}

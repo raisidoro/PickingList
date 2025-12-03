@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { apiCarga, apiItens, apiPallets } from "../lib/axios";
 import { MdArrowBack } from "react-icons/md";
+import { GoChevronLeft, GoChevronRight } from "react-icons/go";
 import { TfiReload } from "react-icons/tfi";
 import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
@@ -71,6 +72,7 @@ interface Pallet {
   itens: PalletItem[];
   cod_lane: string;
   cod_grupo: string;
+  num_order: string;
 }
 
 function Text({
@@ -116,6 +118,11 @@ export default function PalletViewSingle() {
   const [, setItemIndex] = useState(0);
   //const itemAtual = palletAtual?.itens[itemIndex];
   const [caixasLidas, setCaixasLidas] = useState(0);
+  const [etiquetaLiberada, setEtiquetaLiberada] = useState(false);  
+  //Constantes para validação se a etiqueta do cliente confere o kanban GDBR
+  const [kanbanGDBR, setKanbanGDBR] = useState("");
+  const [, setEtiquetaCliente] = useState("");
+  const etiquetaClienteRef = useRef<HTMLInputElement>(null);
 
   // ordem de visuali8zação dos itens 
   const sortedItems = palletAtual
@@ -163,6 +170,13 @@ export default function PalletViewSingle() {
     );
   }
 
+  // Define foco automático no campo etiqueta cliente após validação do kanban
+  useEffect(() => {
+    if (etiquetaLiberada && etiquetaClienteRef.current) {
+      etiquetaClienteRef.current.focus();
+    }
+  }, [etiquetaLiberada]);
+
   // Carrega os paletes da API de acordo com a carga
   useEffect(() => {
     setLoading(true);
@@ -192,6 +206,7 @@ export default function PalletViewSingle() {
                   cod_palete: p.cod_palete,
                   stat_pale: p.stat_pale,
                   cod_lane: p.cod_lane,
+                  num_order: p.num_order,
                   cod_grupo: p.cod_grupo,
                   itens: Array.isArray(respItens.data?.itens)
                     ? respItens.data.itens.map((it: any) => ({
@@ -223,18 +238,29 @@ export default function PalletViewSingle() {
   }, [carga]);
 
   //Inicio das validações do processo de montagem de carga
-  //Constantes para validação se a etiqueta do cliente confere o kanban GDBR
-  const [kanbanGDBR, setKanbanGDBR] = useState("");
-  const [, setEtiquetaCliente] = useState("");
-  const etiquetaClienteRef = useRef<HTMLInputElement>(null);
 
   // Funções que verificam etiqueta cliente e kanban GDBR
-  function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setKanbanGDBR(e.target.value);
-    if (e.target.value.length === 12) {
-      etiquetaClienteRef.current?.focus();
+function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
+  const valor = e.target.value;
+  setKanbanGDBR(valor); 
+
+  const kanbanRegex = /^X\|([A-Z]-\d{3})\|(\d{4})?$/i; 
+  if (valor.trim() === "" || !kanbanRegex.test(valor)) { 
+    setEtiquetaLiberada(false);
+    if (valor.trim() !== "") {
+      setErro("Formato do Kanban GDBR inválido. Use o formato X|KANBAN|SEQUENCIAL.");
+    } else {
+      setErro(null);
     }
+    setEtiquetaCliente("");
+  } else {
+    setEtiquetaLiberada(true);
+    setErro(null);
+    etiquetaClienteRef.current?.focus();
   }
+}
+
+
 
   function handleEtiquetaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
     const etiquetaCliente = e.target.value;
@@ -242,7 +268,6 @@ export default function PalletViewSingle() {
   }
 
   // Validação se Kanban GDBR está no Pallet atual e confere com a Etiqueta do Cliente
-
   function verificaKanban({ etiqueta }: { etiqueta: string }) {
     if (!kanbanGDBR || !etiqueta || !palletAtual) return;
 
@@ -275,7 +300,7 @@ export default function PalletViewSingle() {
 
     // Confere se etiqueta bate com Kanban
     if (etiqueta !== kanbanClienteEsperado) {
-      setErro(`Etiqueta ${etiqueta} não confere com o Kanban esperado (${kanbanClienteEsperado}).`);
+      setErro(`Etiqueta do cliente: ${etiqueta} não confere com o Kanban GDBR: ${kanbanGDBR}.`);
       setSucess(null);
       return;
     }
@@ -311,7 +336,6 @@ export default function PalletViewSingle() {
     } else if (foundItem.status !== "2") {
       const sequencialValido = verificaItem()(foundItem.sequen);
       if (sequencialValido) {
-        setSucess(`Kanban GDBR ${kanbanGDBR} confere Etiqueta Cliente ${etiqueta}`);
         caixas(palletAtual, foundItem, itemIdx);
       }
     }
@@ -446,12 +470,15 @@ export default function PalletViewSingle() {
         setSucess("Leitura realizada com sucesso!");
         setKanbanGDBR("");
         setEtiquetaCliente("");
+        setEtiquetaLiberada(false);
 
         // Se o pallet estava pendente, muda para "em montagem"
         if (_pallet.stat_pale === "0") {
           atualizarStatusPalete("1");
           atualizarItensDoPallet();
         }
+
+        await refreshPalletsCompletos();
 
         // Se todas as caixas foram lidas, finaliza o item   
         if (novaQtdCaixasLidas >= totalCaixas) {
@@ -501,8 +528,6 @@ export default function PalletViewSingle() {
       }
     }
   }
-
-
 
   async function atualizarItensDoPallet() {
     try {
@@ -628,6 +653,68 @@ export default function PalletViewSingle() {
     }
   }
 
+  async function refreshPalletsCompletos() {
+  if (!carga) return;
+  
+  setLoading(true);
+  setErro(null);
+
+  try {
+    const respPallets = await apiPallets.get("/PICK_PALETE", { 
+      params: { cCarga: carga.cod_carg } 
+    });
+    
+    const palletsApi: PalletApi[] = Array.isArray(respPallets.data?.paletes)
+      ? respPallets.data.paletes
+      : [];
+      
+    if (palletsApi.length === 0) {
+      setErro("Nenhum palete encontrado.");
+      setPallets([]);
+      return;
+    }
+
+    const palletsDetalhados = await Promise.all(
+      palletsApi
+        .filter((p) => !!p.cod_palete)
+        .map((p) =>
+          apiItens
+            .get("", {
+              params: { cCarga: carga.cod_carg, cPalet: p.cod_palete },
+            })
+            .then((respItens) => ({
+              cod_palete: p.cod_palete,
+              stat_pale: p.stat_pale,
+              cod_lane: p.cod_lane,
+              num_order: p.num_order,
+              cod_grupo: p.cod_grupo,
+              itens: Array.isArray(respItens.data?.itens)
+                ? respItens.data.itens.map((it: any) => ({
+                    lido: false,
+                    kanban: it.kanban ?? it.Kanban ?? "-",
+                    sequen: it.sequen ?? it.Sequen ?? "-",
+                    qtd_caixa: it.qtd_caixa ?? it.Qtd_Caixa ?? "-",
+                    qtd_peca: it.qtd_peca ?? it.Qtd_Peca ?? "-",
+                    embalagem: it.embalagem ?? it.Embalagem ?? "-",
+                    multiplo: it.multiplo ?? it.Multiplo ?? "-",
+                    status: it.status ?? it.Status ?? "-",
+                  }))
+                : [],
+            }))
+        )
+    );
+
+    const novoIndice = Math.min(palletIndex, palletsDetalhados.length - 1);
+    setPalletIndex(novoIndice);
+    setPallets(palletsDetalhados);
+    
+  } catch (error) {
+    setErro("Erro ao atualizar pallets.");
+  } finally {
+    setLoading(false);
+  }
+}
+
   return (
     <main
       className="
@@ -685,35 +772,70 @@ export default function PalletViewSingle() {
             <>
               {palletAtual.stat_pale !== "3" && (
                 <div className="w-full flex flex-col gap-4 mb-6 max-w-lg">
-                  <input
+                 <input
                   type="text"
                   autoFocus
                   placeholder="Kanban GDBR"
                   className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
+                  value={kanbanGDBR} 
                   onChange={handleKanbanGDBRChange}
                 />
                 <div className="flex items-center gap-2">
                   <input
-                  type="text"
-                  maxLength={5}
-                  ref={etiquetaClienteRef}
-                  placeholder="Etiqueta Cliente"
-                  className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
-                  onChange={(e) => {
-                  handleEtiquetaClienteChange(e);
-                  verificaKanban({ etiqueta: e.target.value });
-                  }}
-                />
-
+                    ref={etiquetaClienteRef}
+                    type="text"
+                    placeholder="Etiqueta Cliente"
+                    className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
+                    disabled={!etiquetaLiberada} 
+                    onChange={(e) => {
+                      handleEtiquetaClienteChange(e);
+                      verificaKanban({ etiqueta: e.target.value });
+                    }}
+                  />
                   {success && (<SuccessPopup message={success} onClose={() => setSucess(null)} onRespond={() => setSucess(null)} />)}
 
                 </div>
                 </div>
                 )}
 
-               <div className="max-w-lg w-full text-xl">
+               <div className="max-w-lg w-full flex items-center justify-between gap-4">
+                <button
+                  onClick={() => {
+                  if (palletAtual?.stat_pale !== "1") {
+                    setPalletIndex(i => Math.max(i - 1, 0));
+                  } else {
+                    setErro("Pallet está em conferência! Por favor, finalize antes de retornar ao palete anterior.");
+                  }
+                  }}
+                  className="text-blue-600 hover:text-blue-800 flex-shrink-0 disabled:opacity-50"
+                  disabled={palletIndex === 0}
+                  title="Palete Anterior"
+                >
+                  <GoChevronLeft className="w-6 h-6 text-gray-600" />
+                </button>
+                <div className="flex flex-col gap-2">
+                  <div className="text-xl">
                   <strong>Lane: </strong> {palletAtual.cod_lane} | <strong>Group: </strong> {palletAtual.cod_grupo}
-              </div>
+                  </div>
+                  <div className="text-xl">
+                  <strong>Order: </strong> {palletAtual.num_order}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                  if (palletAtual?.stat_pale !== "1") {
+                    setPalletIndex(i => Math.min(i + 1, totalPallets - 1));
+                  } else {
+                    setErro("Pallet está em conferência! Por favor, finalize antes de avançar.");
+                  }
+                  }}
+                  className="text-blue-600 hover:text-blue-800 flex-shrink-0 disabled:opacity-50"
+                  disabled={palletIndex === totalPallets - 1}
+                  title="Próximo Palete"
+                >
+                  <GoChevronRight className="w-6 h-6 text-gray-600" />
+                </button>
+                </div>
 
               <div className="max-w-lg w-full">
                 <div className="text-base font-bold text-center mb-2"
@@ -722,6 +844,23 @@ export default function PalletViewSingle() {
                   {palletAtual?.cod_palete ??
                     String(palletIndex + 1).padStart(2, "0")}/{totalPallets.toString().padStart(2, "0")}
                 </div>
+              <div className="text-center font-bold text-lg mt-2 select-none">
+                  {palletAtual.stat_pale === "0" && (
+                    <span className="text-red-700">Pendente</span>
+                  )}
+                  {palletAtual.stat_pale === "1" && (
+                    <span className="text-orange-700">Em montagem</span>
+                  )}
+                  {palletAtual.stat_pale === "2" && (
+                    <span className="text-orange-700">
+                      Finalizado com divergência
+                    </span>
+                  )}
+                  {palletAtual.stat_pale === "3" && (
+                    <span className="text-green-700">Finalizado</span>
+                  )}
+                </div>
+
                 <div className="flex flex-col gap-2">
                   {sortedItems.map((item, idx) => (
                     <Card
@@ -788,44 +927,6 @@ export default function PalletViewSingle() {
                   ))}
                 </div>
 
-                <div className="text-center font-bold text-lg mt-2 select-none">
-                  {palletAtual.stat_pale === "0" && (
-                    <span className="text-red-700">Pendente</span>
-                  )}
-                  {palletAtual.stat_pale === "1" && (
-                    <span className="text-orange-700">Em montagem</span>
-                  )}
-                  {palletAtual.stat_pale === "2" && (
-                    <span className="text-orange-700">
-                      Finalizado com divergência
-                    </span>
-                  )}
-                  {palletAtual.stat_pale === "3" && (
-                    <span className="text-green-700">Finalizado</span>
-                  )}
-                </div>
-              </div>
-              <div className="flex justify-between mt-6 gap-4 max-w-xs mx-auto w-full px-4">
-                <button
-                  className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
-                  disabled={palletIndex === 0}
-                  onClick={() => setPalletIndex((i) => Math.max(i - 1, 0))}
-                >
-                  Anterior
-                </button>
-                <button
-                  className="rounded px-3 py-2 text-base bg-gray-300 hover:bg-gray-400 disabled:opacity-50 transition"
-                  disabled={palletIndex === totalPallets - 1}
-                  onClick={() => {
-                    if (palletAtual?.stat_pale !== "1") {
-                      setPalletIndex(i => Math.min(i + 1, totalPallets - 1));
-                    } else {
-                      setErro("Pallet está em conferência! Por favor, finalize a montagem antes de passar para o próximo.");
-                    }
-                  }}
-                >
-                  Próximo
-                </button>
               </div>
             </>
           )}

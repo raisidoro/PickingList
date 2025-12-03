@@ -410,15 +410,14 @@ export default function CargaList({}: Props) {
                   </span>
 
                   <span onClick={() => navigate("/PalletsView", { state: { carga } })}>
-                    <IoEyeSharp className="text-gray-500 h-8" onClick={() => handleSelect(carga)}
-                    tabIndex={0}
-                    role="button"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleSelect(carga);
-                      }
-                    }} />
+                    <IoEyeSharp
+                      onClick={(e) => {
+                        e.stopPropagation(); 
+                        navigate("/PalletsView", { state: { carga } });
+                      }}
+                      className="cursor-pointer text-grey-600 hover:text-blue-800"
+                      title="Visualizar Paletes"
+                    />
                  </span>
 
                 </Text>

@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'picking.list',
-  appName: 'pickinglist',
+  appId: 'com.example.app',
+  appName: 'pickinglist versao-teste',
   webDir: 'dist'
 };
 
