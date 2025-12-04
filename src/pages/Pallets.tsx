@@ -111,7 +111,7 @@ export default function PalletViewSingle() {
   const [pallets, setPallets] = useState<Pallet[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [success, setSucess] = useState<string | null>(null);
+  //const [success, setSucess] = useState<string | null>(null);
   const [palletIndex, setPalletIndex] = useState(0);
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
@@ -123,6 +123,8 @@ export default function PalletViewSingle() {
   const [kanbanGDBR, setKanbanGDBR] = useState("");
   const [, setEtiquetaCliente] = useState("");
   const etiquetaClienteRef = useRef<HTMLInputElement>(null);
+  type SuccessType = "LEITURA" | "ITEM" | "CARGA";
+  const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
 
   // ordem de visuali8zação dos itens 
   const sortedItems = palletAtual
@@ -176,6 +178,16 @@ export default function PalletViewSingle() {
       etiquetaClienteRef.current.focus();
     }
   }, [etiquetaLiberada]);
+
+  useEffect(() => {
+    if (success) {
+      const timeout = setTimeout(() => {
+        setSucess(null);
+      }, success.type === "CARGA" ? 8000 : 4000); 
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [success]);
 
   // Carrega os paletes da API de acordo com a carga
   useEffect(() => {
@@ -467,7 +479,7 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
 
       const data = resp.data;
       if (data === "Gravado com sucesso") {
-        setSucess("Leitura realizada com sucesso!");
+        setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
         setKanbanGDBR("");
         setEtiquetaCliente("");
         setEtiquetaLiberada(false);
@@ -513,7 +525,7 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
 
         const data = resp.data;
         if (data === "Kanban finalizado") {
-          setSucess("Todas as caixas foram lidas com sucesso, item finalizado com sucesso!");
+          setSucess({ type: "ITEM", message: "Todas as caixas foram lidas com sucesso, item finalizado com sucesso!" });
           setCaixasLidas(0);
           atualizarItensDoPallet();
         } else if (data?.Erro) {
@@ -630,7 +642,7 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
       const data = resp.data;
 
       if (data === "Gravado com sucesso") {
-        setSucess("Carga finalizada com sucesso! Todos os paletes concluídos.");
+        setSucess({ type: "CARGA", message: "Carga finalizada com sucesso! Todos os paletes concluídos." });
       } else if (data?.Erro) {
         setErro(data.Erro);
       }
@@ -750,8 +762,8 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
           </div>
 
           <div className="flex justify-between items-center px-4">
-              <span onClick={() => window.location.reload()}>
-                <TfiReload className="text-gray-500 w-6 h-6 cursor-pointer" />
+              <span onClick={() => refreshPalletsCompletos()}>
+                <TfiReload className="text-gray-500 w-6 h-6 cursor-pointer hover:text-gray-700 cursor-pointer" title="Atualizar pallets" />
               </span>
           </div>
 
@@ -792,8 +804,13 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
                       verificaKanban({ etiqueta: e.target.value });
                     }}
                   />
-                  {success && (<SuccessPopup message={success} onClose={() => setSucess(null)} onRespond={() => setSucess(null)} />)}
-
+                  {success && (
+                    <SuccessPopup 
+                      message={success.message} 
+                      onClose={() => setSucess(null)} 
+                      onRespond={() => setSucess(null)} 
+                    />
+                  )}
                 </div>
                 </div>
                 )}
