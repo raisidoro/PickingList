@@ -7,6 +7,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
 import ErrorPopup from '../components/CompErrorPopup.tsx';
 import SuccessPopup from "../components/CompSuccessPopup.tsx";
+import ConfirmationPopup from "../components/CompConfirmationPopup.tsx";
+import { set } from "zod";
 
 // Define tipo de texto com variantes
 const textVariants = {
@@ -125,6 +127,7 @@ export default function PalletViewSingle() {
   const etiquetaClienteRef = useRef<HTMLInputElement>(null);
   type SuccessType = "LEITURA" | "ITEM" | "CARGA";
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
+  const [Confirm, setConfirm] = useState<string | null>(null);
 
   // ordem de visuali8zação dos itens 
   const sortedItems = palletAtual
@@ -483,12 +486,6 @@ export default function PalletViewSingle() {
         setEtiquetaCliente("");
         setEtiquetaLiberada(false);
 
-        // Se o pallet estava pendente, muda para "em montagem"
-        if (_pallet.stat_pale === "0") {
-          atualizarStatusPalete("1");
-          atualizarItensDoPallet();
-        }
-
         await refreshPalletsCompletos();
 
         // Se todas as caixas foram lidas, finaliza o item   
@@ -723,7 +720,13 @@ export default function PalletViewSingle() {
   } finally {
     setLoading(false);
   }
-}
+  }
+
+  async function confirmaPalete(response: string, selectedCod: string | null){
+      if (response === "s" && selectedCod) {
+        atualizarStatusPalete("1");
+      } 
+    }
 
   return (
     <main
@@ -778,9 +781,35 @@ export default function PalletViewSingle() {
             />
           )}
 
+          {Confirm && (
+            <ConfirmationPopup
+              message={Confirm}
+              onRespond={(response: string) => {
+                setConfirm(null);
+                confirmaPalete(response, palletAtual?.cod_palete ?? null);
+              }}
+              onClose={() => setConfirm(null)}
+            />
+          )}
+          
+
           {!loading && !erro && palletAtual && (
             <>
-              {palletAtual.stat_pale !== "3" && (
+      
+              <div className="flex justify-center">
+                {palletAtual.stat_pale === "0" && (
+                  <button
+                    className="rounded-xl px-3 py-2 text-base bg-blue-300 hover:bg-gray-400 disabled:opacity-50 transition w-60 h-10"
+                    onClick={() => {
+                      setConfirm(`Iniciar montagem do palete ${palletAtual.cod_palete}?`);
+                    }}
+                  >
+                    Iniciar Palete
+                  </button>
+                )}
+              </div>
+
+              {palletAtual.stat_pale === "1" && (
                 <div className="w-full flex flex-col gap-4 mb-6 max-w-lg">
                  <input
                   type="text"
