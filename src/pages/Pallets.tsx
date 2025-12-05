@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { apiCarga, apiItens, apiPallets } from "../lib/axios";
 import { MdArrowBack } from "react-icons/md";
 import { GoChevronLeft, GoChevronRight } from "react-icons/go";
@@ -7,6 +7,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
 import ErrorPopup from '../components/CompErrorPopup.tsx';
 import SuccessPopup from "../components/CompSuccessPopup.tsx";
+import useSound from 'use-sound';
+import successSound from '../sounds/success.mp3';
 
 // Define tipo de texto com variantes
 const textVariants = {
@@ -111,20 +113,20 @@ export default function PalletViewSingle() {
   const [pallets, setPallets] = useState<Pallet[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  //const [success, setSucess] = useState<string | null>(null);
   const [palletIndex, setPalletIndex] = useState(0);
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
   const [, setItemIndex] = useState(0);
-  //const itemAtual = palletAtual?.itens[itemIndex];
   const [caixasLidas, setCaixasLidas] = useState(0);
   const [etiquetaLiberada, setEtiquetaLiberada] = useState(false);  
-  //Constantes para validação se a etiqueta do cliente confere o kanban GDBR
   const [kanbanGDBR, setKanbanGDBR] = useState("");
   const [, setEtiquetaCliente] = useState("");
   const etiquetaClienteRef = useRef<HTMLInputElement>(null);
-  type SuccessType = "LEITURA" | "ITEM" | "CARGA";
+  const [isSoundLocked, setIsSoundLocked] = useState(false);
+  const soundTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
+  const [playSuccess] = useSound(successSound);
+  type SuccessType = "LEITURA" | "PALETE" | "CARGA";
 
   // ordem de visuali8zação dos itens 
   const sortedItems = palletAtual
@@ -178,16 +180,6 @@ export default function PalletViewSingle() {
       etiquetaClienteRef.current.focus();
     }
   }, [etiquetaLiberada]);
-
-  useEffect(() => {
-    if (success) {
-      const timeout = setTimeout(() => {
-        setSucess(null);
-      }, success.type === "CARGA" ? 8000 : 4000); 
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [success]);
 
   // Carrega os paletes da API de acordo com a carga
   useEffect(() => {
@@ -249,6 +241,21 @@ export default function PalletViewSingle() {
       });
   }, [carga]);
 
+  const playSuccessWithPopup = useCallback((type: "LEITURA" | "PALETE" | "CARGA", message: string) => {
+    if (isSoundLocked) return;
+    
+    setIsSoundLocked(true);
+    playSuccess();
+    setSucess({ type, message });
+    
+    const duration = type === "CARGA" ? 6000 : type === "PALETE" ? 4000 : 2000; 
+    soundTimeoutRef.current = setTimeout(() => {
+      setIsSoundLocked(false);
+      setSucess(null);
+    }, duration);
+  }, [isSoundLocked, playSuccess, setSucess]);
+
+
   //Inicio das validações do processo de montagem de carga
 
   // Funções que verificam etiqueta cliente e kanban GDBR
@@ -261,6 +268,8 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
     setEtiquetaLiberada(false);
     if (valor.trim() !== "") {
       setErro("Formato do Kanban GDBR inválido. Use o formato X|KANBAN|SEQUENCIAL.");
+      setEtiquetaCliente("");
+      setKanbanGDBR("");
     } else {
       setErro(null);
     }
@@ -294,6 +303,8 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (!etiquetaRegex.test(etiqueta)) {
       setErro("Formato da etiqueta inválido. Use L-XXX");
       setSucess(null);
+      setKanbanGDBR("");
+      setEtiquetaCliente("");
       return;
     }
 
@@ -302,6 +313,8 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
     const match = kanbanGDBR.match(kanbanRegex);
     if (!match) {
       setErro("Formato do Kanban GDBR inválido. Use X|KANBAN|SEQUENCIAL.");
+      setKanbanGDBR("");
+      setEtiquetaCliente("");
       setSucess(null);
       return;
     }
@@ -314,6 +327,8 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (etiqueta !== kanbanClienteEsperado) {
       setErro(`Etiqueta do cliente: ${etiqueta} não confere com o Kanban GDBR: ${kanbanGDBR}.`);
       setSucess(null);
+      setKanbanGDBR("");
+      setEtiquetaCliente("");
       return;
     }
 
@@ -336,6 +351,8 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (itemIdx === -1) {
       setErro(`Kanban ${kanbanOriginal} não encontrado no pallet atual.`);
       setSucess(null);
+      setKanbanGDBR("");
+      setEtiquetaCliente("");
       return;
     }
 
@@ -345,6 +362,8 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (foundItem.status === "3") {
       setErro("Todas as caixas do item já foram lidas, não foi possível realizar mais leituras!");
       setSucess(null);
+      setKanbanGDBR("");
+      setEtiquetaCliente("");
     } else if (foundItem.status !== "2") {
       const sequencialValido = verificaItem()(foundItem.sequen);
       if (sequencialValido) {
@@ -406,6 +425,8 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
         const valido = Number(sequencialAtual) === menorSequencialPendente;
         if (!valido) {
           setErro("Operador deve seguir a sequência correta. Finalize o item atual antes de continuar.");
+          setKanbanGDBR("");
+          setEtiquetaCliente("");
         } else {
           setErro(null);
         }
@@ -459,6 +480,8 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
 
     if (caixasLidas >= totalCaixas || _item.status === "3") {
       setErro("Todas as caixas do item já foram lidas. Não é possível continuar.");
+      setKanbanGDBR("");
+      setEtiquetaCliente("");
       return;
     }
 
@@ -479,7 +502,7 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
 
       const data = resp.data;
       if (data === "Gravado com sucesso") {
-        setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
+        playSuccessWithPopup("LEITURA", "Leitura realizada com sucesso!");
         setKanbanGDBR("");
         setEtiquetaCliente("");
         setEtiquetaLiberada(false);
@@ -498,11 +521,17 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
         }
       } else if (data?.Erro) {
         setErro(data.Erro);
+        setKanbanGDBR("");
+        setEtiquetaCliente("");
       } else {
         setErro("Falha ao atualizar o status do item Leitura de caixa");
+        setKanbanGDBR("");
+        setEtiquetaCliente("");
       }
     } catch {
       setErro("Erro ao conectar com a API.");
+      setKanbanGDBR("");
+      setEtiquetaCliente("");
     } finally {
       setLoading(false);
     }
@@ -525,16 +554,19 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
 
         const data = resp.data;
         if (data === "Kanban finalizado") {
-          setSucess({ type: "ITEM", message: "Todas as caixas foram lidas com sucesso, item finalizado com sucesso!" });
           setCaixasLidas(0);
           atualizarItensDoPallet();
         } else if (data?.Erro) {
           setErro(data.Erro);
+          setKanbanGDBR("");
+          setEtiquetaCliente("");
         } else {
           setErro("Falha ao atualizar o status do item Finalização");
         }
       } catch {
         setErro("Erro ao conectar com a API.");
+        setKanbanGDBR("");
+        setEtiquetaCliente("");
       } finally {
         setLoading(false);
       }
@@ -568,6 +600,7 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
         );
 
         if (todosFinalizados) {
+          playSuccessWithPopup("PALETE", "Palete finalizado com sucesso!");
           atualizarStatusPalete("3");
           verificaCarga(updated);
         }
@@ -609,11 +642,15 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
         });
       } else if (data?.Erro) {
         setErro(data.Erro);
+        setKanbanGDBR("");
+        setEtiquetaCliente("");
       } else {
         setErro("Falha ao atualizar o status do palete.");
       }
     } catch {
       setErro("Erro ao conectar com a API.");
+      setKanbanGDBR("");
+      setEtiquetaCliente("");
     } finally {
       setLoading(false);
     }
@@ -642,12 +679,16 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
       const data = resp.data;
 
       if (data === "Gravado com sucesso") {
-        setSucess({ type: "CARGA", message: "Carga finalizada com sucesso! Todos os paletes concluídos." });
+        playSuccessWithPopup("CARGA", "Carga finalizada com sucesso!");
       } else if (data?.Erro) {
         setErro(data.Erro);
+        setKanbanGDBR("");
+        setEtiquetaCliente("");
       }
     } catch {
       setErro("Erro ao conectar com a API.");
+      setKanbanGDBR("");
+      setEtiquetaCliente("");
     } finally {
       setLoading(false);
     }
@@ -754,7 +795,7 @@ function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
             <Text
               as="span"
               variant="muted"
-              className="text-sm sm:text-base t</Text>ext-gray-900 truncate"
+              className="text-sm sm:text-base text-gray-900 truncate"
             >
               <b>Carga:</b> {carga.cod_carg} – {carga.nome_cli} |{" "}
               {carga.data_col} – {carga.hora_col}

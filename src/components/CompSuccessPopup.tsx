@@ -1,6 +1,4 @@
 import Modal from "react-modal";
-import useSound from 'use-sound';
-import successSound from '../sounds/success.mp3';
 import { useEffect } from "react";
 
 Modal.setAppElement("#root");
@@ -8,28 +6,26 @@ Modal.setAppElement("#root");
 interface SuccessPopupProps {
   message: string | null;
   onClose: () => void;
-  onRespond: (response: string) => void;
+  onRespond?: () => void;
 }
 
-
 export default function SuccessPopup({ message, onClose }: SuccessPopupProps) {
-  const [playSuccess] = useSound(successSound);
-
   useEffect(() => {
-      if (message) {
-        playSuccess();
-        const timer = setTimeout(() => {
-          onClose();
-        }, 1000); 
-        return () => clearTimeout(timer);
-      }
-    }, [message, playSuccess, onClose]);
+    if (message) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 2000); 
+      return () => clearTimeout(timer);
+    }
+  }, [message, onClose]);
+
+  if (!message) return null;
 
   return (
     <Modal
-      isOpen={!!message}
+      isOpen={true}
       onRequestClose={onClose}
-      contentLabel="Sucess"
+      contentLabel="Sucesso"
       className="fixed inset-0 flex items-center justify-center p-4"
       overlayClassName="fixed inset-0 bg-black/50"
     >
