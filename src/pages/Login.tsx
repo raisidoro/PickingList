@@ -3,8 +3,6 @@ import { useState } from "react";
 import { apiOperadores } from "../lib/axios";
 import { useNavigate } from "react-router-dom";
 import SuccessPopup from "../components/CompSuccessPopup";
-// import ErrorPopup from "./CompErrorPopup";
-// import { success } from "zod";
 
 const textVariants = {
   default: "text-xl sm:text-2xl",
@@ -145,9 +143,10 @@ function LoginForm() {
 
       if (data && data.Nome && data.Matricula) {
       setSucess(`Bem-vindo, ${data.Nome.trim()}`);
+      console.log(matricula)
       setTimeout(() => {
         setSucess(null);
-        navigate("/Carga");
+        navigate("/Carga", { state: { matricula } });
       }, 1000); 
       } else if (data && data.Erro) {
       setErro(data.Erro);

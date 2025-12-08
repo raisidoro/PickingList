@@ -8,7 +8,7 @@ import { type JSX } from "react";
 import ErrorPopup from '../components/CompErrorPopup.tsx';
 import SuccessPopup from "../components/CompSuccessPopup.tsx";
 import ConfirmationPopup from "../components/CompConfirmationPopup.tsx";
-import { set } from "zod";
+import { apiLog } from "../lib/axios";
 
 // Define tipo de texto com variantes
 const textVariants = {
@@ -113,7 +113,6 @@ export default function PalletViewSingle() {
   const [pallets, setPallets] = useState<Pallet[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  //const [success, setSucess] = useState<string | null>(null);
   const [palletIndex, setPalletIndex] = useState(0);
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
@@ -128,6 +127,17 @@ export default function PalletViewSingle() {
   type SuccessType = "LEITURA" | "ITEM" | "CARGA";
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
   const [Confirm, setConfirm] = useState<string | null>(null);
+  const dataent = new Date();
+  const horaent = dataent.toLocaleTimeString('pt-BR', { hour12: false });
+  const codCarg = location.state?.codCarg || localStorage.getItem("codCarg");
+  const kanbanitem = palletAtual?.itens.find(item => item.status !== "3")?.kanban ?? "";
+
+  const matricula = location.state?.matricula || localStorage.getItem("matricula");
+    useEffect(() => {
+      if (!matricula) {
+        setErro("Matrícula não encontrada. Por favor, faça login novamente.");
+      }
+    }, [matricula]);
 
   // ordem de visuali8zação dos itens 
   const sortedItems = palletAtual
@@ -334,6 +344,21 @@ export default function PalletViewSingle() {
       foundItem = itensComKanban.find(item => String(item.sequen) === etiqueta);
     }else{
       setErro("Etiqueta do cliente não confere com o kanban GDBR");
+
+      atualizarOp(
+        codCarg,
+        palletAtual?.cod_palete.trim() ?? "",
+        kanbanitem,
+        "4",
+        dataent.toString(),
+        horaent.toString(),
+        String(matricula ?? ""),
+        kanbanGDBR,
+        etiquetaClienteRef.toString(),
+        "2",
+        `Item ${kanbanitem}} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} lido com sucesso pelo operador ${matricula} `
+          );
+
     }
  
     if (!foundItem) {
@@ -485,8 +510,21 @@ export default function PalletViewSingle() {
         setKanbanGDBR("");
         setEtiquetaCliente("");
         setEtiquetaLiberada(false);
-
         await refreshPalletsCompletos();
+
+        atualizarOp(
+            codCarg,
+            palletAtual?.cod_palete.trim() ?? "",
+            _item.kanban ?? "",
+            "4",
+            dataent.toString(),
+            horaent.toString(),
+            String(matricula ?? ""),
+            kanbanGDBR,
+            etiquetaClienteRef.toString(),
+            "1",
+            `Item ${_item.kanban ?? ""} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} lido com sucesso pelo operador ${matricula} `
+          );
 
         // Se todas as caixas foram lidas, finaliza o item   
         if (novaQtdCaixasLidas >= totalCaixas) {
@@ -524,6 +562,21 @@ export default function PalletViewSingle() {
           setSucess({ type: "ITEM", message: "Todas as caixas foram lidas com sucesso, item finalizado com sucesso!" });
           setCaixasLidas(0);
           atualizarItensDoPallet();
+
+          atualizarOp(
+            codCarg,
+            palletAtual?.cod_palete.trim() ?? "",
+            kanbanitem,
+            "5",
+            dataent.toString(),
+            horaent.toString(),
+            String(matricula ?? ""),
+            "",
+            "",
+            "",
+            `Item ${kanbanitem} do Pallet ${_pallet.cod_palete} da carga ${codCarg} foi finalizado com ${qtdFinal} caixas lidas`
+          );
+
         } else if (data?.Erro) {
           setErro(data.Erro);
         } else {
@@ -588,6 +641,40 @@ export default function PalletViewSingle() {
 
       const data = resp.data;
       if (data === "Gravado com sucesso") {
+
+          if (status === "1") {
+            atualizarOp(
+              codCarg ?? "", 
+              palletAtual.cod_palete.trim(),
+              "",
+              "2",
+              dataent.toString(),
+              horaent.toString(),
+              String(matricula ?? ""),
+              "",
+              "",
+              "",
+              `Pallet ${palletAtual.cod_palete.trim()} da carga ${codCarg ?? ""} iniciada pelo operador ${matricula} `
+            );
+          }
+
+          if (status === "3") {
+            atualizarOp(
+              codCarg ?? "", 
+              palletAtual.cod_palete.trim(),
+              "",
+              "6",
+              dataent.toString(),
+              horaent.toString(),
+              String(matricula ?? ""),
+              "",
+              "",
+              "",
+              `Pallet ${palletAtual.cod_palete.trim()} da carga ${codCarg ?? ""} finalizada pelo operador ${matricula}  `
+            );
+          }
+
+
         setPallets(prev => {
           const updated = [...prev];
           updated[palletIndex] = {
@@ -638,6 +725,21 @@ export default function PalletViewSingle() {
 
       if (data === "Gravado com sucesso") {
         setSucess({ type: "CARGA", message: "Carga finalizada com sucesso! Todos os paletes concluídos." });
+
+        atualizarOp(
+          codCarg,
+          "",
+          "",
+          "7",
+          dataent.toString(),
+          horaent.toString(),
+          String(matricula ?? ""),
+          "",
+          "",
+          "",
+          `Carga ${codCarg} finalizada pelo operador ${matricula} `
+          );
+        
       } else if (data?.Erro) {
         setErro(data.Erro);
       }
@@ -725,8 +827,65 @@ export default function PalletViewSingle() {
   async function confirmaPalete(response: string, selectedCod: string | null){
       if (response === "s" && selectedCod) {
         atualizarStatusPalete("1");
+        atualizarOp(
+            codCarg,
+            palletAtual?.cod_palete.trim() ?? "",
+            kanbanitem, 
+            "3",
+            dataent.toString(),
+            horaent.toString(),
+            String(matricula ?? ""),
+            "",
+            "",
+            "",
+            `Item ${etiquetaClienteRef} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} iniciada pelo operador ${matricula} `
+          );
       } 
-    }
+  }
+
+  async function atualizarOp(
+    codCarga: string, 
+    codPale: string, 
+    codItem: string, 
+    cOperac: string, 
+    cData: string, 
+    cHora: string, 
+    cUser: string, 
+    cLeit1: string, 
+    cLeit2: string, 
+    cStatus: string, 
+    cHistor: string) {
+
+    try {
+      setLoading(true);
+      const resp = await apiLog.post("", {
+        "codCarg": codCarga,
+        "codPale": codPale,
+        "codItem": codItem,
+        "cOperac": cOperac,
+        "cData": cData,
+        "cHora": cHora,
+        "cUser": cUser,
+        "cLeit1": cLeit1,
+        "cLeit2": cLeit2,
+        "cStatus": cStatus,
+        "cHistor": cHistor
+        });
+
+        const data = resp.data;
+        if (data === "Gravado com sucesso") {
+          console.log("Enviado para a API")
+        } else if (data?.Erro) {
+          setErro(data.Erro);
+        } else {
+          setErro("Falha ao atualizar o status do palete.");
+        }
+      } catch {
+        setErro("Erro ao conectar com a API.");
+      } finally {
+        setLoading(false);
+      }
+  }
 
   return (
     <main

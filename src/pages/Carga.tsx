@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState} from "react";
 import { type JSX } from "react";
 import { apiCarga } from "../lib/axios";
 import { MdArrowBack } from "react-icons/md";
 import { CiFilter } from "react-icons/ci";
 import { IoEyeSharp } from 'react-icons/io5';
 import { TfiReload } from "react-icons/tfi";
-import { useNavigate } from "react-router-dom";
+import { data, useNavigate } from "react-router-dom";
 import ErrorPopup from "../components/CompErrorPopup.tsx";
 import ConfirmationPopup from "../components/CompConfirmationPopup.tsx";
+import { useLocation } from "react-router-dom";
+import { apiLog } from "../lib/axios";
 
 const textVariants = {
   default: "text-xl sm:text-2xl",
@@ -95,16 +97,25 @@ export default function CargaList({}: Props) {
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const navigate = useNavigate();
   const [Confirm, setConfirm] = useState<string | null>(null);
-  const [, setSucess] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const cargaSelecionada = cargas.find((c) => c.cod_carg === selectedCod);
+  const codCarg = cargaSelecionada?.cod_carg. toString() || "";
+  const location = useLocation();
+  const dataent = new Date();
+  const horaent = dataent.toLocaleTimeString('pt-BR', { hour12: false });
 
+  const matricula = location.state?.matricula || localStorage.getItem("matricula");
+  useEffect(() => {
+    if (!matricula) {
+      setErro("Matrícula não encontrada. Por favor, faça login novamente.");
+    }
+  }, [matricula]);
+  
   async function confirmaCarga(response: string, selectedCod: string | null){
     if (response === "s" && selectedCod) {
-      const cargaSelecionada = cargas.find(
-        (c) => c.cod_carg === selectedCod
-      );
+
       if (cargaSelecionada) {
-        navigate("/Pallets", { state: { carga: cargaSelecionada } });
+        navigate("/Pallets", { state: { carga: cargaSelecionada, matricula, codCarg, dataent, horaent } });
       }
 
       try {
@@ -116,11 +127,23 @@ export default function CargaList({}: Props) {
         console.log(resp)
         const data = resp.data;
 
-
-        console.log("cCarga : " + data.codCarg + "status: " + data.status)
         if (data && data.cCarga && data.status) {
-          setSucess("Deu certo eba!");
           console.log("Emviado pra API");
+
+          atualizarOp(
+            codCarg,
+            "",
+            "",
+            "1",
+            dataent.toString(),
+            horaent.toString(),
+            String(matricula ?? ""),
+            "",
+            "",
+            "",
+            `Carga ${codCarg} iniciada pelo operador ${matricula}`
+          );
+
         } else if (data && data.Erro) {
           setErro(data.Erro);
         } else {
@@ -202,13 +225,57 @@ export default function CargaList({}: Props) {
   }, []);
 
   function getStatusColor(status: string) {
-  switch (status) {
-    case "0": return "bg-gray-200 border-gray-400";    
-    case "1": return "bg-orange-200 border-orange-400";
-    case "3": return "bg-green-200 border-green-400";   
+    switch (status) {
+      case "0": return "bg-gray-200 border-gray-400";    
+      case "1": return "bg-orange-200 border-orange-400";
+      case "3": return "bg-green-200 border-green-400";   
+    }
   }
-}
+  
+  async function atualizarOp(
+    codCarga: string, 
+    codPale: string, 
+    codItem: string, 
+    cOperac: string, 
+    cData: string, 
+    cHora: string, 
+    cUser: string, 
+    cLeit1: string, 
+    cLeit2: string, 
+    cStatus: string, 
+    cHistor: string) {
 
+     try {
+      setLoading(true);
+      const resp = await apiLog.post("", {
+        "codCarg": codCarga,
+        "codPale": codPale,
+        "codItem": codItem,
+        "cOperac": cOperac,
+        "cData": cData,
+        "cHora": cHora,
+        "cUser": cUser,
+        "cLeit1": cLeit1,
+        "cLeit2": cLeit2,
+        "cStatus": cStatus,
+        "cHistor": cHistor
+      });
+
+      const data = resp.data;
+      if (data === "Gravado com sucesso") {
+        console.log("Enviado para a API")
+      } else if (data?.Erro) {
+        setErro(data.Erro);
+      } else {
+        setErro("Falha ao atualizar o status do palete.");
+      }
+    } catch {
+      setErro("Erro ao conectar com a API.");
+    } finally {
+      setLoading(false);
+    }
+  }
+  
   return (
     <main
       className="
@@ -346,7 +413,7 @@ export default function CargaList({}: Props) {
             />
             )}
 
-          {erro && (
+          {erro && ( 
             //popup de erro
             <ErrorPopup message={erro} onClose={() => setErro(null)} />
           )}

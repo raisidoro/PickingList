@@ -25,6 +25,14 @@ export const apiPallets = axios.create({
   },
 });
 
+export const apiLog = axios.create({
+  baseURL: env.VITE_API_LOG_URL, 
+  auth: {
+    username: 'webservice', 
+    password: '@Gdbr036841',   
+  },
+});
+
 export const apiItens = axios.create({
   baseURL: env.VITE_API_ITENS_URL, 
   auth: {
