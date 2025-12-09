@@ -110,12 +110,15 @@ export default function CargaList({}: Props) {
       setErro("Matrícula não encontrada. Por favor, faça login novamente.");
     }
   }, [matricula]);
+
+
+  console.log(matricula)
   
   async function confirmaCarga(response: string, selectedCod: string | null){
     if (response === "s" && selectedCod) {
 
       if (cargaSelecionada) {
-        navigate("/Pallets", { state: { carga: cargaSelecionada, matricula, codCarg, dataent, horaent } });
+        navigate("/Pallets", { state: { carga: cargaSelecionada, matricula: matricula} });
       }
 
       try {
@@ -123,12 +126,19 @@ export default function CargaList({}: Props) {
 
         const resp = await apiCarga.post("", { 
           "codCarg": cargaSelecionada?.cod_carg,
-          "status": "1" });
+          "status": "0" });
         console.log(resp)
         const data = resp.data;
 
         if (data && data.cCarga && data.status) {
-          console.log("Emviado pra API");
+          console.log("Enviado pra API");    
+
+          console.log("Dados para atualizarOp:", {
+            codCarg,
+            dataent: dataent.toString(),
+            horaent: horaent.toString(),
+            matricula: matricula.toString()
+          });
 
           atualizarOp(
             codCarg,
@@ -165,7 +175,7 @@ export default function CargaList({}: Props) {
   { code: "0", label: "Pendente" },
   { code: "1", label: "Em conferência" },
   { code: "3", label: "Concluída" }
-];
+  ];
 
   const cargasFiltradas = cargas.filter((carga) => {
     const busca = searchTerm.toLowerCase();
@@ -270,7 +280,7 @@ export default function CargaList({}: Props) {
         setErro("Falha ao atualizar o status do palete.");
       }
     } catch {
-      setErro("Erro ao conectar com a API.");
+      setErro("Erro ao conectar com a API de Log.");
     } finally {
       setLoading(false);
     }
@@ -302,7 +312,7 @@ export default function CargaList({}: Props) {
             className="text-center mb-2 sm:mb-4 text-gray-900"
           >
             <div className="flex justify-between items-center px-4">
-              <span onClick={() => navigate("/")}>
+              <span onClick={() => navigate("/", { state: { matricula: matricula } })}>
                 <MdArrowBack className="text-gray-500 w-6 h-6 cursor-pointer" />
               </span>
               <span onClick={() => window.location.reload()}>

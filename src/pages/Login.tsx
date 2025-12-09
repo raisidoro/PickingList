@@ -146,7 +146,7 @@ function LoginForm() {
       console.log(matricula)
       setTimeout(() => {
         setSucess(null);
-        navigate("/Carga", { state: { matricula } });
+        navigate("/Carga", { state: { matricula: matricula } });
       }, 1000); 
       } else if (data && data.Erro) {
       setErro(data.Erro);

@@ -127,10 +127,12 @@ export default function PalletViewSingle() {
   type SuccessType = "LEITURA" | "ITEM" | "CARGA";
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
   const [Confirm, setConfirm] = useState<string | null>(null);
-  const dataent = new Date();
-  const horaent = dataent.toLocaleTimeString('pt-BR', { hour12: false });
   const codCarg = location.state?.codCarg || localStorage.getItem("codCarg");
   const kanbanitem = palletAtual?.itens.find(item => item.status !== "3")?.kanban ?? "";
+
+  const dataent = new Date();
+  const dataformatada = dataent.toLocaleDateString('pt-BR'); 
+  const horaformatada = dataent.toLocaleTimeString('pt-BR', { hour12: false }); 
 
   const matricula = location.state?.matricula || localStorage.getItem("matricula");
     useEffect(() => {
@@ -264,6 +266,7 @@ export default function PalletViewSingle() {
 
   //Inicio das validações do processo de montagem de carga
 
+
   // Funções que verificam etiqueta cliente e kanban GDBR
   function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
     const valor = e.target.value;
@@ -350,8 +353,8 @@ export default function PalletViewSingle() {
         palletAtual?.cod_palete.trim() ?? "",
         kanbanitem,
         "4",
-        dataent.toString(),
-        horaent.toString(),
+        dataformatada.toString(),
+        horaformatada.toString(),
         String(matricula ?? ""),
         kanbanGDBR,
         etiquetaClienteRef.toString(),
@@ -490,7 +493,24 @@ export default function PalletViewSingle() {
     }
 
     const novaQtdCaixasLidas = caixasLidas + 1;
+    console.log("Caixas lidas atualizadas para:", novaQtdCaixasLidas);
     setCaixasLidas(novaQtdCaixasLidas);
+
+    if (novaQtdCaixasLidas === 1) {
+      atualizarOp(
+            codCarg,
+            palletAtual?.cod_palete.trim() ?? "",
+            kanbanitem,
+            "5",
+            dataformatada.toString(),
+            horaformatada.toString(),
+            String(matricula ?? ""),
+            "",
+            "",
+            "",
+            `Item ${_item.kanban} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} iniciada pelo operador ${matricula}`
+          );
+    }
 
     try {
       setLoading(true);
@@ -513,18 +533,31 @@ export default function PalletViewSingle() {
         await refreshPalletsCompletos();
 
         atualizarOp(
-            codCarg,
-            palletAtual?.cod_palete.trim() ?? "",
-            _item.kanban ?? "",
-            "4",
-            dataent.toString(),
-            horaent.toString(),
-            String(matricula ?? ""),
-            kanbanGDBR,
-            etiquetaClienteRef.toString(),
-            "1",
-            `Item ${_item.kanban ?? ""} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} lido com sucesso pelo operador ${matricula} `
-          );
+          codCarg,
+          palletAtual?.cod_palete.trim() ?? "",
+          _item.kanban ?? "",
+          "4",
+          dataformatada.toString(),
+          horaformatada.toString(),
+          matricula,
+          kanbanGDBR,
+          etiquetaClienteRef.toString(),
+          "1",
+          `Item ${_item.kanban ?? ""} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} lido com sucesso pelo operador ${matricula} `
+        );
+
+        console.log(
+          "CodCarg:", codCarg,
+          "CodPale:", palletAtual?.cod_palete.trim() ?? "",
+          "4",
+          "Dataent:", dataformatada.toString(),
+          "Horaent:", horaformatada.toString(),
+          "Matricula:", matricula,
+          "KanbanGDBR:", kanbanGDBR,
+          "EtiquetaCliente:", _item.kanban.toString(),
+          "1",
+          `Item ${_item.kanban.toString()} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} lido com sucesso pelo operador ${matricula} `
+        )
 
         // Se todas as caixas foram lidas, finaliza o item   
         if (novaQtdCaixasLidas >= totalCaixas) {
@@ -568,8 +601,8 @@ export default function PalletViewSingle() {
             palletAtual?.cod_palete.trim() ?? "",
             kanbanitem,
             "5",
-            dataent.toString(),
-            horaent.toString(),
+            dataformatada.toString(),
+            horaformatada.toString(),
             String(matricula ?? ""),
             "",
             "",
@@ -644,33 +677,33 @@ export default function PalletViewSingle() {
 
           if (status === "1") {
             atualizarOp(
-              codCarg ?? "", 
+              codCarg, 
               palletAtual.cod_palete.trim(),
               "",
               "2",
-              dataent.toString(),
-              horaent.toString(),
+              dataformatada.toString(),
+              horaformatada.toString(),
               String(matricula ?? ""),
               "",
               "",
               "",
-              `Pallet ${palletAtual.cod_palete.trim()} da carga ${codCarg ?? ""} iniciada pelo operador ${matricula} `
+              `Pallet ${palletAtual.cod_palete.trim()} da carga ${codCarg} iniciada pelo operador ${matricula} `
             );
           }
 
           if (status === "3") {
             atualizarOp(
-              codCarg ?? "", 
+              codCarg, 
               palletAtual.cod_palete.trim(),
               "",
               "6",
-              dataent.toString(),
-              horaent.toString(),
+              dataformatada.toString(),
+              horaformatada.toString(),
               String(matricula ?? ""),
               "",
               "",
               "",
-              `Pallet ${palletAtual.cod_palete.trim()} da carga ${codCarg ?? ""} finalizada pelo operador ${matricula}  `
+              `Pallet ${palletAtual.cod_palete.trim()} da carga ${codCarg} finalizada pelo operador ${matricula}  `
             );
           }
 
@@ -731,8 +764,8 @@ export default function PalletViewSingle() {
           "",
           "",
           "7",
-          dataent.toString(),
-          horaent.toString(),
+          dataformatada.toString(),
+          horaformatada.toString(),
           String(matricula ?? ""),
           "",
           "",
@@ -827,19 +860,6 @@ export default function PalletViewSingle() {
   async function confirmaPalete(response: string, selectedCod: string | null){
       if (response === "s" && selectedCod) {
         atualizarStatusPalete("1");
-        atualizarOp(
-            codCarg,
-            palletAtual?.cod_palete.trim() ?? "",
-            kanbanitem, 
-            "3",
-            dataent.toString(),
-            horaent.toString(),
-            String(matricula ?? ""),
-            "",
-            "",
-            "",
-            `Item ${etiquetaClienteRef} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} iniciada pelo operador ${matricula} `
-          );
       } 
   }
 
@@ -855,6 +875,8 @@ export default function PalletViewSingle() {
     cLeit2: string, 
     cStatus: string, 
     cHistor: string) {
+
+    console.log("Função de operação")
 
     try {
       setLoading(true);
@@ -874,14 +896,14 @@ export default function PalletViewSingle() {
 
         const data = resp.data;
         if (data === "Gravado com sucesso") {
-          console.log("Enviado para a API")
+          console.log("Enviado para a API de Log")
         } else if (data?.Erro) {
           setErro(data.Erro);
         } else {
-          setErro("Falha ao atualizar o status do palete.");
+          setErro("Falha ao atualizar o Log do Usuário.");
         }
       } catch {
-        setErro("Erro ao conectar com a API.");
+        setErro("Erro ao conectar com a API de Log.");
       } finally {
         setLoading(false);
       }
@@ -905,7 +927,7 @@ export default function PalletViewSingle() {
         <div className="w-full flex flex-col gap-4 h-full p-3 sm:gap-6 sm:p-6 overflow-auto">
           <div className="flex items-center gap-2 mb-4">
             <button
-              onClick={() => navigate("/Carga")}
+              onClick={() => navigate("/Carga", { state: { matricula: matricula } }) }
               className="focus:outline-none"
               title="Voltar"
             >
