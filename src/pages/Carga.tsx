@@ -1,15 +1,13 @@
-import React, { useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import { type JSX } from "react";
-import { apiCarga } from "../lib/axios";
+import { apiCarga, apiLog } from "../lib/axios";
 import { MdArrowBack } from "react-icons/md";
 import { CiFilter } from "react-icons/ci";
-import { IoEyeSharp } from 'react-icons/io5';
+import { IoEyeSharp } from "react-icons/io5";
 import { TfiReload } from "react-icons/tfi";
-import { data, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import ErrorPopup from "../components/CompErrorPopup.tsx";
 import ConfirmationPopup from "../components/CompConfirmationPopup.tsx";
-import { useLocation } from "react-router-dom";
-import { apiLog } from "../lib/axios";
 
 const textVariants = {
   default: "text-xl sm:text-2xl",
@@ -95,75 +93,85 @@ export default function CargaList({}: Props) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showStatusFilter, setShowStatusFilter] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
-  const navigate = useNavigate();
   const [Confirm, setConfirm] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const cargaSelecionada = cargas.find((c) => c.cod_carg === selectedCod);
-  const codCarg = cargaSelecionada?.cod_carg. toString() || "";
+
+  const navigate = useNavigate();
   const location = useLocation();
-  const dataent = new Date();
-  const horaent = dataent.toLocaleTimeString('pt-BR', { hour12: false });
 
-  const matricula = location.state?.matricula || localStorage.getItem("matricula");
-  useEffect(() => {
-    if (!matricula) {
-      setErro("Matrícula não encontrada. Por favor, faça login novamente.");
+  const matriculaState = location.state?.matricula as string | undefined;
+  const matriculaStorage = localStorage.getItem("matricula") || undefined;
+  const matricula = matriculaState || matriculaStorage || "";
+
+  console.log("Matrícula carregada:", matricula);
+
+  async function confirmaCarga(response: string) {
+    console.log(">> confirmaCarga chamada com:", { response, selectedCod, matricula });
+
+    if (response.toLowerCase() !== "s" || !selectedCod) return;
+
+    const cargaSelecionada = cargas.find(
+      (c) => c.cod_carg === selectedCod
+    );
+
+    if (!cargaSelecionada) {
+      setErro("Carga selecionada não encontrada.");
+      return;
     }
-  }, [matricula]);
 
+    // Navega para a tela de pallets
+    navigate("/Pallets", {
+      state: { carga: cargaSelecionada, matricula },
+    });
 
-  console.log(matricula)
-  
-  async function confirmaCarga(response: string, selectedCod: string | null){
-    if (response === "s" && selectedCod) {
+    try {
+      setLoading(true);
 
-      if (cargaSelecionada) {
-        navigate("/Pallets", { state: { carga: cargaSelecionada, matricula: matricula} });
+      const resp = await apiCarga.post("", {
+        codCarg: cargaSelecionada.cod_carg,
+        status: "1",
+      });
+
+      console.log("Resposta da API de Carga ao iniciar carga:", resp.data);
+
+      const dataAtual = new Date();
+      const dataLog =
+        dataAtual.getFullYear().toString() +
+        String(dataAtual.getMonth() + 1).padStart(2, "0") +
+        String(dataAtual.getDate()).padStart(2, "0"); 
+      const horaLog = dataAtual.toTimeString().slice(0, 5); 
+
+      const userLog = matricula || localStorage.getItem("matricula") || "";
+      if (!userLog) {
+        console.warn("Sem matrícula, pulando log de operador.");
+        return;
       }
 
-      try {
-        setLoading(true);
+      console.log("Dados enviados a atualizarOp:", {
+        codCarg: cargaSelecionada.cod_carg,
+        dataLog,
+        horaLog,
+        userLog,
+      });
 
-        const resp = await apiCarga.post("", { 
-          "codCarg": cargaSelecionada?.cod_carg,
-          "status": "0" });
-        console.log(resp)
-        const data = resp.data;
-
-        if (data && data.cCarga && data.status) {
-          console.log("Enviado pra API");    
-
-          console.log("Dados para atualizarOp:", {
-            codCarg,
-            dataent: dataent.toString(),
-            horaent: horaent.toString(),
-            matricula: matricula.toString()
-          });
-
-          atualizarOp(
-            codCarg,
-            "",
-            "",
-            "1",
-            dataent.toString(),
-            horaent.toString(),
-            String(matricula ?? ""),
-            "",
-            "",
-            "",
-            `Carga ${codCarg} iniciada pelo operador ${matricula}`
-          );
-
-        } else if (data && data.Erro) {
-          setErro(data.Erro);
-        } else {
-          setErro("Falha ao atualizar status da carga.");
-        }
-      } catch (err) {
-        setErro("Erro ao conectar com a API.");
-      } finally {
-        setLoading(false);
-      }
+      await atualizarOp(
+        cargaSelecionada.cod_carg,
+        "",
+        "",
+        "1",
+        dataLog,
+        horaLog,
+        userLog,
+        "",
+        "",
+        "",
+        `Carga ${cargaSelecionada.cod_carg} iniciada pelo operador ${userLog} na data ${dataLog} as ${horaLog}.`
+      );
+    } catch (err: any) {
+      console.error("Erro ao atualizar status da carga:", err?.response || err);
+      setErro("Erro ao conectar com a API.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -172,9 +180,9 @@ export default function CargaList({}: Props) {
   }
 
   const statusOptions = [
-  { code: "0", label: "Pendente" },
-  { code: "1", label: "Em conferência" },
-  { code: "3", label: "Concluída" }
+    { code: "0", label: "Pendente" },
+    { code: "1", label: "Em conferência" },
+    { code: "3", label: "Concluída" },
   ];
 
   const cargasFiltradas = cargas.filter((carga) => {
@@ -185,28 +193,29 @@ export default function CargaList({}: Props) {
       safeTrim(carga.data_col).toLowerCase().includes(busca) ||
       safeTrim(carga.hora_col).toLowerCase().includes(busca) ||
       safeTrim(carga.stat_col).toLowerCase().includes(busca);
+
     const matchStatus =
       selectedStatus.length === 0 ||
       selectedStatus.includes(String(safeTrim(carga.stat_col)));
-      
-      const matchHistory = showHistory
-        ? safeTrim(carga.stat_col) === "3" 
-        : safeTrim(carga.stat_col) !== "3"; 
+
+    const matchHistory = showHistory
+      ? safeTrim(carga.stat_col) === "3"
+      : safeTrim(carga.stat_col) !== "3";
 
     return matchSearch && matchStatus && matchHistory;
   });
 
   function handleSelect(carga: Carga) {
-    if(carga.stat_col == "0"){
-      setConfirm(null);
-      setSelectedCod(carga.cod_carg)
-      setConfirm(`Deseja iniciar a carga selecionada para o cliente ${carga.nome_cli} com data de coleta para ${carga.data_col} as ${carga.hora_col}?`);
-    }else{
-      navigate("/Pallets", { state: { carga } })
+    if (carga.stat_col === "0") {
+      setSelectedCod(carga.cod_carg);
+      setConfirm(
+        `Deseja iniciar a carga selecionada para o cliente ${carga.nome_cli} com data de coleta para ${carga.data_col} as ${carga.hora_col}?`
+      );
+    } else {
+      navigate("/Pallets", { state: { carga, matricula } });
     }
   }
 
-  // Handle confirming filter selection and hiding filter box
   function applyFilter() {
     setShowStatusFilter(false);
   }
@@ -215,6 +224,8 @@ export default function CargaList({}: Props) {
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "";
+      setErro(null);
+      setConfirm(null);
     };
   }, []);
 
@@ -236,56 +247,78 @@ export default function CargaList({}: Props) {
 
   function getStatusColor(status: string) {
     switch (status) {
-      case "0": return "bg-gray-200 border-gray-400";    
-      case "1": return "bg-orange-200 border-orange-400";
-      case "3": return "bg-green-200 border-green-400";   
+      case "0":
+        return "bg-gray-200 border-gray-400";
+      case "1":
+        return "bg-orange-200 border-orange-400";
+      case "3":
+        return "bg-green-200 border-green-400";
+      default:
+        return "bg-white border-gray-200";
     }
   }
-  
-  async function atualizarOp(
-    codCarga: string, 
-    codPale: string, 
-    codItem: string, 
-    cOperac: string, 
-    cData: string, 
-    cHora: string, 
-    cUser: string, 
-    cLeit1: string, 
-    cLeit2: string, 
-    cStatus: string, 
-    cHistor: string) {
 
-     try {
+  async function atualizarOp(
+    codCarga: string,
+    codPale: string,
+    codItem: string,
+    cOperac: string,
+    cData: string,
+    cHora: string,
+    cUser: string,
+    cLeit1: string,
+    cLeit2: string,
+    cStatus: string,
+    cHistor: string
+  ) {
+    console.log(">> atualizarOp:", {
+      codCarga,
+      codPale,
+      codItem,
+      cOperac,
+      cData,
+      cHora,
+      cUser,
+      cLeit1,
+      cLeit2,
+      cStatus,
+      cHistor,
+    });
+
+    try {
       setLoading(true);
       const resp = await apiLog.post("", {
-        "codCarg": codCarga,
-        "codPale": codPale,
-        "codItem": codItem,
-        "cOperac": cOperac,
-        "cData": cData,
-        "cHora": cHora,
-        "cUser": cUser,
-        "cLeit1": cLeit1,
-        "cLeit2": cLeit2,
-        "cStatus": cStatus,
-        "cHistor": cHistor
+        codCarg: codCarga,
+        codPale,
+        codItem,
+        cOperac,
+        cData,
+        cHora,
+        cUser,
+        cLeit1,
+        cLeit2,
+        cStatus,
+        cHistor,
       });
 
+      console.log(">> Resposta apiLog:", resp.status, resp.data);
       const data = resp.data;
+
       if (data === "Gravado com sucesso") {
-        console.log("Enviado para a API")
+        console.log("Log gravado com sucesso na API de Log");
       } else if (data?.Erro) {
         setErro(data.Erro);
       } else {
         setErro("Falha ao atualizar o status do palete.");
       }
-    } catch {
+    } catch (err: any) {
+      console.error("Erro ao conectar com a API de Log:", err?.response || err);
       setErro("Erro ao conectar com a API de Log.");
     } finally {
       setLoading(false);
     }
   }
-  
+
   return (
     <main
       className="
@@ -312,7 +345,13 @@ export default function CargaList({}: Props) {
             className="text-center mb-2 sm:mb-4 text-gray-900"
           >
             <div className="flex justify-between items-center px-4">
-              <span onClick={() => navigate("/", { state: { matricula: matricula } })}>
+              <span
+                onClick={() => {
+                  setErro(null);
+                  setConfirm(null);
+                  navigate("/", { state: { matricula } });
+                }}
+              >
                 <MdArrowBack className="text-gray-500 w-6 h-6 cursor-pointer" />
               </span>
               <span onClick={() => window.location.reload()}>
@@ -326,11 +365,10 @@ export default function CargaList({}: Props) {
             className="flex items-center mb-2 border border-gray-300 rounded-xl
             focus-within:border-gray-600 transition-colors bg-white shadow px-2 relative"
           >
-
             <input
               type="text"
               placeholder="Buscar cargas..."
-              className="flex-grow px-3 py-2 text-gray-800 placeholder-gray-400 bg-white focus:outline-none" 
+              className="flex-grow px-3 py-2 text-gray-800 placeholder-gray-400 bg-white focus:outline-none"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               aria-label="Buscar cargas"
@@ -346,10 +384,10 @@ export default function CargaList({}: Props) {
                 ×
               </button>
             )}
-           <button
+            <button
               type="button"
               aria-label="Filtrar por status"
-              onClick={() => { 
+              onClick={() => {
                 setShowStatusFilter((v) => !v);
               }}
               className="px-1"
@@ -357,9 +395,8 @@ export default function CargaList({}: Props) {
               <CiFilter className="text-gray-500 w-6 h-6 mx-2" />
             </button>
 
-            {/* Small dropdown filter box */}
             {showStatusFilter && (
-                <div className="absolute top-full right-2 mt-1 w-44 bg-white border border-gray-300 rounded-lg shadow-lg p-3 z-50">
+              <div className="absolute top-full right-2 mt-1 w-44 bg-white border border-gray-300 rounded-lg shadow-lg p-3 z-50">
                 <div className="flex flex-col max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200">
                   {statusOptions.map((opt) => (
                     <label
@@ -396,12 +433,12 @@ export default function CargaList({}: Props) {
           </div>
 
           <button
-          className="text-right text-gray-900"
+            className="text-right text-gray-900"
             type="button"
             onClick={() => {
               setShowHistory((v) => !v);
             }}
-           >
+          >
             Histórico de Cargas
             {showHistory ? " - Pendentes" : " - Concluídas"}
           </button>
@@ -410,23 +447,23 @@ export default function CargaList({}: Props) {
             <Text className="text-center text-gray-600">
               Carregando cargas...
             </Text>
-
           )}
-            {Confirm && (
+
+          {Confirm && (
             <ConfirmationPopup
               message={Confirm}
               onRespond={(response: string) => {
-              setConfirm(null);
-              confirmaCarga(response, selectedCod)
+                setConfirm(null);
+                confirmaCarga(response);
               }}
               onClose={() => setConfirm(null)}
             />
-            )}
+          )}
 
-          {erro && ( 
-            //popup de erro
+          {erro && (
             <ErrorPopup message={erro} onClose={() => setErro(null)} />
           )}
+
           {!loading && !erro && cargasFiltradas.length === 0 && (
             <Text className="text-center text-gray-600">
               Nenhuma carga disponível para o filtro informado .
@@ -446,7 +483,8 @@ export default function CargaList({}: Props) {
                 className={`
                   p-4 sm:p-6 cursor-pointer border rounded-2xl transition-shadow duration-300
                   ${getStatusColor(safeTrim(carga.stat_col))}
-                  ${selectedCod === carga.cod_carg
+                  ${
+                    selectedCod === carga.cod_carg
                       ? "border-black-600 shadow-black-300 shadow-lg"
                       : "border-transparent hover:shadow-md hover:border-black-400"
                   }
@@ -473,7 +511,8 @@ export default function CargaList({}: Props) {
                   className="text-gray-700 mt-2 whitespace-pre-line"
                 >
                   <span className="block">
-                    <strong>Data de Coleta:</strong> {safeTrim(carga.data_col)}
+                    <strong>Data de Coleta:</strong>{" "}
+                    {safeTrim(carga.data_col)}
                   </span>
                   <span className="block">
                     <strong>Hora:</strong> {safeTrim(carga.hora_col)}
@@ -486,17 +525,20 @@ export default function CargaList({}: Props) {
                     {getStatusText(safeTrim(carga.stat_col))}
                   </span>
 
-                  <span onClick={() => navigate("/PalletsView", { state: { carga } })}>
+                  <span
+                    onClick={() =>
+                      navigate("/PalletsView", { state: { carga, matricula } })
+                    }
+                  >
                     <IoEyeSharp
                       onClick={(e) => {
-                        e.stopPropagation(); 
-                        navigate("/PalletsView", { state: { carga } });
+                        e.stopPropagation();
+                        navigate("/PalletsView", { state: { carga, matricula } });
                       }}
                       className="cursor-pointer text-grey-600 hover:text-blue-800"
                       title="Visualizar Paletes"
                     />
-                 </span>
-
+                  </span>
                 </Text>
               </Card>
             ))}

@@ -144,6 +144,8 @@ function LoginForm() {
       if (data && data.Nome && data.Matricula) {
       setSucess(`Bem-vindo, ${data.Nome.trim()}`);
       console.log(matricula)
+      const mat = matricula.trim(); 
+      localStorage.setItem("matricula", mat);
       setTimeout(() => {
         setSucess(null);
         navigate("/Carga", { state: { matricula: matricula } });
