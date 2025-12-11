@@ -130,9 +130,12 @@ export default function PalletViewSingle() {
   const codCarg = location.state?.codCarg || localStorage.getItem("codCarg");
   const kanbanitem = palletAtual?.itens.find(item => item.status !== "3")?.kanban ?? "";
 
-  const dataent = new Date();
-  const dataformatada = dataent.toLocaleDateString('pt-BR'); 
-  const horaformatada = dataent.toLocaleTimeString('pt-BR', { hour12: false }); 
+  const dataAtual = new Date();
+  const dataformatada =
+    dataAtual.getFullYear().toString() +
+    String(dataAtual.getMonth() + 1).padStart(2, "0") +
+    String(dataAtual.getDate()).padStart(2, "0"); 
+  const horaformatada = dataAtual.toTimeString().slice(0, 5); 
 
   const matricula = location.state?.matricula || localStorage.getItem("matricula");
     useEffect(() => {
@@ -277,6 +280,21 @@ export default function PalletViewSingle() {
       setEtiquetaLiberada(false);
       if (valor.trim() !== "") {
         setErro("Formato do Kanban GDBR inválido. Use o formato X|KANBAN|SEQUENCIAL.");
+
+        atualizarOp(
+        carga?.cod_carg.toString() ?? "",
+        palletAtual?.cod_palete.trim() ?? "",
+        kanbanitem,
+        "4",
+        dataformatada.toString(),
+        horaformatada.toString(),
+        String(matricula ?? ""),
+        kanbanGDBR,
+        etiqueta.toString(),
+        "2",
+        `Kanban GDBR: ${kanbanGDBR}. "Formato do Kanban GDBR inválido. `
+      );
+
       } else {
         setErro(null);
       }
@@ -307,6 +325,21 @@ export default function PalletViewSingle() {
     const etiquetaRegex = /^[A-Z]-\d{3}$/i;
     if (!etiquetaRegex.test(etiqueta)) {
       setErro("Formato da etiqueta inválido. Use L-XXX");
+
+      atualizarOp(
+        carga?.cod_carg.toString() ?? "",
+        palletAtual?.cod_palete.trim() ?? "",
+        kanbanitem,
+        "4",
+        dataformatada.toString(),
+        horaformatada.toString(),
+        String(matricula ?? ""),
+        kanbanGDBR,
+        etiqueta.toString(),
+        "2",
+        `Etiqueta Cliente ${etiqueta.toString()}. Formato da etiqueta inválido.} `
+      );
+
       setSucess(null);
       return;
     }
@@ -316,6 +349,21 @@ export default function PalletViewSingle() {
     const match = kanbanGDBR.match(kanbanRegex);
     if (!match) {
       setErro("Formato do Kanban GDBR inválido. Use X|KANBAN|SEQUENCIAL.");
+
+      atualizarOp(
+        carga?.cod_carg.toString() ?? "",
+        palletAtual?.cod_palete.trim() ?? "",
+        kanbanitem,
+        "4",
+        dataformatada.toString(),
+        horaformatada.toString(),
+        String(matricula ?? ""),
+        kanbanGDBR,
+        etiqueta.toString(),
+        "2",
+        `Kanban GDBR ${kanbanGDBR}. Formato do Kanban GDBR inválido.} `
+      );
+      
       setSucess(null);
       return;
     }
@@ -337,6 +385,19 @@ export default function PalletViewSingle() {
  
     if (itensComKanban.length === 0) {
       setErro(`Kanban ${kanbanOriginal} não encontrado no pallet atual.`);
+      atualizarOp(
+        carga?.cod_carg.toString() ?? "",
+        palletAtual?.cod_palete.trim() ?? "",
+        kanbanitem,
+        "4",
+        dataformatada.toString(),
+        horaformatada.toString(),
+        String(matricula ?? ""),
+        kanbanGDBR,
+        etiqueta.toString(),
+        "2",
+        `Kanban GDBR ${kanbanGDBR} não encontrado no palete atual.} `
+      );
       setSucess(null);
       return;
     }
@@ -346,22 +407,34 @@ export default function PalletViewSingle() {
     if (etiqueta.length === 5 && kanbanOriginal.includes(etiqueta)) {
       foundItem = itensComKanban.find(item => String(item.sequen) === etiqueta);
     }else{
-      setErro("Etiqueta do cliente não confere com o kanban GDBR");
-
+      setErro("Etiqueta cliente não confere com o kanban GDBR");
       atualizarOp(
-        codCarg,
+        carga?.cod_carg.toString() ?? "",
         palletAtual?.cod_palete.trim() ?? "",
-        kanbanitem,
+        etiquetaClienteRef.toString(),
         "4",
         dataformatada.toString(),
         horaformatada.toString(),
         String(matricula ?? ""),
         kanbanGDBR,
-        etiquetaClienteRef.toString(),
+        etiqueta.toString(),
         "2",
-        `Item ${kanbanitem}} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} lido com sucesso pelo operador ${matricula} `
-          );
+        `Kanban GDBR ${kanbanGDBR} não confere com etiqueta cliente ${etiquetaClienteRef.current?.value ?? ""} `
+      );
 
+      console.log("atualizarOp - ERRO DE LEITURA",
+        "CodCarg", carga?.cod_carg.toString() ?? "",
+        "CodPale",palletAtual?.cod_palete.trim() ?? "",
+        "item",kanbanitem,
+        "op - 4",
+        "data", dataformatada.toString(),
+        "hora", horaformatada.toString(),
+        "matricula",String(matricula ?? ""),
+        "item",kanbanGDBR,
+        "etiqueta cliente",etiquetaClienteRef.toString(),
+        "status de verificação - 2",
+        `Item ${kanbanitem}} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} lido com sucesso pelo operador ${matricula} `
+      );
     }
  
     if (!foundItem) {
@@ -370,6 +443,21 @@ export default function PalletViewSingle() {
  
     if (!foundItem) {
       setErro("Todos os itens com este Kanban já foram finalizados.");
+      
+      atualizarOp(
+        carga?.cod_carg.toString() ?? "",
+        palletAtual?.cod_palete.trim() ?? "",
+        kanbanitem,
+        "4",
+        dataformatada.toString(),
+        horaformatada.toString(),
+        String(matricula ?? ""),
+        kanbanGDBR,
+       etiqueta.toString(),
+        "2",
+        `Kanban GDBR ${kanbanGDBR}. Todos os itens desse kanban já foram finalizados.} `
+      );
+
       setSucess(null);
       return;
     }
@@ -437,6 +525,21 @@ export default function PalletViewSingle() {
         const valido = Number(sequencialAtual) === menorSequencialPendente;
         if (!valido) {
           setErro("Operador deve seguir a sequência correta. Finalize o item atual antes de continuar.");
+          
+          atualizarOp(
+            carga?.cod_carg.toString() ?? "",
+            palletAtual?.cod_palete.trim() ?? "",
+            kanbanitem,
+            "4",
+            dataformatada.toString(),
+            horaformatada.toString(),
+            String(matricula ?? ""),
+            kanbanGDBR,
+            etiqueta.toString(),
+            "2",
+            `Kanban GDBR ${kanbanGDBR}. Operador deve seguir a sequência correta. `
+          );
+
         } else {
           setErro(null);
         }
@@ -461,6 +564,21 @@ export default function PalletViewSingle() {
         const valido = Number(sequencialAtual) === menorSequencialPendente;
         if (!valido) {
           setErro("O item atual não segue a ordem sequencial do palete.");
+          
+          atualizarOp(
+            carga?.cod_carg.toString() ?? "",
+            palletAtual?.cod_palete.trim() ?? "",
+            kanbanitem,
+            "4",
+            dataformatada.toString(),
+            horaformatada.toString(),
+            String(matricula ?? ""),
+            kanbanGDBR,
+           etiqueta.toString(),
+            "2",
+            `Kanban GDBR ${kanbanGDBR}. O item atual não segue a sequência do palete.} `
+          );
+
         } else {
           setErro(null);
         }
@@ -473,6 +591,21 @@ export default function PalletViewSingle() {
 
       if (aindaTemSequencialPendente) {
         setErro("Finalize os itens com sequência antes de montar os sem sequência.");
+        
+        atualizarOp(
+          carga?.cod_carg.toString() ?? "",
+          palletAtual?.cod_palete.trim() ?? "",
+          kanbanitem,
+          "4",
+          dataformatada.toString(),
+          horaformatada.toString(),
+          String(matricula ?? ""),
+          kanbanGDBR,
+          etiqueta.toString(),
+          "2",
+          `Kanban GDBR ${kanbanGDBR}. Finalize os itens com sequência antes de iniciar os sem sequencial. `
+        );
+
         return false;
       }
 
@@ -489,28 +622,27 @@ export default function PalletViewSingle() {
 
     if (caixasLidas >= totalCaixas || _item.status === "3") {
       setErro("Todas as caixas do item já foram lidas. Não é possível continuar.");
+      
+      atualizarOp(
+        carga?.cod_carg.toString() ?? "",
+        palletAtual?.cod_palete.trim() ?? "",
+        kanbanitem,
+        "4",
+        dataformatada.toString(),
+        horaformatada.toString(),
+        String(matricula ?? ""),
+        kanbanGDBR,
+        etiquetaClienteRef.toString(),
+        "2",
+        `Kanban GDBR ${kanbanGDBR}. Todas as caixas desse item já foram lidas. `
+      );
+
       return;
     }
 
     const novaQtdCaixasLidas = caixasLidas + 1;
     console.log("Caixas lidas atualizadas para:", novaQtdCaixasLidas);
     setCaixasLidas(novaQtdCaixasLidas);
-
-    if (novaQtdCaixasLidas === 1) {
-      atualizarOp(
-            codCarg,
-            palletAtual?.cod_palete.trim() ?? "",
-            kanbanitem,
-            "5",
-            dataformatada.toString(),
-            horaformatada.toString(),
-            String(matricula ?? ""),
-            "",
-            "",
-            "",
-            `Item ${_item.kanban} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} iniciada pelo operador ${matricula}`
-          );
-    }
 
     try {
       setLoading(true);
@@ -532,23 +664,54 @@ export default function PalletViewSingle() {
         setEtiquetaLiberada(false);
         await refreshPalletsCompletos();
 
+        if (novaQtdCaixasLidas === 1) {
+          atualizarOp(
+            codCarg,
+            palletAtual?.cod_palete.trim() ?? "",
+            kanbanitem,
+            "5",
+            dataformatada.toString(),
+            horaformatada.toString(),
+            String(matricula ?? ""),
+            "",
+            "",
+            "",
+            `Item ${_item.kanban} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} iniciada pelo operador ${matricula}`
+          );
+        }
+
         atualizarOp(
           codCarg,
           palletAtual?.cod_palete.trim() ?? "",
-          _item.kanban ?? "",
+          kanbanitem,
+          "5",
+          dataformatada.toString(),
+          horaformatada.toString(),
+          String(matricula ?? ""),
+          "",
+          "",
+          "",
+          `Item ${_item.kanban} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} iniciada pelo operador ${matricula}`
+        );
+
+        atualizarOp(
+          carga?.cod_carg.toString() ?? "",
+          palletAtual?.cod_palete.trim() ?? "",
+          kanbanitem,
           "4",
           dataformatada.toString(),
           horaformatada.toString(),
           matricula,
           kanbanGDBR,
-          etiquetaClienteRef.toString(),
+          etiqueta.toString(),
           "1",
           `Item ${_item.kanban ?? ""} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} lido com sucesso pelo operador ${matricula} `
         );
 
-        console.log(
-          "CodCarg:", codCarg,
+        console.log( "Leitura de ITEM ",
+          "CodCarg:", carga?.cod_carg.toString() ?? "",
           "CodPale:", palletAtual?.cod_palete.trim() ?? "",
+          "EtiquetaCliente:", _item.kanban.toString(),
           "4",
           "Dataent:", dataformatada.toString(),
           "Horaent:", horaformatada.toString(),
@@ -556,7 +719,7 @@ export default function PalletViewSingle() {
           "KanbanGDBR:", kanbanGDBR,
           "EtiquetaCliente:", _item.kanban.toString(),
           "1",
-          `Item ${_item.kanban.toString()} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} lido com sucesso pelo operador ${matricula} `
+          `Item ${_item.kanban.toString()} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString()} lido com sucesso pelo operador ${matricula} `
         )
 
         // Se todas as caixas foram lidas, finaliza o item   
@@ -663,7 +826,7 @@ export default function PalletViewSingle() {
 
   async function atualizarStatusPalete(status: string) {
   if (!palletAtual || !carga) return;
-
+  
     try {
       setLoading(true);
       const resp = await apiPallets.post("", {
@@ -675,38 +838,37 @@ export default function PalletViewSingle() {
       const data = resp.data;
       if (data === "Gravado com sucesso") {
 
-          if (status === "1") {
-            atualizarOp(
-              codCarg, 
-              palletAtual.cod_palete.trim(),
-              "",
-              "2",
-              dataformatada.toString(),
-              horaformatada.toString(),
-              String(matricula ?? ""),
-              "",
-              "",
-              "",
-              `Pallet ${palletAtual.cod_palete.trim()} da carga ${codCarg} iniciada pelo operador ${matricula} `
+        if (status === "1") {
+          atualizarOp(
+          codCarg, 
+          palletAtual.cod_palete.trim(),
+          "",
+          "2",
+          dataformatada.toString(),
+          horaformatada.toString(),
+          String(matricula ?? ""),
+          "",
+          "",
+          "",
+          `Pallet ${palletAtual.cod_palete.trim()} da carga ${codCarg} iniciada pelo operador ${matricula} `
+          );
+        }
+
+        if (status === "3") {
+          atualizarOp(
+            codCarg, 
+            palletAtual.cod_palete.trim(),
+            "",
+            "6",
+            dataformatada.toString(),
+            horaformatada.toString(),
+            String(matricula ?? ""),
+            "",
+            "",
+            "",
+            `Pallet ${palletAtual.cod_palete.trim()} da carga ${codCarg} finalizada pelo operador ${matricula}  `
             );
           }
-
-          if (status === "3") {
-            atualizarOp(
-              codCarg, 
-              palletAtual.cod_palete.trim(),
-              "",
-              "6",
-              dataformatada.toString(),
-              horaformatada.toString(),
-              String(matricula ?? ""),
-              "",
-              "",
-              "",
-              `Pallet ${palletAtual.cod_palete.trim()} da carga ${codCarg} finalizada pelo operador ${matricula}  `
-            );
-          }
-
 
         setPallets(prev => {
           const updated = [...prev];

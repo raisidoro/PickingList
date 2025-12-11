@@ -103,7 +103,6 @@ export default function CargaList({}: Props) {
   const matriculaStorage = localStorage.getItem("matricula") || undefined;
   const matricula = matriculaState || matriculaStorage || "";
 
-  console.log("Matrícula carregada:", matricula);
 
   async function confirmaCarga(response: string) {
     console.log(">> confirmaCarga chamada com:", { response, selectedCod, matricula });
