@@ -122,7 +122,7 @@ export default function PalletViewSingle() {
   const [etiquetaLiberada, setEtiquetaLiberada] = useState(false);  
   //Constantes para validação se a etiqueta do cliente confere o kanban GDBR
   const [kanbanGDBR, setKanbanGDBR] = useState("");
-  const [, setEtiquetaCliente] = useState("");
+  const [etiquetacliente, setEtiquetaCliente] = useState("");
   const etiquetaClienteRef = useRef<HTMLInputElement>(null);
   type SuccessType = "LEITURA" | "ITEM" | "CARGA";
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
@@ -290,7 +290,7 @@ export default function PalletViewSingle() {
         horaformatada.toString(),
         String(matricula ?? ""),
         kanbanGDBR,
-        etiqueta.toString(),
+        etiquetaClienteRef.current?.value ?? etiquetacliente,
         "2",
         `Kanban GDBR: ${kanbanGDBR}. "Formato do Kanban GDBR inválido. `
       );
@@ -403,15 +403,15 @@ export default function PalletViewSingle() {
     }
  
     let foundItem: PalletItem | undefined;
- 
-    if (etiqueta.length === 5 && kanbanOriginal.includes(etiqueta)) {
-      foundItem = itensComKanban.find(item => String(item.sequen) === etiqueta);
-    }else{
+
+    if (kanbanParte1 === etiqueta) {
+      foundItem = itensComKanban.find(item => String(item.sequen) === kanbanParte2);
+    } else {
       setErro("Etiqueta cliente não confere com o kanban GDBR");
       atualizarOp(
         carga?.cod_carg.toString() ?? "",
         palletAtual?.cod_palete.trim() ?? "",
-        etiquetaClienteRef.toString(),
+        kanbanitem,
         "4",
         dataformatada.toString(),
         horaformatada.toString(),
@@ -420,20 +420,6 @@ export default function PalletViewSingle() {
         etiqueta.toString(),
         "2",
         `Kanban GDBR ${kanbanGDBR} não confere com etiqueta cliente ${etiquetaClienteRef.current?.value ?? ""} `
-      );
-
-      console.log("atualizarOp - ERRO DE LEITURA",
-        "CodCarg", carga?.cod_carg.toString() ?? "",
-        "CodPale",palletAtual?.cod_palete.trim() ?? "",
-        "item",kanbanitem,
-        "op - 4",
-        "data", dataformatada.toString(),
-        "hora", horaformatada.toString(),
-        "matricula",String(matricula ?? ""),
-        "item",kanbanGDBR,
-        "etiqueta cliente",etiquetaClienteRef.toString(),
-        "status de verificação - 2",
-        `Item ${kanbanitem}} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} lido com sucesso pelo operador ${matricula} `
       );
     }
  
@@ -453,7 +439,7 @@ export default function PalletViewSingle() {
         horaformatada.toString(),
         String(matricula ?? ""),
         kanbanGDBR,
-       etiqueta.toString(),
+        etiqueta.toString(),
         "2",
         `Kanban GDBR ${kanbanGDBR}. Todos os itens desse kanban já foram finalizados.} `
       );
@@ -535,7 +521,7 @@ export default function PalletViewSingle() {
             horaformatada.toString(),
             String(matricula ?? ""),
             kanbanGDBR,
-            etiqueta.toString(),
+            etiquetaClienteRef.current?.value ?? etiquetacliente,
             "2",
             `Kanban GDBR ${kanbanGDBR}. Operador deve seguir a sequência correta. `
           );
@@ -574,7 +560,7 @@ export default function PalletViewSingle() {
             horaformatada.toString(),
             String(matricula ?? ""),
             kanbanGDBR,
-           etiqueta.toString(),
+            etiquetaClienteRef.current?.value ?? etiquetacliente,
             "2",
             `Kanban GDBR ${kanbanGDBR}. O item atual não segue a sequência do palete.} `
           );
@@ -601,7 +587,7 @@ export default function PalletViewSingle() {
           horaformatada.toString(),
           String(matricula ?? ""),
           kanbanGDBR,
-          etiqueta.toString(),
+          etiquetaClienteRef.current?.value ?? etiquetacliente,
           "2",
           `Kanban GDBR ${kanbanGDBR}. Finalize os itens com sequência antes de iniciar os sem sequencial. `
         );
@@ -703,7 +689,7 @@ export default function PalletViewSingle() {
           horaformatada.toString(),
           matricula,
           kanbanGDBR,
-          etiqueta.toString(),
+          etiquetaClienteRef.current?.value ?? etiquetacliente,
           "1",
           `Item ${_item.kanban ?? ""} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} lido com sucesso pelo operador ${matricula} `
         );
@@ -1057,7 +1043,8 @@ export default function PalletViewSingle() {
         });
 
         const data = resp.data;
-        if (data === "Gravado com sucesso") {
+        console.log(resp.data)
+        if (data === "Gravado com sucessoGravado com sucesso") {
           console.log("Enviado para a API de Log")
         } else if (data?.Erro) {
           setErro(data.Erro);
