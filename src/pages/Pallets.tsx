@@ -404,7 +404,7 @@ export default function PalletViewSingle() {
  
     let foundItem: PalletItem | undefined;
 
-    if (kanbanParte1 === etiqueta) {
+    if  (etiquetacliente.length === 5 && kanbanGDBR.includes(etiquetacliente))  {
       foundItem = itensComKanban.find(item => String(item.sequen) === kanbanParte2);
     } else {
       setErro("Etiqueta cliente não confere com o kanban GDBR");
@@ -643,7 +643,7 @@ export default function PalletViewSingle() {
       });
 
       const data = resp.data;
-      if (data === "Gravado com sucesso") {
+      if (data === "Gravado com sucessoGravado com sucesso") {
         setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
         setKanbanGDBR("");
         setEtiquetaCliente("");
@@ -677,7 +677,7 @@ export default function PalletViewSingle() {
           "",
           "",
           "",
-          `Item ${_item.kanban} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} iniciada pelo operador ${matricula}`
+          `Item ${_item.kanban} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} iniciada pelo operador ${matricula}`
         );
 
         atualizarOp(
@@ -691,7 +691,7 @@ export default function PalletViewSingle() {
           kanbanGDBR,
           etiquetaClienteRef.current?.value ?? etiquetacliente,
           "1",
-          `Item ${_item.kanban ?? ""} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} lido com sucesso pelo operador ${matricula} `
+          `Item ${_item.kanban ?? ""} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} lido com sucesso pelo operador ${matricula} `
         );
 
         console.log( "Leitura de ITEM ",
@@ -746,7 +746,7 @@ export default function PalletViewSingle() {
           atualizarItensDoPallet();
 
           atualizarOp(
-            codCarg,
+            carga?.cod_carg.toString() ?? "",
             palletAtual?.cod_palete.trim() ?? "",
             kanbanitem,
             "5",
@@ -826,7 +826,7 @@ export default function PalletViewSingle() {
 
         if (status === "1") {
           atualizarOp(
-          codCarg, 
+          carga?.cod_carg.toString() ?? "", 
           palletAtual.cod_palete.trim(),
           "",
           "2",
