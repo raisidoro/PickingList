@@ -280,6 +280,8 @@ export default function PalletViewSingle() {
       setEtiquetaLiberada(false);
       if (valor.trim() !== "") {
         setErro("Formato do Kanban GDBR inválido. Use o formato X|KANBAN|SEQUENCIAL.");
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
 
         atualizarOp(
         carga?.cod_carg.toString() ?? "",
@@ -297,11 +299,15 @@ export default function PalletViewSingle() {
 
       } else {
         setErro(null);
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
       }
       setEtiquetaCliente("");
     } else {
       setEtiquetaLiberada(true);
       setErro(null);
+      setEtiquetaCliente("");
+      setKanbanGDBR("");
       etiquetaClienteRef.current?.focus();
     }
   }
@@ -325,6 +331,8 @@ export default function PalletViewSingle() {
     const etiquetaRegex = /^[A-Z]-\d{3}$/i;
     if (!etiquetaRegex.test(etiqueta)) {
       setErro("Formato da etiqueta inválido. Use L-XXX");
+      setEtiquetaCliente("");
+      setKanbanGDBR("");
 
       atualizarOp(
         carga?.cod_carg.toString() ?? "",
@@ -349,6 +357,8 @@ export default function PalletViewSingle() {
     const match = kanbanGDBR.match(kanbanRegex);
     if (!match) {
       setErro("Formato do Kanban GDBR inválido. Use X|KANBAN|SEQUENCIAL.");
+      setEtiquetaCliente("");
+      setKanbanGDBR("");
 
       atualizarOp(
         carga?.cod_carg.toString() ?? "",
@@ -385,6 +395,9 @@ export default function PalletViewSingle() {
  
     if (itensComKanban.length === 0) {
       setErro(`Kanban ${kanbanOriginal} não encontrado no pallet atual.`);
+      setEtiquetaCliente("");
+      setKanbanGDBR("");
+
       atualizarOp(
         carga?.cod_carg.toString() ?? "",
         palletAtual?.cod_palete.trim() ?? "",
@@ -408,6 +421,8 @@ export default function PalletViewSingle() {
       foundItem = itensComKanban.find(item => String(item.sequen) === kanbanParte2);
     } else {
       setErro("Etiqueta cliente não confere com o kanban GDBR");
+      setEtiquetaCliente("");
+      setKanbanGDBR("");
       atualizarOp(
         carga?.cod_carg.toString() ?? "",
         palletAtual?.cod_palete.trim() ?? "",
@@ -429,6 +444,8 @@ export default function PalletViewSingle() {
  
     if (!foundItem) {
       setErro("Todos os itens com este Kanban já foram finalizados.");
+      setEtiquetaCliente("");
+      setKanbanGDBR("");
       
       atualizarOp(
         carga?.cod_carg.toString() ?? "",
@@ -511,6 +528,8 @@ export default function PalletViewSingle() {
         const valido = Number(sequencialAtual) === menorSequencialPendente;
         if (!valido) {
           setErro("Operador deve seguir a sequência correta. Finalize o item atual antes de continuar.");
+          setEtiquetaCliente("");
+          setKanbanGDBR("");
           
           atualizarOp(
             carga?.cod_carg.toString() ?? "",
@@ -550,6 +569,8 @@ export default function PalletViewSingle() {
         const valido = Number(sequencialAtual) === menorSequencialPendente;
         if (!valido) {
           setErro("O item atual não segue a ordem sequencial do palete.");
+          setEtiquetaCliente("");
+          setKanbanGDBR("");
           
           atualizarOp(
             carga?.cod_carg.toString() ?? "",
@@ -577,6 +598,8 @@ export default function PalletViewSingle() {
 
       if (aindaTemSequencialPendente) {
         setErro("Finalize os itens com sequência antes de montar os sem sequência.");
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
         
         atualizarOp(
           carga?.cod_carg.toString() ?? "",
@@ -608,6 +631,8 @@ export default function PalletViewSingle() {
 
     if (caixasLidas >= totalCaixas || _item.status === "3") {
       setErro("Todas as caixas do item já foram lidas. Não é possível continuar.");
+      setEtiquetaCliente("");
+      setKanbanGDBR("");
       
       atualizarOp(
         carga?.cod_carg.toString() ?? "",
@@ -643,7 +668,7 @@ export default function PalletViewSingle() {
       });
 
       const data = resp.data;
-      if (data === "Gravado com sucessoGravado com sucesso") {
+      if (data === "Gravado com sucesso") {
         setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
         setKanbanGDBR("");
         setEtiquetaCliente("");
@@ -714,11 +739,17 @@ export default function PalletViewSingle() {
         }
       } else if (data?.Erro) {
         setErro(data.Erro);
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
       } else {
         setErro("Falha ao atualizar o status do item Leitura de caixa");
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
       }
     } catch {
       setErro("Erro ao conectar com a API.");
+      setEtiquetaCliente("");
+      setKanbanGDBR("");
     } finally {
       setLoading(false);
     }
@@ -761,11 +792,17 @@ export default function PalletViewSingle() {
 
         } else if (data?.Erro) {
           setErro(data.Erro);
+          setEtiquetaCliente("");
+          setKanbanGDBR("");
         } else {
           setErro("Falha ao atualizar o status do item Finalização");
+          setEtiquetaCliente("");
+          setKanbanGDBR("");
         }
       } catch {
         setErro("Erro ao conectar com a API.");
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
       } finally {
         setLoading(false);
       }
@@ -872,11 +909,17 @@ export default function PalletViewSingle() {
         });
       } else if (data?.Erro) {
         setErro(data.Erro);
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
       } else {
         setErro("Falha ao atualizar o status do palete.");
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
       }
     } catch {
       setErro("Erro ao conectar com a API.");
+      setEtiquetaCliente("");
+      setKanbanGDBR("");
     } finally {
       setLoading(false);
     }
@@ -923,9 +966,13 @@ export default function PalletViewSingle() {
         
       } else if (data?.Erro) {
         setErro(data.Erro);
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
       }
     } catch {
       setErro("Erro ao conectar com a API.");
+      setEtiquetaCliente("");
+      setKanbanGDBR("");
     } finally {
       setLoading(false);
     }
@@ -1044,15 +1091,21 @@ export default function PalletViewSingle() {
 
         const data = resp.data;
         console.log(resp.data)
-        if (data === "Gravado com sucessoGravado com sucesso") {
+        if (data === "Gravado com sucesso") {
           console.log("Enviado para a API de Log")
         } else if (data?.Erro) {
           setErro(data.Erro);
+          setEtiquetaCliente("");
+          setKanbanGDBR("");
         } else {
           setErro("Falha ao atualizar o Log do Usuário.");
+          setEtiquetaCliente("");
+          setKanbanGDBR("");
         }
       } catch {
         setErro("Erro ao conectar com a API de Log.");
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
       } finally {
         setLoading(false);
       }
@@ -1179,6 +1232,8 @@ export default function PalletViewSingle() {
                     setPalletIndex(i => Math.max(i - 1, 0));
                   } else {
                     setErro("Pallet está em conferência! Por favor, finalize antes de retornar ao palete anterior.");
+                    setEtiquetaCliente("");
+                    setKanbanGDBR("");
                   }
                   }}
                   className="text-blue-600 hover:text-blue-800 flex-shrink-0 disabled:opacity-50"
@@ -1201,6 +1256,8 @@ export default function PalletViewSingle() {
                     setPalletIndex(i => Math.min(i + 1, totalPallets - 1));
                   } else {
                     setErro("Pallet está em conferência! Por favor, finalize antes de avançar.");
+                    setEtiquetaCliente("");
+                    setKanbanGDBR("");
                   }
                   }}
                   className="text-blue-600 hover:text-blue-800 flex-shrink-0 disabled:opacity-50"
