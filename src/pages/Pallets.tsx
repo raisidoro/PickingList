@@ -318,14 +318,21 @@ export default function PalletViewSingle() {
     setEtiquetaCliente(etiquetaCliente);
   }
 
-  // Validação se Kanban GDBR está no Pallet atual e confere com a Etiqueta do Cliente
+    // Validação se Kanban GDBR está no Pallet atual e confere com a Etiqueta do Cliente
   function verificaKanban({ etiqueta }: { etiqueta: string }) {
-    if (!kanbanGDBR || !etiqueta || !palletAtual) return;
+    if (!palletAtual) {
+      setErro("Nenhum palete selecionado.");
+      return;
+    }
 
-    if (etiqueta.length < 5) {
-        setErro(null);
-        setSucess(null);
-        return;
+    if (!kanbanGDBR) {
+      setErro("Informe o Kanban GDBR antes da etiqueta do cliente.");
+      return;
+    }
+    
+    if (!etiqueta || etiqueta.length < 5) {
+      setSucess(null);
+      return;
     }
 
     // Valida formato da etiqueta
@@ -418,28 +425,29 @@ export default function PalletViewSingle() {
  
     let foundItem: PalletItem | undefined;
 
-    if  (etiquetacliente.length === 5 && kanbanParte1 === etiqueta) {
-      foundItem = itensComKanban.find(item => String(item.sequen) === etiqueta);
-    } else {
-      setErro(`Kanban GDBR ${kanbanGDBR} não confere com etiqueta cliente ${etiquetaClienteRef.current?.value ?? ""}`);
-      setEtiquetaCliente("");
-      setKanbanGDBR("");
-      setEtiquetaLiberada(false);
-      atualizarOp(
-        carga?.cod_carg.toString() ?? "",
-        palletAtual?.cod_palete.trim() ?? "",
-        kanbanitem,
-        "4",
-        dataformatada.toString(),
-        horaformatada.toString(),
-        String(matricula ?? ""),
-        kanbanGDBR,
-        etiqueta.toString(),
-        "2",
-        `Kanban GDBR ${kanbanGDBR} não confere com etiqueta cliente ${etiquetaClienteRef.current?.value ?? ""} `
-      );
-      return;
-    }
+    if (etiqueta.length === 5) {
+      if (etiqueta !== kanbanParte1) {
+        setErro(`Kanban GDBR ${kanbanGDBR} não confere com etiqueta cliente ${etiquetaClienteRef.current?.value ?? ""}`);
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
+        setEtiquetaLiberada(false);
+        atualizarOp(
+          carga?.cod_carg.toString() ?? "",
+          palletAtual?.cod_palete.trim() ?? "",
+          kanbanitem,
+          "4",
+          dataformatada.toString(),
+          horaformatada.toString(),
+          String(matricula ?? ""),
+          kanbanGDBR,
+          etiqueta.toString(),
+          "2",
+          `Kanban GDBR ${kanbanGDBR} não confere com etiqueta cliente ${etiquetaClienteRef.current?.value ?? ""} `
+        );
+        return;
+      }
+  }
+    foundItem = itensComKanban.find(item => item.status !== "3");
  
     if (!foundItem) {
       foundItem = itensComKanban.find(item => item.status !== "3");
@@ -449,7 +457,6 @@ export default function PalletViewSingle() {
       setErro("Todos os itens com este Kanban já foram finalizados.");
       setEtiquetaCliente("");
       setKanbanGDBR("");
-      
       atualizarOp(
         carga?.cod_carg.toString() ?? "",
         palletAtual?.cod_palete.trim() ?? "",
@@ -790,7 +797,7 @@ export default function PalletViewSingle() {
             "",
             "",
             "",
-            `Item ${kanbanitem} do Pallet ${_pallet.cod_palete} da carga ${codCarg} foi finalizado com ${qtdFinal} caixas lidas`
+            `Item ${kanbanitem} do Pallet ${_pallet.cod_palete} da carga ${carga?.cod_carg.toString() ?? ""} foi finalizado com ${qtdFinal} caixas lidas`
           );
 
         } else if (data?.Erro) {
@@ -954,7 +961,7 @@ export default function PalletViewSingle() {
         setSucess({ type: "CARGA", message: "Carga finalizada com sucesso! Todos os paletes concluídos." });
 
         atualizarOp(
-          codCarg,
+          carga?.cod_carg.toString() ?? "",
           "",
           "",
           "7",
@@ -964,7 +971,7 @@ export default function PalletViewSingle() {
           "",
           "",
           "",
-          `Carga ${codCarg} finalizada pelo operador ${matricula} `
+          `Carga ${carga?.cod_carg.toString() ?? ""} finalizada pelo operador ${matricula} `
           );
         
       } else if (data?.Erro) {
@@ -1106,7 +1113,7 @@ export default function PalletViewSingle() {
           setKanbanGDBR("");
         }
       } catch {
-        setErro("Erro ao conectar com a API de Log.");
+        //setErro("Erro ao conectar com a API de Log.");
         setEtiquetaCliente("");
         setKanbanGDBR("");
       } finally {
