@@ -9,6 +9,7 @@ import ErrorPopup from '../components/CompErrorPopup.tsx';
 import SuccessPopup from "../components/CompSuccessPopup.tsx";
 import ConfirmationPopup from "../components/CompConfirmationPopup.tsx";
 import { apiLog } from "../lib/axios";
+import { set } from "zod";
 
 // Define tipo de texto com variantes
 const textVariants = {
@@ -144,7 +145,7 @@ export default function PalletViewSingle() {
       }
     }, [matricula]);
 
-  // ordem de visuali8zação dos itens 
+  // ordem de visualização dos itens 
   const sortedItems = palletAtual
     ? (() => {
         const temSequencial = (it: PalletItem) => {
@@ -282,6 +283,7 @@ export default function PalletViewSingle() {
         setErro("Formato do Kanban GDBR inválido. Use o formato X|KANBAN|SEQUENCIAL.");
         setEtiquetaCliente("");
         setKanbanGDBR("");
+        setEtiquetaLiberada(false);
 
         atualizarOp(
         carga?.cod_carg.toString() ?? "",
@@ -307,7 +309,6 @@ export default function PalletViewSingle() {
       setEtiquetaLiberada(true);
       setErro(null);
       setEtiquetaCliente("");
-      setKanbanGDBR("");
       etiquetaClienteRef.current?.focus();
     }
   }
@@ -417,12 +418,13 @@ export default function PalletViewSingle() {
  
     let foundItem: PalletItem | undefined;
 
-    if  (etiquetacliente.length === 5 && kanbanGDBR.includes(etiquetacliente))  {
-      foundItem = itensComKanban.find(item => String(item.sequen) === kanbanParte2);
+    if  (etiquetacliente.length === 5 && kanbanParte1 === etiqueta) {
+      foundItem = itensComKanban.find(item => String(item.sequen) === etiqueta);
     } else {
-      setErro("Etiqueta cliente não confere com o kanban GDBR");
+      setErro(`Kanban GDBR ${kanbanGDBR} não confere com etiqueta cliente ${etiquetaClienteRef.current?.value ?? ""}`);
       setEtiquetaCliente("");
       setKanbanGDBR("");
+      setEtiquetaLiberada(false);
       atualizarOp(
         carga?.cod_carg.toString() ?? "",
         palletAtual?.cod_palete.trim() ?? "",
@@ -436,6 +438,7 @@ export default function PalletViewSingle() {
         "2",
         `Kanban GDBR ${kanbanGDBR} não confere com etiqueta cliente ${etiquetaClienteRef.current?.value ?? ""} `
       );
+      return;
     }
  
     if (!foundItem) {
@@ -873,13 +876,13 @@ export default function PalletViewSingle() {
           "",
           "",
           "",
-          `Pallet ${palletAtual.cod_palete.trim()} da carga ${codCarg} iniciada pelo operador ${matricula} `
+          `Pallet ${palletAtual.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} iniciada pelo operador ${matricula} `
           );
         }
 
         if (status === "3") {
           atualizarOp(
-            codCarg, 
+            carga?.cod_carg.toString() ?? "", 
             palletAtual.cod_palete.trim(),
             "",
             "6",
@@ -889,7 +892,7 @@ export default function PalletViewSingle() {
             "",
             "",
             "",
-            `Pallet ${palletAtual.cod_palete.trim()} da carga ${codCarg} finalizada pelo operador ${matricula}  `
+            `Pallet ${palletAtual.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} finalizada pelo operador ${matricula}  `
             );
           }
 
@@ -1091,7 +1094,7 @@ export default function PalletViewSingle() {
 
         const data = resp.data;
         console.log(resp.data)
-        if (data === "Gravado com sucesso") {
+        if (data === "Gravado com sucessoGravado com sucesso") {
           console.log("Enviado para a API de Log")
         } else if (data?.Erro) {
           setErro(data.Erro);
@@ -1212,6 +1215,7 @@ export default function PalletViewSingle() {
                     onChange={(e) => {
                       handleEtiquetaClienteChange(e);
                       verificaKanban({ etiqueta: e.target.value });
+                      setEtiquetaLiberada(false);
                     }}
                   />
                   {success && (
