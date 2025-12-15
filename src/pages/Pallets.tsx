@@ -9,7 +9,7 @@ import ErrorPopup from '../components/CompErrorPopup.tsx';
 import SuccessPopup from "../components/CompSuccessPopup.tsx";
 import ConfirmationPopup from "../components/CompConfirmationPopup.tsx";
 import { apiLog } from "../lib/axios";
-import { set } from "zod";
+
 
 // Define tipo de texto com variantes
 const textVariants = {
@@ -661,7 +661,7 @@ export default function PalletViewSingle() {
       return;
     }
 
-    const novaQtdCaixasLidas = caixasLidas + 1;
+    let novaQtdCaixasLidas = caixasLidas + 1;
     console.log("Caixas lidas atualizadas para:", novaQtdCaixasLidas);
     setCaixasLidas(novaQtdCaixasLidas);
 
@@ -687,7 +687,7 @@ export default function PalletViewSingle() {
 
         if (novaQtdCaixasLidas === 1) {
           atualizarOp(
-            codCarg,
+            carga?.cod_carg.toString() ?? "",
             palletAtual?.cod_palete.trim() ?? "",
             kanbanitem,
             "5",
@@ -702,20 +702,6 @@ export default function PalletViewSingle() {
         }
 
         atualizarOp(
-          codCarg,
-          palletAtual?.cod_palete.trim() ?? "",
-          kanbanitem,
-          "5",
-          dataformatada.toString(),
-          horaformatada.toString(),
-          String(matricula ?? ""),
-          "",
-          "",
-          "",
-          `Item ${_item.kanban} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} iniciada pelo operador ${matricula}`
-        );
-
-        atualizarOp(
           carga?.cod_carg.toString() ?? "",
           palletAtual?.cod_palete.trim() ?? "",
           kanbanitem,
@@ -728,20 +714,6 @@ export default function PalletViewSingle() {
           "1",
           `Item ${_item.kanban ?? ""} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} lido com sucesso pelo operador ${matricula} `
         );
-
-        console.log( "Leitura de ITEM ",
-          "CodCarg:", carga?.cod_carg.toString() ?? "",
-          "CodPale:", palletAtual?.cod_palete.trim() ?? "",
-          "EtiquetaCliente:", _item.kanban.toString(),
-          "4",
-          "Dataent:", dataformatada.toString(),
-          "Horaent:", horaformatada.toString(),
-          "Matricula:", matricula,
-          "KanbanGDBR:", kanbanGDBR,
-          "EtiquetaCliente:", _item.kanban.toString(),
-          "1",
-          `Item ${_item.kanban.toString()} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString()} lido com sucesso pelo operador ${matricula} `
-        )
 
         // Se todas as caixas foram lidas, finaliza o item   
         if (novaQtdCaixasLidas >= totalCaixas) {
@@ -758,6 +730,8 @@ export default function PalletViewSingle() {
       }
     } catch {
       setErro("Erro ao conectar com a API.");
+      novaQtdCaixasLidas = novaQtdCaixasLidas - 1;
+      
       setEtiquetaCliente("");
       setKanbanGDBR("");
     } finally {
@@ -797,7 +771,7 @@ export default function PalletViewSingle() {
             "",
             "",
             "",
-            `Item ${kanbanitem} do Pallet ${_pallet.cod_palete} da carga ${carga?.cod_carg.toString() ?? ""} foi finalizado com ${qtdFinal} caixas lidas`
+            `Item ${kanbanitem} do Pallet ${_pallet.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} foi finalizado com ${qtdFinal} caixas lidas`
           );
 
         } else if (data?.Erro) {
