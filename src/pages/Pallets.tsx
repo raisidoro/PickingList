@@ -697,7 +697,7 @@ export default function PalletViewSingle() {
             "",
             "",
             "",
-            `Item ${_item.kanban} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${codCarg} iniciada pelo operador ${matricula}`
+            `Item ${_item.kanban} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} iniciada pelo operador ${matricula}`
           );
         }
 
@@ -731,6 +731,8 @@ export default function PalletViewSingle() {
     } catch {
       setErro("Erro ao conectar com a API.");
       novaQtdCaixasLidas = novaQtdCaixasLidas - 1;
+      console.log("Revertendo caixas lidas para:", novaQtdCaixasLidas);
+      setCaixasLidas(novaQtdCaixasLidas);
       
       setEtiquetaCliente("");
       setKanbanGDBR("");
@@ -821,7 +823,6 @@ export default function PalletViewSingle() {
 
         if (todosFinalizados) {
           atualizarStatusPalete("3");
-          //verificaCarga(updated);
         }
 
         return updated;
@@ -928,6 +929,8 @@ export default function PalletViewSingle() {
       console.log("Existem paletes pendentes:", pendentes.map(p => p.cod_palete).join(", "));
       return;
     }
+
+    finalizandoCargaRef.current = true;
 
     try {
       setLoading(true);
@@ -1083,7 +1086,7 @@ export default function PalletViewSingle() {
 
         const data = resp.data;
         console.log(resp.data)
-        if (data === "Gravado com sucessoGravado com sucesso") {
+        if (data === "Gravado com sucessoGravado com sucesso" || data === "Gravado com sucesso") {
           console.log("Enviado para a API de Log")
         } else if (data?.Erro) {
           setErro(data.Erro);
@@ -1095,7 +1098,7 @@ export default function PalletViewSingle() {
           setKanbanGDBR("");
         }
       } catch {
-        //setErro("Erro ao conectar com a API de Log.");
+        setErro("Erro ao conectar com a API de Log.");
         setEtiquetaCliente("");
         setKanbanGDBR("");
       } finally {
