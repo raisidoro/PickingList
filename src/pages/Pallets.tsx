@@ -9,7 +9,7 @@ import ErrorPopup from '../components/CompErrorPopup.tsx';
 import SuccessPopup from "../components/CompSuccessPopup.tsx";
 import ConfirmationPopup from "../components/CompConfirmationPopup.tsx";
 import { apiLog } from "../lib/axios";
-
+import successSound from '../sounds/success.mp3';
 
 // Define tipo de texto com variantes
 const textVariants = {
@@ -122,12 +122,12 @@ export default function PalletViewSingle() {
   const [etiquetaLiberada, setEtiquetaLiberada] = useState(false);  
   //Constantes para validação se a etiqueta do cliente confere o kanban GDBR
   const [kanbanGDBR, setKanbanGDBR] = useState("");
-  const [etiquetacliente, setEtiquetaCliente] = useState("");
+  const [, setEtiquetaCliente] = useState("");
   const etiquetaClienteRef = useRef<HTMLInputElement>(null);
   type SuccessType = "LEITURA" | "ITEM" | "CARGA";
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
   const [Confirm, setConfirm] = useState<string | null>(null);
-  const codCarg = location.state?.codCarg || localStorage.getItem("codCarg");
+  //const codCarg = location.state?.codCarg || localStorage.getItem("codCarg");
   const kanbanitem = palletAtual?.itens.find(item => item.status !== "3")?.kanban ?? "";
   const finalizandoPaleteRef = useRef(false);
   const finalizandoCargaRef = useRef(false);
@@ -136,14 +136,15 @@ export default function PalletViewSingle() {
     dataAtual.getFullYear().toString() +
     String(dataAtual.getMonth() + 1).padStart(2, "0") +
     String(dataAtual.getDate()).padStart(2, "0"); 
-  const horaformatada = dataAtual.toTimeString().slice(0, 5); 
-
+  const horaformatada = dataAtual.toTimeString().slice(0, 8);
   const matricula = location.state?.matricula || localStorage.getItem("matricula");
     useEffect(() => {
       if (!matricula) {
         setErro("Matrícula não encontrada. Por favor, faça login novamente.");
       }
     }, [matricula]);
+  const lastSoundTimeRef = useRef<number>(0);
+
 
   // ordem de visualização dos itens 
   const sortedItems = palletAtual
@@ -202,11 +203,43 @@ export default function PalletViewSingle() {
     if (success) {
       const timeout = setTimeout(() => {
         setSucess(null);
-      }, success.type === "CARGA" ? 8000 : 4000); 
-      
+      }, 
+      success.type === 'CARGA' ? 8000 :
+      success.type === 'LEITURA' ? 800 :   
+      4000
+      );
       return () => clearTimeout(timeout);
     }
   }, [success]);
+
+  useEffect(() => {
+  if (!success) return;
+
+  const now = Date.now();
+  const msSinceLast = now - lastSoundTimeRef.current;
+
+  // sempre toca na LEITURA
+  if (success.type === 'LEITURA') {
+    const audio = new Audio(successSound);
+    audio.volume = 0.8;
+    audio.play().catch(err => console.error('ERRO PLAY LEITURA:', err));
+    lastSoundTimeRef.current = now;
+    return;
+  }
+
+  // para ITEM: só toca se não tiver som de leitura "grudado" (ex.: item de 1 caixa)
+  if (success.type === 'ITEM') {
+    if (msSinceLast < 400) {
+      console.log('ITEM sem som (já teve LEITURA muito recente)');
+      return;
+    }
+
+    const audio = new Audio(successSound);
+    audio.volume = 0.8;
+    audio.play().catch(err => console.error('ERRO PLAY ITEM:', err));
+    lastSoundTimeRef.current = now;
+  }
+}, [success]);
 
   // Carrega os paletes da API de acordo com a carga
   useEffect(() => {
@@ -270,19 +303,17 @@ export default function PalletViewSingle() {
 
   //Inicio das validações do processo de montagem de carga
 
-
   // Funções que verificam etiqueta cliente e kanban GDBR
   function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
     const valor = e.target.value;
     setKanbanGDBR(valor); 
+    const etiquetaLog = etiquetaClienteRef.current?.value || "";
 
     const kanbanRegex = /^X\|([A-Z]-\d{3})\|(\d{4})?$/i; 
     if (valor.trim() === "" || !kanbanRegex.test(valor)) { 
       setEtiquetaLiberada(false);
       if (valor.trim() !== "") {
         setErro("Formato do Kanban GDBR inválido. Use o formato X|KANBAN|SEQUENCIAL.");
-        setEtiquetaCliente("");
-        setKanbanGDBR("");
         setEtiquetaLiberada(false);
 
         atualizarOp(
@@ -293,11 +324,14 @@ export default function PalletViewSingle() {
         dataformatada.toString(),
         horaformatada.toString(),
         String(matricula ?? ""),
-        kanbanGDBR,
-        etiquetaClienteRef.current?.value ?? etiquetacliente,
+        valor,
+        etiquetaLog,
         "2",
-        `Kanban GDBR: ${kanbanGDBR}. "Formato do Kanban GDBR inválido. `
+        `Kanban GDBR: ${valor}. "Formato do Kanban GDBR inválido. `
       );
+
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
 
       } else {
         setErro(null);
@@ -320,6 +354,7 @@ export default function PalletViewSingle() {
 
     // Validação se Kanban GDBR está no Pallet atual e confere com a Etiqueta do Cliente
   function verificaKanban({ etiqueta }: { etiqueta: string }) {
+    const etiquetaLog = etiquetaClienteRef.current?.value || "";
     if (!palletAtual) {
       setErro("Nenhum palete selecionado.");
       return;
@@ -339,8 +374,6 @@ export default function PalletViewSingle() {
     const etiquetaRegex = /^[A-Z]-\d{3}$/i;
     if (!etiquetaRegex.test(etiqueta)) {
       setErro("Formato da etiqueta inválido. Use L-XXX");
-      setEtiquetaCliente("");
-      setKanbanGDBR("");
 
       atualizarOp(
         carga?.cod_carg.toString() ?? "",
@@ -351,11 +384,12 @@ export default function PalletViewSingle() {
         horaformatada.toString(),
         String(matricula ?? ""),
         kanbanGDBR,
-        etiqueta.toString(),
+        etiquetaLog,
         "2",
         `Etiqueta Cliente ${etiqueta.toString()}. Formato da etiqueta inválido.} `
       );
-
+      setEtiquetaCliente("");
+      setKanbanGDBR("");
       setSucess(null);
       return;
     }
@@ -377,7 +411,7 @@ export default function PalletViewSingle() {
         horaformatada.toString(),
         String(matricula ?? ""),
         kanbanGDBR,
-        etiqueta.toString(),
+        etiquetaLog,
         "2",
         `Kanban GDBR ${kanbanGDBR}. Formato do Kanban GDBR inválido.} `
       );
@@ -415,7 +449,7 @@ export default function PalletViewSingle() {
         horaformatada.toString(),
         String(matricula ?? ""),
         kanbanGDBR,
-        etiqueta.toString(),
+        etiquetaLog,
         "2",
         `Kanban GDBR ${kanbanGDBR} não encontrado no palete atual.} `
       );
@@ -440,7 +474,7 @@ export default function PalletViewSingle() {
           horaformatada.toString(),
           String(matricula ?? ""),
           kanbanGDBR,
-          etiqueta.toString(),
+          etiquetaLog,
           "2",
           `Kanban GDBR ${kanbanGDBR} não confere com etiqueta cliente ${etiquetaClienteRef.current?.value ?? ""} `
         );
@@ -466,7 +500,7 @@ export default function PalletViewSingle() {
         horaformatada.toString(),
         String(matricula ?? ""),
         kanbanGDBR,
-        etiqueta.toString(),
+        etiquetaLog,
         "2",
         `Kanban GDBR ${kanbanGDBR}. Todos os itens desse kanban já foram finalizados.} `
       );
@@ -487,6 +521,7 @@ export default function PalletViewSingle() {
 
   //Verifica sequencial dos itens
   function verificaItem(): (sequencialAtual: number | string) => boolean {
+    const etiquetaLog = etiquetaClienteRef.current?.value || "";
     if (!palletAtual || !palletAtual.itens) {
       setErro("Pallet ou itens não definidos");
       return () => false;
@@ -550,7 +585,7 @@ export default function PalletViewSingle() {
             horaformatada.toString(),
             String(matricula ?? ""),
             kanbanGDBR,
-            etiquetaClienteRef.current?.value ?? etiquetacliente,
+            etiquetaLog,
             "2",
             `Kanban GDBR ${kanbanGDBR}. Operador deve seguir a sequência correta. `
           );
@@ -591,7 +626,7 @@ export default function PalletViewSingle() {
             horaformatada.toString(),
             String(matricula ?? ""),
             kanbanGDBR,
-            etiquetaClienteRef.current?.value ?? etiquetacliente,
+            etiquetaLog,
             "2",
             `Kanban GDBR ${kanbanGDBR}. O item atual não segue a sequência do palete.} `
           );
@@ -620,7 +655,7 @@ export default function PalletViewSingle() {
           horaformatada.toString(),
           String(matricula ?? ""),
           kanbanGDBR,
-          etiquetaClienteRef.current?.value ?? etiquetacliente,
+          etiquetaLog,
           "2",
           `Kanban GDBR ${kanbanGDBR}. Finalize os itens com sequência antes de iniciar os sem sequencial. `
         );
@@ -635,6 +670,8 @@ export default function PalletViewSingle() {
 
   //Valida quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
   async function caixas(_pallet: Pallet, _item: PalletItem, _itemIdx: number) {
+    const etiquetaLog = etiquetaClienteRef.current?.value || "";
+    console.log("etiquetaLOG pós preenchimento" + etiquetaClienteRef.current?.value);
     if (!_pallet || !_item) return;
 
     const totalCaixas = Number(_item.qtd_caixa);
@@ -653,7 +690,7 @@ export default function PalletViewSingle() {
         horaformatada.toString(),
         String(matricula ?? ""),
         kanbanGDBR,
-        etiquetaClienteRef.toString(),
+        etiquetaLog,
         "2",
         `Kanban GDBR ${kanbanGDBR}. Todas as caixas desse item já foram lidas. `
       );
@@ -710,7 +747,7 @@ export default function PalletViewSingle() {
           horaformatada.toString(),
           matricula,
           kanbanGDBR,
-          etiquetaClienteRef.current?.value ?? etiquetacliente,
+          etiquetaLog,
           "1",
           `Item ${_item.kanban ?? ""} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} lido com sucesso pelo operador ${matricula} `
         );
