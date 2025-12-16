@@ -118,7 +118,6 @@ export default function PalletViewSingle() {
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
   const [, setItemIndex] = useState(0);
-  //const itemAtual = palletAtual?.itens[itemIndex];
   const [caixasLidas, setCaixasLidas] = useState(0);
   const [etiquetaLiberada, setEtiquetaLiberada] = useState(false);  
   //Constantes para validação se a etiqueta do cliente confere o kanban GDBR
@@ -130,7 +129,8 @@ export default function PalletViewSingle() {
   const [Confirm, setConfirm] = useState<string | null>(null);
   const codCarg = location.state?.codCarg || localStorage.getItem("codCarg");
   const kanbanitem = palletAtual?.itens.find(item => item.status !== "3")?.kanban ?? "";
-
+  const finalizandoPaleteRef = useRef(false);
+  const finalizandoCargaRef = useRef(false);
   const dataAtual = new Date();
   const dataformatada =
     dataAtual.getFullYear().toString() +
@@ -821,7 +821,7 @@ export default function PalletViewSingle() {
 
         if (todosFinalizados) {
           atualizarStatusPalete("3");
-          verificaCarga(updated);
+          //verificaCarga(updated);
         }
 
         return updated;
@@ -833,7 +833,12 @@ export default function PalletViewSingle() {
 
   async function atualizarStatusPalete(status: string) {
   if (!palletAtual || !carga) return;
-  
+
+  if (status === "3") {
+    if (finalizandoPaleteRef.current) return;
+      finalizandoPaleteRef.current = true;
+  }
+
     try {
       setLoading(true);
       const resp = await apiPallets.post("", {
@@ -906,14 +911,16 @@ export default function PalletViewSingle() {
       setKanbanGDBR("");
     } finally {
       setLoading(false);
+      if (status === "3") finalizandoPaleteRef.current = false;
     }
   }
 
    //verifica se a carga não foi completada (com palletes pendentes)
   async function verificaCarga(palletsAtualizados?: Pallet[]) {
     const lista = palletsAtualizados ?? pallets;
-
     if (lista.length === 0) return;
+
+    if (finalizandoCargaRef.current) return;
 
     const pendentes = lista.filter(p => p.stat_pale !== "3");
 
@@ -959,6 +966,7 @@ export default function PalletViewSingle() {
       setKanbanGDBR("");
     } finally {
       setLoading(false);
+      finalizandoCargaRef.current = false;
     }
   }
 
