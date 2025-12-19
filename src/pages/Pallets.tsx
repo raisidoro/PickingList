@@ -182,6 +182,16 @@ export default function PalletViewSingle() {
     setItemIndex(0);
   }, [pallets, palletIndex]);
 
+  // inicia a carga no palete em montagem (caso exista)
+  useEffect(() => {
+    if (pallets.length > 0) {
+      const paleteEmMontagem = pallets.findIndex(p => p.stat_pale === "1");
+      if (paleteEmMontagem !== -1 && palletIndex === 0) {
+        setPalletIndex(paleteEmMontagem);
+      }
+    }
+  }, [pallets]);
+
   useEffect(() => {
     setSucess(null);
   }, [palletIndex]);
@@ -1215,7 +1225,16 @@ export default function PalletViewSingle() {
         <div className="w-full flex flex-col gap-4 h-full p-3 sm:gap-6 sm:p-6 overflow-auto">
           <div className="flex items-center gap-2 mb-4">
             <button
-              onClick={() => navigate("/Carga", { state: { matricula: matricula } }) }
+              onClick={() => {
+                if (palletAtual?.stat_pale !== "1") {
+                  navigate("/Carga", { state: { matricula: matricula } }) 
+                } else {
+                  setErro("Pallet está em conferência! Por favor, finalize antes de retornar a página de cargas.");
+                  setEtiquetaCliente("");
+                  setKanbanGDBR("");
+
+                }
+                }}
               className="focus:outline-none"
               title="Voltar"
             >
