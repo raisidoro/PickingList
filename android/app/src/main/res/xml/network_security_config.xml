@@ -7,5 +7,5 @@
     </domain-config>
 
     <!-- Mantém HTTPS como padrão para outros -->
-    <base-config cleartextTrafficPermitted="false" />
+    <base-config cleartextTrafficPermitted="true" />
 </network-security-config>
