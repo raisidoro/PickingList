@@ -1,4 +1,4 @@
-package picking.list;
+package com.example.app;
 
 import com.getcapacitor.BridgeActivity;
 
