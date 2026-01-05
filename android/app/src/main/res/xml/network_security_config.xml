@@ -1,11 +1,5 @@
-
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Libera HTTP apenas para o domínio da API -->
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">gdbrindustria132575.protheus.cloudtotvs.com.br</domain>
-    </domain-config>
 
-    <!-- Mantém HTTPS como padrão para outros -->
-    <base-config cleartextTrafficPermitted="false" />
+    <base-config cleartextTrafficPermitted="true" />
 </network-security-config>
