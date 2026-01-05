@@ -156,7 +156,7 @@ function LoginForm() {
       setErro("Falha de autenticação. Tente novamente.");
       }
     } catch (err) {
-      setErro("Erro ao conectar.");
+      setErro("Erro ao conectar." + (err instanceof Error ? ` Detalhes: ${err.message}` : ""));
     } finally {
       setLoading(false);
     }
