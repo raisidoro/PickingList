@@ -1,5 +1,6 @@
-package com.example.app;
+package com.example.app;  // ← SEU PACKAGE real
 
 import com.getcapacitor.BridgeActivity;
 
-public class MainActivity extends BridgeActivity {}
+public class MainActivity extends BridgeActivity {
+}
