@@ -139,6 +139,7 @@ export default function PalletViewSingle() {
     String(dataAtual.getDate()).padStart(2, "0"); 
   const horaformatada = dataAtual.toTimeString().slice(0, 8);
   const matricula = location.state?.matricula || localStorage.getItem("matricula");
+  let novaQtdCaixasLidas = 0;
 
     useEffect(() => {
       if (!matricula) {
@@ -729,7 +730,7 @@ export default function PalletViewSingle() {
       return;
     }
 
-    let novaQtdCaixasLidas = caixasLidas + 1;
+    novaQtdCaixasLidas = caixasLidas + 1;
     console.log("Caixas lidas atualizadas para:", novaQtdCaixasLidas);
     setCaixasLidas(novaQtdCaixasLidas);
 
@@ -880,6 +881,7 @@ export default function PalletViewSingle() {
           setKanbanGDBR("");
         } else {
           setErro("Falha ao atualizar o status do item Finalização");
+          novaQtdCaixasLidas = novaQtdCaixasLidas - 1;
           setEtiquetaCliente("");
           setKanbanGDBR("");
         }
