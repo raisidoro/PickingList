@@ -184,25 +184,55 @@ export default function CargaList({}: Props) {
     { code: "3", label: "Concluída" },
   ];
 
-  const cargasFiltradas = cargas.filter((carga) => {
-    const busca = searchTerm.toLowerCase();
-    const matchSearch =
-      safeTrim(carga.cod_carg).toLowerCase().includes(busca) ||
-      safeTrim(carga.nome_cli).toLowerCase().includes(busca) ||
-      safeTrim(carga.data_col).toLowerCase().includes(busca) ||
-      safeTrim(carga.hora_col).toLowerCase().includes(busca) ||
-      safeTrim(carga.stat_col).toLowerCase().includes(busca);
+  // Ordem de visualização das cargas
+  const getStatusOrder = (status: string) => {
+    switch (status) {
+      case "0":
+        return 0; // Pendente (primeiro)
+      case "1":
+        return 1; // Em montagem (segundo)
+      case "3":
+        return 2; // Concluída (último)
+      default:
+        return 3;
+    }
+  };
 
-    const matchStatus =
-      selectedStatus.length === 0 ||
-      selectedStatus.includes(String(safeTrim(carga.stat_col)));
+  const cargasFiltradas = cargas
+    .filter((carga) => {
+      const busca = searchTerm.toLowerCase();
+      const matchSearch =
+        safeTrim(carga.cod_carg).toLowerCase().includes(busca) ||
+        safeTrim(carga.nome_cli).toLowerCase().includes(busca) ||
+        safeTrim(carga.data_col).toLowerCase().includes(busca) ||
+        safeTrim(carga.hora_col).toLowerCase().includes(busca) ||
+        safeTrim(carga.stat_col).toLowerCase().includes(busca);
 
-    const matchHistory = showHistory
-      ? safeTrim(carga.stat_col) === "3"
-      : safeTrim(carga.stat_col) !== "3";
+      const matchStatus =
+        selectedStatus.length === 0 ||
+        selectedStatus.includes(String(safeTrim(carga.stat_col)));
 
-    return matchSearch && matchStatus && matchHistory;
-  });
+      const matchHistory = showHistory
+        ? safeTrim(carga.stat_col) === "3"
+        : safeTrim(carga.stat_col) !== "3";
+
+      return matchSearch && matchStatus && matchHistory;
+    })
+    .sort((a, b) => {
+      // Primeiro ordena por status
+      const statusOrderA = getStatusOrder(safeTrim(a.stat_col));
+      const statusOrderB = getStatusOrder(safeTrim(b.stat_col));
+
+      if (statusOrderA !== statusOrderB) {
+        return statusOrderA - statusOrderB;
+      }
+
+      // Se mesmo status, ordena por data e hora (mais recentes primeiro)
+      const dataA = `${safeTrim(a.data_col)}${safeTrim(a.hora_col)}`;
+      const dataB = `${safeTrim(b.data_col)}${safeTrim(b.hora_col)}`;
+
+      return dataB.localeCompare(dataA);
+    });
 
   function handleSelect(carga: Carga) {
     if (carga.stat_col === "0") {

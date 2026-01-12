@@ -149,12 +149,7 @@ export default function PalletViewSingle() {
       }
     }, [matricula]);
 
-    // Mostra popup de caixas vazias na primeira renderização
-    useEffect(() => {
-      setCaixasVazias("Existem caixas vazias para finalizar a montagem deste palete!");
-    }, []);
   const lastSoundTimeRef = useRef<number>(0);
-
 
   // ordem de visualização dos itens 
   const sortedItems = palletAtual
@@ -321,7 +316,7 @@ export default function PalletViewSingle() {
       });
   }, [carga]);
 
-  //Inicio das validações do processo de montagem de carga
+  // --Inicio das validações do processo de montagem de carga--
 
   // Funções que verificam etiqueta cliente e kanban GDBR
   function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -372,7 +367,7 @@ export default function PalletViewSingle() {
     setEtiquetaCliente(etiquetaCliente);
   }
 
-    // Validação se Kanban GDBR está no Pallet atual e confere com a Etiqueta do Cliente
+  // Validação se Kanban GDBR está no Pallet atual e confere com a Etiqueta do Cliente
   function verificaKanban({ etiqueta }: { etiqueta: string }) {
     const etiquetaLog = etiquetaClienteRef.current?.value || "";
     if (!palletAtual) {
@@ -930,6 +925,7 @@ export default function PalletViewSingle() {
         );
 
         if (todosFinalizados) {
+          setCaixasVazias("Existem caixas vazias para finalizar a montagem deste palete!");
           atualizarStatusPalete("3");
         }
 
