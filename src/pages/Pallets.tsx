@@ -10,6 +10,7 @@ import SuccessPopup from "../components/CompSuccessPopup.tsx";
 import ConfirmationPopup from "../components/CompConfirmationPopup.tsx";
 import { apiLog } from "../lib/axios";
 import successSound from '../sounds/success.mp3';
+import CaixasVaziasPopup from "../components/CaixasVaziasPopup.tsx";
 
 // Define tipo de texto com variantes
 const textVariants = {
@@ -128,6 +129,7 @@ export default function PalletViewSingle() {
   type SuccessType = "LEITURA" | "ITEM" | "CARGA";
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
   const [Confirm, setConfirm] = useState<string | null>(null);
+  const [caixasVazias, setCaixasVazias] = useState<string | null>(null);
   const kanbanitem = palletAtual?.itens.find(item => item.status !== "3")?.kanban ?? "";
   const finalizandoPaleteRef = useRef(false);
   const finalizandoCargaRef = useRef(false);
@@ -146,6 +148,11 @@ export default function PalletViewSingle() {
         setErro("Matrícula não encontrada. Por favor, faça login novamente.");
       }
     }, [matricula]);
+
+    // Mostra popup de caixas vazias na primeira renderização
+    useEffect(() => {
+      setCaixasVazias("Existem caixas vazias para finalizar a montagem deste palete!");
+    }, []);
   const lastSoundTimeRef = useRef<number>(0);
 
 
@@ -1211,6 +1218,7 @@ export default function PalletViewSingle() {
 
   return (
     <main
+
       className="
       fixed inset-0 flex items-center justify-center
       bg-gradient-to-b from-gray-200 to-gray-300
@@ -1279,6 +1287,14 @@ export default function PalletViewSingle() {
                 confirmaPalete(response, palletAtual?.cod_palete ?? null);
               }}
               onClose={() => setConfirm(null)}
+            />
+          )}
+
+          {caixasVazias && (
+            <CaixasVaziasPopup
+              message={caixasVazias}
+              onClose={() => setCaixasVazias(null)}
+              onRespond={() => setCaixasVazias(null)}
             />
           )}
 
