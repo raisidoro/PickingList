@@ -3,7 +3,8 @@ import React, { useState, useEffect, useRef } from "react";
 import ErrorPopup from "./CompErrorPopup";
 import SuccessPopup from "./CompSuccessPopup";
 import successSound from '../sounds/success.mp3';
-import { set } from "zod";
+import { apiCarga, apiItens, apiPallets, apiLog } from "../lib/axios";
+import { useLocation, useNavigate } from "react-router-dom";
 
 Modal.setAppElement("#root");
 
@@ -14,18 +15,140 @@ interface CaixasVaziasPopupProps {
   onRespond: (response: string) => void; 
 }
 
+// Dados da carga
+export interface Carga {
+  cod_carg: string;
+  cod_cli: string;
+  nome_cli: string;
+  data_col: string;
+  hora_col: string;
+  qtd_pale: string;
+  stat_col: string;
+}
+
+//Formato dos dados retornados pela API de paletes
+interface PalletApi {
+  cod_palete: string;
+  num_order: string;
+  cod_doca: string;
+  sup_doc: string;
+  cod_grupo: string;
+  cod_lane: string;
+  stat_pale: string;
+}
+
+// Formato dos itens dentro do pallet
+interface PalletItem {
+  lido: boolean;
+  kanban: string;
+  sequen: number;
+  qtd_caixa: number;
+  qtd_peca: number;
+  embalagem: string;
+  multiplo: string;
+  status: string;
+}
+
+// Formato do pallet com seus itens
+interface Pallet {
+  cod_palete: string;
+  stat_pale: string;
+  itens: PalletItem[];
+  cod_lane: string;
+  cod_grupo: string;
+  num_order: string;
+}
+
 export default function CaixasVaziasPopup({ message, matricula, onClose }: CaixasVaziasPopupProps) {
- 
+  const location = useLocation();
   const [caixaGDBR, setCaixaGDBR] = useState("");
   const [caixaCliente, setCaixaCliente] = useState("");
+  const carga = location.state?.carga as Carga | undefined;
+  const [pallets, setPallets] = useState<Pallet[]>([]);
+  const [palletIndex, setPalletIndex] = useState(0);
+  const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const [erro, setErro] = useState<string | null>(null);
-  type SuccessType = "LEITURA" 
-  const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
-  const [caixaLiberada, setcaixaLiberada] = useState(false);  
-  var [contagemCaixas, setContagemCaixas] = useState(0); //variavel para armazenar a contagem de caixas
-  const caixaClienteRef = useRef<HTMLInputElement>(null);
-  const embalagem = ""; //variavel para armazenar a embalagem
+  type SuccessType = "LEITURA";
+  const [success, setSucess] = useState<{ type: SuccessType; message: string} | null>(null);
+  const [loading, setLoading] = useState(false);
+  // const [caixaLiberada, setcaixaLiberada] = useState(false);  
+  var [contagemCaixas, ] = useState(0); //variavel para armazenar a contagem de caixas
+  const caixaGDBRRef = useRef<HTMLInputElement>(null);
+  const embalagem = "E26CP"; //variavel para armazenar a embalagem
   const totalCaixas = 0; //variavel para armazenar o total de caixas no palete
+  const dataAtual = new Date();
+  const dataformatada =
+    dataAtual.getFullYear().toString() +
+    String(dataAtual.getMonth() + 1).padStart(2, "0") +
+    String(dataAtual.getDate()).padStart(2, "0"); 
+  const horaformatada = dataAtual.toTimeString().slice(0, 8);
+
+  useEffect(() => {
+      setLoading(true);
+      setErro(null);
+  
+      if (!carga) {
+        setErro("Carga não encontrada.");
+        setLoading(false);
+        return;
+      }
+
+      apiPallets
+        .get("/PICK_PALETE", { params: { cCarga: carga.cod_carg } })
+        .then((resp) => {
+          const palletsApi: PalletApi[] = Array.isArray(resp.data?.paletes)
+            ? resp.data.paletes
+            : [];
+          if (palletsApi.length === 0) {
+            setErro("Nenhum palete encontrado.");
+            setPallets([]);
+            setLoading(false);
+            return;
+          }
+          Promise.all(
+            palletsApi
+              .filter((p) => !!p.cod_palete)
+              .map((p) =>
+                apiItens
+                  .get("", {
+                    params: { cCarga: carga.cod_carg, cPalet: p.cod_palete },
+                  })
+                  .then((respItens) => ({
+                    cod_palete: p.cod_palete,
+                    stat_pale: p.stat_pale,
+                    cod_lane: p.cod_lane,
+                    num_order: p.num_order,
+                    cod_grupo: p.cod_grupo,
+                    itens: Array.isArray(respItens.data?.itens)
+                      ? respItens.data.itens.map((it: any) => ({
+                        kanban: it.kanban ?? it.Kanban ?? "-",
+                        sequen: it.sequen ?? it.Sequen ?? "-",
+                        qtd_caixa: it.qtd_caixa ?? it.Qtd_Caixa ?? "-",
+                        qtd_peca: it.qtd_peca ?? it.Qtd_Peca ?? "-",
+                        embalagem: it.embalagem ?? it.Embalagem ?? "-",
+                        multiplo: it.multiplo ?? it.Multiplo ?? "-",
+                        status: it.status ?? it.Status ?? "-",
+                      }))
+                      : [],
+                  }))
+              )
+          )
+            .then((palletsDetalhados) => {
+              setPallets(palletsDetalhados);
+            })
+            .catch(() => {
+              setErro("Erro ao buscar itens dos paletes.");
+            })
+            .finally(() => setLoading(false));
+        })
+        .catch(() => {
+          setErro("Erro ao carregar paletes.");
+          setPallets([]);
+          setLoading(false);
+        });
+    }, [carga]);
+
+  // --Inicio das validações de montagem--
 
   // passa a matrícula do operador
   useEffect(() => {
@@ -48,11 +171,11 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
   }
 
   //foco no input caixa cliente
-  useEffect(() => {
-    if (caixaLiberada && caixaClienteRef.current) {
-      caixaClienteRef.current.focus();
-    }
-  }, [caixaLiberada]);
+  // useEffect(() => {
+  //   if (caixaLiberada && caixaGDBRRef.current) {
+  //     caixaGDBRRef.current.focus();
+  //   }
+  // // }, [caixaLiberada]);
 
   //mantém a variavel caixaGDBR atualizada
   function handleCaixaGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -66,66 +189,153 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
     setCaixaCliente(caixaCliente);
   }
 
-  //validação se a embalagem está no palete
-  // function embalagemPalete(){
-  //   if (caixaGDBR !== embalagem){
-  //     setErro("Embalagem não encontrada no palete.");
-  //   }
-  //   if (caixaGDBR === embalagem){
-  //     console.log("Embalagem encontrada no palete.");
-  //     if (caixaCliente === embalagem){
-  //       console.log("Caixa Cliente encontrada no palete.");
-  //     }
-  //   }
-  // }
-
-  function extrairEmbalagem(caixa: string): string {
-  if (caixa.includes(";")) {
-    return caixa.split(";")[0].trim();
-  }
-
-  const match = caixa.match(/^([A-Z]+\d*)/i);
-  return match ? match[1] : caixa;
-}
-
-function validarCaixas() {
-  const embalagemCliente = extrairEmbalagem(caixaCliente);
-  const embalagemGDBR = extrairEmbalagem(caixaGDBR);
-
-  if (embalagemGDBR !== embalagem) {
-    setErro(`Embalagem não encontrada no palete.`);
-    return false;
-  }
-  
-  if (embalagemCliente !== embalagemGDBR) {
-    setErro(`Embalagens não conferem: ${embalagemCliente} / ${embalagemGDBR}`);
-    return false;
-  }
-  
-  if (caixaCliente === caixaGDBR) {
-
-    if (contagemCaixas >= totalCaixas) {
-      setErro("Todas as caixas vazias desse item já foram lidas.");
-      setCaixaCliente("");
-      setCaixaGDBR("");
-      return;
-    }
-
-    contagemCaixas += 1; 
-
-    if(contagemCaixas === 1){
-      //atualizar status para "em montagem"
-    }
-
-    if (contagemCaixas === totalCaixas) {
-      //atualizar status para "finalizado"
-    }
-  }
-
-  function finalizaritem(){
+  function extrairEmbalagem(caixa: string, embalagem: string) {
+    if (!caixa) return null;
     
+    if (caixa.includes(";")) {
+      return caixa.split(";")[0].trim();
+    }
+
+    // Busca pela embalagem esperada dentro da string
+    if (caixa.includes(embalagem)) {
+      return embalagem;
+    }
   }
-}
+
+  //valida a leitura das caixas vazias
+  function validarCaixas() {
+    const embalagemCliente = extrairEmbalagem(caixaCliente, embalagem);
+    const embalagemGDBR = extrairEmbalagem(caixaGDBR, embalagem);
+
+    if (!embalagemCliente || embalagemCliente !== embalagem) {
+      setErro(`Embalagem não encontrada no palete.`);
+
+      atualizarOp(
+        carga?.cod_carg.toString() ?? "",
+        palletAtual?.cod_palete.trim() ?? "",
+        embalagem,
+        "8",
+        dataformatada.toString(),
+        horaformatada.toString(),
+        String(matricula ?? ""),
+        caixaCliente,
+        caixaGDBR,
+        "2",
+      `Embalagem ${embalagemCliente} não encontrada no palete`,
+      );
+
+      return false;
+    }
+    
+    if (embalagemCliente !== embalagemGDBR) {
+      setErro(`Embalagens não conferem: ${embalagemCliente} / ${embalagemGDBR}`);
+
+      atualizarOp(
+        carga?.cod_carg.toString() ?? "",
+        palletAtual?.cod_palete.trim() ?? "",
+        embalagem,
+        "8",
+        dataformatada.toString(),
+        horaformatada.toString(),
+        String(matricula ?? ""),
+        caixaCliente,
+        caixaGDBR,
+        "2",
+      `As embalagens não conferem: ${embalagemCliente} / ${embalagemGDBR}`,
+      );
+
+      return false;
+    }
+    
+    if (caixaCliente === caixaGDBR) {
+
+      if (contagemCaixas >= totalCaixas) {
+        setErro("Todas as caixas vazias desse item já foram lidas.");
+
+        atualizarOp(
+          carga?.cod_carg.toString() ?? "",
+          palletAtual?.cod_palete.trim() ?? "",
+          embalagem,
+          "8",
+          dataformatada.toString(),
+          horaformatada.toString(),
+          String(matricula ?? ""),
+          caixaCliente,
+          caixaGDBR,
+          "2",
+        `Todas as caixas vazias do item ${embalagem} já foram lidas.`,
+        );
+
+        setCaixaCliente("");
+        setCaixaGDBR("");
+        return;
+      }
+
+      contagemCaixas += 1; 
+
+      if(contagemCaixas === 1){
+        //atualizar status para "em montagem"
+      }
+
+      if (contagemCaixas === totalCaixas) {
+        //atualizar status para "finalizado"
+      }
+    }
+  }
+
+  async function atualizarOp(
+    codCarga: string, 
+    codPale: string, 
+    codItem: string, 
+    cOperac: string, 
+    cData: string, 
+    cHora: string, 
+    cUser: string, 
+    cLeit1: string, 
+    cLeit2: string, 
+    cStatus: string, 
+    cHistor: string) {
+
+    console.log("Função de operação")
+  
+    try {
+      setLoading(true);
+      const resp = await apiLog.post("", {
+        "codCarg": codCarga,
+        "codPale": codPale,
+        "codItem": codItem,
+        "cOperac": cOperac,
+        "cData": cData,
+        "cHora": cHora,
+        "cUser": cUser,
+        "cLeit1": cLeit1,
+        "cLeit2": cLeit2,
+        "cStatus": cStatus,
+        "cHistor": cHistor
+      });
+  
+        const data = resp.data;
+        console.log(resp.data)
+        if (data === "Gravado com sucessoGravado com sucesso" || data === "Gravado com sucesso"){
+          console.log("Enviado para a API de Log")
+        } else if (data?.Erro) {
+          setErro(data.Erro);
+          setCaixaCliente("");
+          setCaixaGDBR("");
+        } else {
+          setErro("Falha ao atualizar o Log do Usuário.");
+          setCaixaCliente("");
+          setCaixaGDBR("");
+        }
+      } catch {
+        setErro("Erro ao conectar com a API de Log.");
+        setCaixaCliente("");
+        setCaixaGDBR("");
+      } finally {
+        setLoading(false);
+      }
+  }
+
 
   return (
     <Modal
@@ -142,21 +352,21 @@ function validarCaixas() {
         <input
           type="text"
           autoFocus
-          placeholder="Caixa GDBR"
-          className="border-b border-gray-400 bg-transparent px-2 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
-          value={caixaGDBR}
-          onChange={(e) => setCaixaGDBR(e.target.value)}
-        />
-        <input
-          ref={caixaClienteRef}
-          type="text"
           placeholder="Caixa Cliente"
           className="border-b border-gray-400 bg-transparent px-2 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
-          disabled
+          value={caixaCliente}
+          onChange={handleCaixaClienteChange}
+        />
+        <input
+          ref={caixaGDBRRef}
+          type="text"
+          placeholder="Caixa GDBR"
+          className="border-b border-gray-400 bg-transparent px-2 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
+          // disabled
           onChange={(e) => {
-            handleCaixaClienteChange(e);
+            handleCaixaGDBRChange(e);
             validarCaixas();
-            setcaixaLiberada(false);
+            // setcaixaLiberada(false);
           }}
         />
 
