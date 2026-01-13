@@ -455,7 +455,7 @@ export default function PalletViewSingle() {
     });
  
     if (itensComKanban.length === 0) {
-      setErro(`Kanban ${kanbanOriginal} não encontrado no pallet atual.`);
+      setErro(`Kanban ${kanbanOriginal} não encontrado no palete atual.`);
       setEtiquetaCliente("");
       setKanbanGDBR("");
 

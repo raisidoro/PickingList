@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import ErrorPopup from "./CompErrorPopup";
 import SuccessPopup from "./CompSuccessPopup";
 import successSound from '../sounds/success.mp3';
+import { set } from "zod";
 
 Modal.setAppElement("#root");
 
@@ -21,57 +22,110 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
   type SuccessType = "LEITURA" 
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
   const [caixaLiberada, setcaixaLiberada] = useState(false);  
+  var [contagemCaixas, setContagemCaixas] = useState(0); //variavel para armazenar a contagem de caixas
   const caixaClienteRef = useRef<HTMLInputElement>(null);
+  const embalagem = ""; //variavel para armazenar a embalagem
+  const totalCaixas = 0; //variavel para armazenar o total de caixas no palete
 
   // passa a matrícula do operador
   useEffect(() => {
-        if (!matricula) {
-          setErro("Matrícula não encontrada. Por favor, faça login novamente.");
-        }
-      }, [matricula]);
+    if (!matricula) {
+      setErro("Matrícula não encontrada. Por favor, faça login novamente.");
+    }
+  }, [matricula]);
     
-    const lastSoundTimeRef = useRef<number>(0);
+  const lastSoundTimeRef = useRef<number>(0);
     
-    const now = Date.now();
+  const now = Date.now();
       
-    //som de sucesso
-    if (success && success.type === 'LEITURA') {
-        const audio = new Audio(successSound);
-        audio.volume = 0.8;
-        audio.play().catch(err => console.error('ERRO PLAY LEITURA:', err));
-        lastSoundTimeRef.current = now;
-    return;
-    }
+  //som de sucesso
+  if (success && success.type === 'LEITURA') {
+    const audio = new Audio(successSound);
+    audio.volume = 0.8;
+    audio.play().catch(err => console.error('ERRO PLAY LEITURA:', err));
+    lastSoundTimeRef.current = now;
+  return;
+  }
 
-    //foco no input caixa cliente
-    useEffect(() => {
-      if (caixaLiberada && caixaClienteRef.current) {
-        caixaClienteRef.current.focus();
-      }
-    }, [caixaLiberada]);
-
-    //mantém a variavel caixaGDBR atualizada
-    function handleCaixaGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
-        const caixaGDBR = e.target.value;
-        setCaixaGDBR(caixaGDBR);
+  //foco no input caixa cliente
+  useEffect(() => {
+    if (caixaLiberada && caixaClienteRef.current) {
+      caixaClienteRef.current.focus();
     }
+  }, [caixaLiberada]);
+
+  //mantém a variavel caixaGDBR atualizada
+  function handleCaixaGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const caixaGDBR = e.target.value;
+    setCaixaGDBR(caixaGDBR);
+  }
     
-    //mantém a variavel caixaCliente atualizada
-    function handleCaixaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
-        const caixaCliente = e.target.value;
-        setCaixaCliente(caixaCliente);
+  //mantém a variavel caixaCliente atualizada
+  function handleCaixaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const caixaCliente = e.target.value;
+    setCaixaCliente(caixaCliente);
+  }
+
+  //validação se a embalagem está no palete
+  // function embalagemPalete(){
+  //   if (caixaGDBR !== embalagem){
+  //     setErro("Embalagem não encontrada no palete.");
+  //   }
+  //   if (caixaGDBR === embalagem){
+  //     console.log("Embalagem encontrada no palete.");
+  //     if (caixaCliente === embalagem){
+  //       console.log("Caixa Cliente encontrada no palete.");
+  //     }
+  //   }
+  // }
+
+  function extrairEmbalagem(caixa: string): string {
+  if (caixa.includes(";")) {
+    return caixa.split(";")[0].trim();
+  }
+
+  const match = caixa.match(/^([A-Z]+\d*)/i);
+  return match ? match[1] : caixa;
+}
+
+function validarCaixas() {
+  const embalagemCliente = extrairEmbalagem(caixaCliente);
+  const embalagemGDBR = extrairEmbalagem(caixaGDBR);
+
+  if (embalagemGDBR !== embalagem) {
+    setErro(`Embalagem não encontrada no palete.`);
+    return false;
+  }
+  
+  if (embalagemCliente !== embalagemGDBR) {
+    setErro(`Embalagens não conferem: ${embalagemCliente} / ${embalagemGDBR}`);
+    return false;
+  }
+  
+  if (caixaCliente === caixaGDBR) {
+
+    if (contagemCaixas >= totalCaixas) {
+      setErro("Todas as caixas vazias desse item já foram lidas.");
+      setCaixaCliente("");
+      setCaixaGDBR("");
+      return;
     }
 
-    //validação se a embalagem está no palete
+    contagemCaixas += 1; 
 
-    //Valida leitura de caixas
+    if(contagemCaixas === 1){
+      //atualizar status para "em montagem"
+    }
 
+    if (contagemCaixas === totalCaixas) {
+      //atualizar status para "finalizado"
+    }
+  }
 
-
-
-//   verificacaixa(){
-
-//   }
+  function finalizaritem(){
+    
+  }
+}
 
   return (
     <Modal
@@ -94,11 +148,16 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
           onChange={(e) => setCaixaGDBR(e.target.value)}
         />
         <input
+          ref={caixaClienteRef}
           type="text"
           placeholder="Caixa Cliente"
           className="border-b border-gray-400 bg-transparent px-2 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
-          value={caixaCliente}
-          onChange={(e) => setCaixaCliente(e.target.value)}
+          disabled
+          onChange={(e) => {
+            handleCaixaClienteChange(e);
+            validarCaixas();
+            setcaixaLiberada(false);
+          }}
         />
 
         <div className="flex flex-row justify-center gap-8 w-full">
@@ -112,6 +171,21 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
             <p className="text-gray-700">...</p>
           </div>
         </div>
+
+        {erro && (
+          <ErrorPopup
+            message={erro}
+            onClose={() => setErro(null)}
+          />
+        )}
+
+        {success && (
+          <SuccessPopup 
+            message={success.message} 
+            onClose={() => setSucess(null)} 
+            onRespond={() => setSucess(null)} 
+          />
+        )}
 
         <button
           onClick={onClose}
