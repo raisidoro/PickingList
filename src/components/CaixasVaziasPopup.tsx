@@ -72,7 +72,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
   const [success, setSucess] = useState<{ type: SuccessType; message: string} | null>(null);
   const [loading, setLoading] = useState(false);
   // const [caixaLiberada, setcaixaLiberada] = useState(false);  
-  var [contagemCaixas, ] = useState(0); //variavel para armazenar a contagem de caixas
+  var [contagemCaixas, setContagemCaixas] = useState(0); //variavel para armazenar a contagem de caixas
   const caixaGDBRRef = useRef<HTMLInputElement>(null);
   const embalagem = "E26CP"; //variavel para armazenar a embalagem
   const totalCaixas = 0; //variavel para armazenar o total de caixas no palete
@@ -170,13 +170,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
   return;
   }
 
-  //foco no input caixa cliente
-  // useEffect(() => {
-  //   if (caixaLiberada && caixaGDBRRef.current) {
-  //     caixaGDBRRef.current.focus();
-  //   }
-  // // }, [caixaLiberada]);
-
   //mantém a variavel caixaGDBR atualizada
   function handleCaixaGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
     const caixaGDBR = e.target.value;
@@ -189,27 +182,60 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
     setCaixaCliente(caixaCliente);
   }
 
-  function extrairEmbalagem(caixa: string, embalagem: string) {
+  // Remove espaços, tabs, quebras de linha, e normaliza Unicode
+  function sanitize(input: string): string {
+    return input
+      .normalize('NFKC')         // normaliza caracteres Unicode "parecidos"
+      .replace(/\s+/g, '')       // remove todos os espaços/brancos (inclui \r \n \t)
+      .replace(/\u0000/g, '')    // remove NUL, se existir
+      .trim()
+      .toUpperCase();
+  }
+
+  //extrai a embalagem da leitura da caixa
+  function extrairEmbalagem(caixa: string, embalagemEsperada: string): string | null {
     if (!caixa) return null;
-    
-    if (caixa.includes(";")) {
-      return caixa.split(";")[0].trim();
+
+    const caixaNorm = sanitize(caixa);
+    const embalagemNorm = sanitize(embalagemEsperada);
+
+    // DEBUG: ver exatamente o que estamos comparando
+    console.log('[DEBUG extrairEmbalagem] caixaNorm:', caixaNorm, 'embalagemNorm:', embalagemNorm);
+
+    // Caso Cliente: tudo antes do primeiro ';'
+    if (caixa.includes(';')) {
+      const primeiraParte = caixa.split(';')[0].trim().toUpperCase();
+      return primeiraParte || null;
     }
 
-    // Busca pela embalagem esperada dentro da string
-    if (caixa.includes(embalagem)) {
-      return embalagem;
+    // Caso GDBR: verificar substring
+    if (caixaNorm.includes(embalagemNorm)) {
+      return embalagemNorm;
     }
+
+    // Tentativa extra: remover caracteres não alfanuméricos e comparar
+    const alnum = caixaNorm.replace(/[^A-Z0-9]/g, '');
+    if (alnum.includes(embalagemNorm.replace(/[^A-Z0-9]/g, ''))) {
+      return embalagemNorm;
+    }
+
+    return null;
   }
 
   //valida a leitura das caixas vazias
-  function validarCaixas() {
-    const embalagemCliente = extrairEmbalagem(caixaCliente, embalagem);
-    const embalagemGDBR = extrairEmbalagem(caixaGDBR, embalagem);
+  function validarCaixas(caixaClienteVal: string, caixaGDBRVal: string) {
+    const embalagemNorm = sanitize(embalagem)
+    const embalagemCliente = extrairEmbalagem(caixaClienteVal, embalagemNorm);
+    const embalagemGDBR = extrairEmbalagem(caixaGDBRVal, embalagemNorm);
 
-    if (!embalagemCliente || embalagemCliente !== embalagem) {
+    console.log('[DEBUG validarCaixas] clienteVal:', caixaClienteVal);
+    console.log('[DEBUG validarCaixas] gdbRVal:', caixaGDBRVal);
+    console.log('[DEBUG validarCaixas] embalagemCliente:', embalagemCliente);
+    console.log('[DEBUG validarCaixas] embalagemGDBR:', embalagemGDBR);
+
+
+    if (!embalagemCliente || embalagemCliente !== embalagemNorm) {
       setErro(`Embalagem não encontrada no palete.`);
-
       atualizarOp(
         carga?.cod_carg.toString() ?? "",
         palletAtual?.cod_palete.trim() ?? "",
@@ -226,8 +252,8 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
 
       return false;
     }
-    
-    if (embalagemCliente !== embalagemGDBR) {
+
+    if (!embalagemGDBR || embalagemCliente !== embalagemGDBR) {
       setErro(`Embalagens não conferem: ${embalagemCliente} / ${embalagemGDBR}`);
 
       atualizarOp(
@@ -271,15 +297,10 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
         return;
       }
 
-      contagemCaixas += 1; 
+      setContagemCaixas((prev) => prev + 1); 
 
-      if(contagemCaixas === 1){
-        //atualizar status para "em montagem"
-      }
+      
 
-      if (contagemCaixas === totalCaixas) {
-        //atualizar status para "finalizado"
-      }
     }
   }
 
@@ -336,7 +357,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
       }
   }
 
-
   return (
     <Modal
       isOpen={!!message}
@@ -355,30 +375,43 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
           placeholder="Caixa Cliente"
           className="border-b border-gray-400 bg-transparent px-2 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
           value={caixaCliente}
-          onChange={handleCaixaClienteChange}
+          onChange={(e) => {
+            const val = e.target.value;
+            setCaixaCliente(val);
+            console.log("Caixa CLiente atual:", caixaCliente, val);
+          }}
         />
+
         <input
           ref={caixaGDBRRef}
           type="text"
           placeholder="Caixa GDBR"
           className="border-b border-gray-400 bg-transparent px-2 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
-          // disabled
+          value={caixaGDBR}
           onChange={(e) => {
-            handleCaixaGDBRChange(e);
-            validarCaixas();
-            // setcaixaLiberada(false);
+            const val = e.target.value;
+            setCaixaGDBR(val);
+
+            if (caixaCliente?.trim()) {
+              validarCaixas(caixaCliente, val); 
+            } else {
+              setErro("Informe a Caixa Cliente antes de ler a Caixa GDBR.");
+            }
+            console.log("Caixa GDBR lida val:", val);
+            console.log("Caixa GDBR atual (state ainda não sincronizado):", caixaGDBR);
           }}
+
         />
 
         <div className="flex flex-row justify-center gap-8 w-full">
           <div className="caixas flex flex-col items-center gap-2">
             <p className="text-gray-700 font-semibold">Embalagem</p>
-            <p className="text-gray-700">...</p>
+            <p className="text-gray-700">{embalagem}</p>
           </div>
 
           <div className="embalagem flex flex-col items-center gap-2">
             <p className="text-gray-700 font-semibold">Quantidade</p>
-            <p className="text-gray-700">...</p>
+            <p className="text-gray-700">3</p>
           </div>
         </div>
 
