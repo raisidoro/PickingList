@@ -538,8 +538,9 @@ export default function PalletViewSingle() {
       caixas(palletAtual, foundItem, itemIdx);
     }
   }
+
   //Verifica sequencial dos itens
-  function verificaItem(selected: PalletItem | undefined, sequencialAtual: number | string): boolean {
+  function verificaItem(selected: PalletItem | undefined, sequencialAtual: number | string): boolean { 
     const etiquetaLog = etiquetaClienteRef.current?.value || "";
     if (!palletAtual || !palletAtual.itens) {
       setErro("Pallet ou itens não definidos");

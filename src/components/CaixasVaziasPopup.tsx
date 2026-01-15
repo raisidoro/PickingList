@@ -223,7 +223,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
   }
 
   //valida a leitura das caixas vazias
-  function validarCaixas(caixaClienteVal: string, caixaGDBRVal: string) {
+  function verificaCaixas(caixaClienteVal: string, caixaGDBRVal: string) {
     const embalagemNorm = sanitize(embalagem)
     const embalagemCliente = extrairEmbalagem(caixaClienteVal, embalagemNorm);
     const embalagemGDBR = extrairEmbalagem(caixaGDBRVal, embalagemNorm);
@@ -272,36 +272,65 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
 
       return false;
     }
-    
-    if (caixaCliente === caixaGDBR) {
 
-      if (contagemCaixas >= totalCaixas) {
-        setErro("Todas as caixas vazias desse item já foram lidas.");
-
-        atualizarOp(
-          carga?.cod_carg.toString() ?? "",
-          palletAtual?.cod_palete.trim() ?? "",
-          embalagem,
-          "8",
-          dataformatada.toString(),
-          horaformatada.toString(),
-          String(matricula ?? ""),
-          caixaCliente,
-          caixaGDBR,
-          "2",
-        `Todas as caixas vazias do item ${embalagem} já foram lidas.`,
-        );
-
-        setCaixaCliente("");
-        setCaixaGDBR("");
-        return;
+  async function finalizarItem(_pallet: Pallet, _item: PalletItem, qtdFinal: number) {
+      if (!_pallet || !_item) return;
+  
+      if (_item.status !== "3") {
+        try {
+          // finalizandoItemRef.current = true;
+          setLoading(true);
+          const resp = await apiItens.post("", {
+            codCarg: carga?.cod_carg,
+            codPale: _pallet.cod_palete.trim(),
+            codKanb: embalagem,
+            codSequ: _item.sequen,
+            qtdrest: qtdFinal,
+            operac: "3"
+          });
+  
+          const data = resp.data;
+          if (data === "Kanban finalizado") {
+            // setSucess({ type: "ITEM", message: "Todas as caixas foram lidas com sucesso, item finalizado com sucesso!" });
+            setContagemCaixas(0);
+  
+            // setItemEmMontagem(null);
+  
+            atualizarOp(
+              carga?.cod_carg.toString() ?? "",
+              palletAtual?.cod_palete.trim() ?? "",
+              embalagem,
+              "5",
+              dataformatada.toString(),
+              horaformatada.toString(),
+              String(matricula ?? ""),
+              "",
+              "",
+              "",
+              `Item ${embalagem} do Pallet ${_pallet.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} foi finalizado com ${qtdFinal} caixas lidas`
+            );
+  
+          } else if (data?.Erro) {
+            setErro(data.Erro);
+            setCaixaCliente("");
+            setCaixaGDBR("");
+          } else {
+            setErro("Falha ao atualizar o status do item Finalização");
+            contagemCaixas = contagemCaixas - 1;
+            setCaixaCliente("");
+            setCaixaGDBR("");
+          }
+        } catch {
+          setErro("Erro ao conectar com a API.");
+          setCaixaCliente("");
+          setCaixaGDBR("");
+        } finally {
+          setLoading(false);
+          // finalizandoItemRef.current = false;
+        }
       }
-
-      setContagemCaixas((prev) => prev + 1); 
-
-      
-
     }
+    
   }
 
   async function atualizarOp(
@@ -393,7 +422,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
             setCaixaGDBR(val);
 
             if (caixaCliente?.trim()) {
-              validarCaixas(caixaCliente, val); 
+              verificaCaixas(caixaCliente, val); 
             } else {
               setErro("Informe a Caixa Cliente antes de ler a Caixa GDBR.");
             }
