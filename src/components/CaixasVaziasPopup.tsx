@@ -307,7 +307,9 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
 
     setContagemCaixas((prev) => prev + 1);
     console.log("Caixas lidas até o momento:", contagemCaixas + 1);
-    setErro("Leitura realizada com sucesso!")
+    setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
+    setCaixaCliente("");
+    setCaixaGDBR("");
 
     // try {
     //   setLoading(true);
@@ -412,7 +414,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
   
         const data = resp.data;
         if (data === "Kanban finalizado") {
-          // setSucess({ type: "ITEM", message: "Todas as caixas foram lidas com sucesso, item finalizado com sucesso!" });
+          // setSucess({ type: "ITEM", message: "Todas as caixas foram lidas, item finalizado com sucesso!" });
           setContagemCaixas(0);
 
           setItemEmMontagem(null);
@@ -524,6 +526,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
           className="border-b border-gray-400 bg-transparent px-2 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
           value={caixaCliente}
           onChange={(e) => {
+            handleCaixaClienteChange(e);
             const val = e.target.value;
             setCaixaCliente(val);
             console.log("Caixa CLiente atual:", caixaCliente, val);
@@ -537,6 +540,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
           className="border-b border-gray-400 bg-transparent px-2 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
           value={caixaGDBR}
           onChange={(e) => {
+            handleCaixaGDBRChange(e);
             const val = e.target.value;
             setCaixaGDBR(val);
 
@@ -559,7 +563,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
 
           <div className="embalagem flex flex-col items-center gap-2">
             <p className="text-gray-700 font-semibold">Quantidade</p>
-            <p className="text-gray-700">7</p>
+            <p className="text-gray-700">{totalCaixas}</p>
           </div>
         </div>
 

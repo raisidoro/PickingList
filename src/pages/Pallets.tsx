@@ -149,10 +149,6 @@ export default function PalletViewSingle() {
       }
     }, [matricula]);
 
-     useEffect(() => {
-      setCaixasVazias("Existem caixas vazias para finalizar a montagem deste palete!");
-    }, []);
-
   const lastSoundTimeRef = useRef<number>(0);
 
   // ordem de visualização dos itens 
@@ -930,7 +926,7 @@ export default function PalletViewSingle() {
         );
 
         if (todosFinalizados) {
-          // setCaixasVazias("Existem caixas vazias para finalizar a montagem deste palete!");
+          setCaixasVazias("Existem caixas vazias para finalizar a montagem deste palete!");
           atualizarStatusPalete("3");
         }
 
