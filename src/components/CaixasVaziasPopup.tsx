@@ -12,7 +12,7 @@ interface CaixasVaziasPopupProps {
   message: string | null;
   matricula?: string | null;
   onClose: () => void;
-  onRespond: (response: string) => void; 
+  onRespond: (response: string) => void;
 }
 
 // Dados da carga
@@ -69,7 +69,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const [erro, setErro] = useState<string | null>(null);
   type SuccessType = "LEITURA";
-  const [success, setSucess] = useState<{ type: SuccessType; message: string} | null>(null);
+  const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
   const [loading, setLoading] = useState(false);
   // const [caixaLiberada, setcaixaLiberada] = useState(false);  
   var [contagemCaixas, setContagemCaixas] = useState(0); //variavel para armazenar a contagem de caixas
@@ -81,73 +81,73 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
   const dataformatada =
     dataAtual.getFullYear().toString() +
     String(dataAtual.getMonth() + 1).padStart(2, "0") +
-    String(dataAtual.getDate()).padStart(2, "0"); 
+    String(dataAtual.getDate()).padStart(2, "0");
   const horaformatada = dataAtual.toTimeString().slice(0, 8);
 
   useEffect(() => {
-      setLoading(true);
-      setErro(null);
-  
-      if (!carga) {
-        setErro("Carga não encontrada.");
-        setLoading(false);
-        return;
-      }
+    setLoading(true);
+    setErro(null);
 
-      apiPallets
-        .get("/PICK_PALETE", { params: { cCarga: carga.cod_carg } })
-        .then((resp) => {
-          const palletsApi: PalletApi[] = Array.isArray(resp.data?.paletes)
-            ? resp.data.paletes
-            : [];
-          if (palletsApi.length === 0) {
-            setErro("Nenhum palete encontrado.");
-            setPallets([]);
-            setLoading(false);
-            return;
-          }
-          Promise.all(
-            palletsApi
-              .filter((p) => !!p.cod_palete)
-              .map((p) =>
-                apiItens
-                  .get("", {
-                    params: { cCarga: carga.cod_carg, cPalet: p.cod_palete },
-                  })
-                  .then((respItens) => ({
-                    cod_palete: p.cod_palete,
-                    stat_pale: p.stat_pale,
-                    cod_lane: p.cod_lane,
-                    num_order: p.num_order,
-                    cod_grupo: p.cod_grupo,
-                    itens: Array.isArray(respItens.data?.itens)
-                      ? respItens.data.itens.map((it: any) => ({
-                        kanban: it.kanban ?? it.Kanban ?? "-",
-                        sequen: it.sequen ?? it.Sequen ?? "-",
-                        qtd_caixa: it.qtd_caixa ?? it.Qtd_Caixa ?? "-",
-                        qtd_peca: it.qtd_peca ?? it.Qtd_Peca ?? "-",
-                        embalagem: it.embalagem ?? it.Embalagem ?? "-",
-                        multiplo: it.multiplo ?? it.Multiplo ?? "-",
-                        status: it.status ?? it.Status ?? "-",
-                      }))
-                      : [],
-                  }))
-              )
-          )
-            .then((palletsDetalhados) => {
-              setPallets(palletsDetalhados);
-            })
-            .catch(() => {
-              setErro("Erro ao buscar itens dos paletes.");
-            })
-            .finally(() => setLoading(false));
-        })
-        .catch(() => {
-          setErro("Erro ao carregar paletes.");
+    if (!carga) {
+      setErro("Carga não encontrada.");
+      setLoading(false);
+      return;
+    }
+
+    apiPallets
+      .get("/PICK_PALETE", { params: { cCarga: carga.cod_carg } })
+      .then((resp) => {
+        const palletsApi: PalletApi[] = Array.isArray(resp.data?.paletes)
+          ? resp.data.paletes
+          : [];
+        if (palletsApi.length === 0) {
+          setErro("Nenhum palete encontrado.");
           setPallets([]);
           setLoading(false);
-        });
-    }, [carga]);
+          return;
+        }
+        Promise.all(
+          palletsApi
+            .filter((p) => !!p.cod_palete)
+            .map((p) =>
+              apiItens
+                .get("", {
+                  params: { cCarga: carga.cod_carg, cPalet: p.cod_palete },
+                })
+                .then((respItens) => ({
+                  cod_palete: p.cod_palete,
+                  stat_pale: p.stat_pale,
+                  cod_lane: p.cod_lane,
+                  num_order: p.num_order,
+                  cod_grupo: p.cod_grupo,
+                  itens: Array.isArray(respItens.data?.itens)
+                    ? respItens.data.itens.map((it: any) => ({
+                      kanban: it.kanban ?? it.Kanban ?? "-",
+                      sequen: it.sequen ?? it.Sequen ?? "-",
+                      qtd_caixa: it.qtd_caixa ?? it.Qtd_Caixa ?? "-",
+                      qtd_peca: it.qtd_peca ?? it.Qtd_Peca ?? "-",
+                      embalagem: it.embalagem ?? it.Embalagem ?? "-",
+                      multiplo: it.multiplo ?? it.Multiplo ?? "-",
+                      status: it.status ?? it.Status ?? "-",
+                    }))
+                    : [],
+                }))
+            )
+        )
+          .then((palletsDetalhados) => {
+            setPallets(palletsDetalhados);
+          })
+          .catch(() => {
+            setErro("Erro ao buscar itens dos paletes.");
+          })
+          .finally(() => setLoading(false));
+      })
+      .catch(() => {
+        setErro("Erro ao carregar paletes.");
+        setPallets([]);
+        setLoading(false);
+      });
+  }, [carga]);
 
   // --Inicio das validações de montagem--
 
@@ -157,18 +157,18 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
       setErro("Matrícula não encontrada. Por favor, faça login novamente.");
     }
   }, [matricula]);
-    
+
   const lastSoundTimeRef = useRef<number>(0);
-    
+
   const now = Date.now();
-      
+
   //som de sucesso
   if (success && success.type === 'LEITURA') {
     const audio = new Audio(successSound);
     audio.volume = 0.8;
     audio.play().catch(err => console.error('ERRO PLAY LEITURA:', err));
     lastSoundTimeRef.current = now;
-  return;
+    return;
   }
 
   //mantém a variavel caixaGDBR atualizada
@@ -176,7 +176,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
     const caixaGDBR = e.target.value;
     setCaixaGDBR(caixaGDBR);
   }
-    
+
   //mantém a variavel caixaCliente atualizada
   function handleCaixaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
     const caixaCliente = e.target.value;
@@ -233,7 +233,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
     console.log('[DEBUG validarCaixas] embalagemCliente:', embalagemCliente);
     console.log('[DEBUG validarCaixas] embalagemGDBR:', embalagemGDBR);
 
-
     if (!embalagemCliente || embalagemCliente !== embalagemNorm) {
       setErro(`Embalagem não encontrada no palete.`);
       atualizarOp(
@@ -247,7 +246,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
         caixaCliente,
         caixaGDBR,
         "2",
-      `Embalagem ${embalagemCliente} não encontrada no palete`,
+        `Embalagem ${embalagemCliente} não encontrada no palete`,
       );
 
       return false;
@@ -267,23 +266,23 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
         caixaCliente,
         caixaGDBR,
         "2",
-      `As embalagens não conferem: ${embalagemCliente} / ${embalagemGDBR}`,
+        `As embalagens não conferem: ${embalagemCliente} / ${embalagemGDBR}`,
       );
 
       return false;
     }
 
     if (embalagemCliente === embalagemGDBR) {
-        leituracaixa(embalagemCliente, embalagemGDBR);
+      leituracaixa(embalagemCliente, embalagemGDBR);
     }
 
   }
 
   async function leituracaixa(embalagemCliente: string, embalagemGDBR: string) {
-    
+
     if (contagemCaixas >= totalCaixas) {
       setErro("Todas as caixas já foram lidas para este item.");
-      
+
       setContagemCaixas(0);
 
       atualizarOp(
@@ -314,23 +313,22 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
     // try {
     //   setLoading(true);
 
-    //   const resp = await apiItens.post("", {
-    //     codCarg: carga?.cod_carg,
-    //     codPale: palletAtual?.cod_palete.trim(),
-    //     codKanb: embalagem,
-    //     codSequ: "",
-    //     qtdrest: contagemCaixas,
-    //     operac: "1"
-    //       });
-    
+    //  const resp = await apiItens.post("", {
+    //     codCarg: carga?.cod_carg.toString() ?? "",
+    //       codPale: palletAtual?.cod_palete.trim() ?? "",
+    //       codEmb:  embalagem,
+    //       cOperac: "1",
+    //       cQuant: contagemCaixas
+    //     });
+
     //   const data = resp.data;
     //   if (data === "Gravado com sucesso") {
     //     setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
     //     setCaixaCliente("");
     //     setCaixaGDBR("");
-    
+
     //     if (contagemCaixas === 1) {
-          
+
     //       setItemEmMontagem(palletAtual!.itens[0]);
     //       atualizarOp(
     //         carga?.cod_carg.toString() ?? "",
@@ -346,7 +344,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
     //         `Item ${embalagem} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} iniciada pelo operador ${matricula}`
     //       );
     //     }
-            
+
     //     atualizarOp(
     //       carga?.cod_carg.toString() ?? "",
     //       palletAtual?.cod_palete.trim() ?? "",
@@ -360,7 +358,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
     //       "1",
     //       `Item ${embalagem} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} lido com sucesso pelo operador ${matricula} `
     //   );
-    
+
     //     // Se todas as caixas foram lidas, finaliza o item   
     //     if (contagemCaixas >= totalCaixas) {
     //       //  finalizarItem(_pallet, _item, novaQtdCaixasLidas);
@@ -382,7 +380,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
     //   setContagemCaixas(contagemCaixas);    
     //   setCaixaGDBR("");
     //   setCaixaCliente("");
-    
+
     //   //falha de leitua
     //   // if (contagemCaixas === 0) {
     //   //   setItemEmMontagem(prev => {
@@ -398,27 +396,27 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
 
   async function finalizarItem(_pallet: Pallet, _item: PalletItem, qtdFinal: number) {
     if (!_pallet || !_item) return;
-  
+
     if (_item.status !== "3") {
       try {
         // finalizandoItemRef.current = true;
         setLoading(true);
-        const resp = await apiItens.post("", {
-          codCarg: carga?.cod_carg,
-          codPale: _pallet.cod_palete.trim(),
-          codKanb: embalagem,
-          codSequ: _item.sequen,
-          qtdrest: qtdFinal,
-          operac: "3"
-        });
-  
+        const resp = await apiItens.post("",
+          {
+            codCarg: carga?.cod_carg.toString() ?? "",
+            codPale: palletAtual?.cod_palete.trim() ?? "",
+            codEmb: embalagem,
+            cOperac: "1",
+            cQuant: contagemCaixas
+          });
+
         const data = resp.data;
         if (data === "Kanban finalizado") {
           // setSucess({ type: "ITEM", message: "Todas as caixas foram lidas, item finalizado com sucesso!" });
           setContagemCaixas(0);
 
           setItemEmMontagem(null);
-  
+
           atualizarOp(
             carga?.cod_carg.toString() ?? "",
             palletAtual?.cod_palete.trim() ?? "",
@@ -431,8 +429,8 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
             "",
             "",
             `Item ${embalagem} do Pallet ${_pallet.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} foi finalizado com ${qtdFinal} caixas lidas`
-            );
-  
+          );
+
         } else if (data?.Erro) {
           setErro(data.Erro);
           setCaixaCliente("");
@@ -455,20 +453,20 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
   }
 
   async function atualizarOp(
-    codCarga: string, 
-    codPale: string, 
-    codItem: string, 
-    cOperac: string, 
-    cData: string, 
-    cHora: string, 
-    cUser: string, 
-    cLeit1: string, 
-    cLeit2: string, 
-    cStatus: string, 
+    codCarga: string,
+    codPale: string,
+    codItem: string,
+    cOperac: string,
+    cData: string,
+    cHora: string,
+    cUser: string,
+    cLeit1: string,
+    cLeit2: string,
+    cStatus: string,
     cHistor: string) {
 
     console.log("Função de operação")
-  
+
     try {
       setLoading(true);
       const resp = await apiLog.post("", {
@@ -484,27 +482,27 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
         "cStatus": cStatus,
         "cHistor": cHistor
       });
-  
-        const data = resp.data;
-        console.log(resp.data)
-        if (data === "Gravado com sucessoGravado com sucesso" || data === "Gravado com sucesso"){
-          console.log("Enviado para a API de Log")
-        } else if (data?.Erro) {
-          setErro(data.Erro);
-          setCaixaCliente("");
-          setCaixaGDBR("");
-        } else {
-          setErro("Falha ao atualizar o Log do Usuário.");
-          setCaixaCliente("");
-          setCaixaGDBR("");
-        }
-      } catch {
-        setErro("Erro ao conectar com a API de Log.");
+
+      const data = resp.data;
+      console.log(resp.data)
+      if (data === "Gravado com sucessoGravado com sucesso" || data === "Gravado com sucesso") {
+        console.log("Enviado para a API de Log")
+      } else if (data?.Erro) {
+        setErro(data.Erro);
         setCaixaCliente("");
         setCaixaGDBR("");
-      } finally {
-        setLoading(false);
+      } else {
+        setErro("Falha ao atualizar o Log do Usuário.");
+        setCaixaCliente("");
+        setCaixaGDBR("");
       }
+    } catch {
+      setErro("Erro ao conectar com a API de Log.");
+      setCaixaCliente("");
+      setCaixaGDBR("");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -545,7 +543,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
             setCaixaGDBR(val);
 
             if (caixaCliente?.trim()) {
-              verificaCaixas(caixaCliente, val); 
+              verificaCaixas(caixaCliente, val);
             } else {
               setErro("Informe a Caixa Cliente antes de ler a Caixa GDBR.");
             }
@@ -575,10 +573,10 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
         )}
 
         {success && (
-          <SuccessPopup 
-            message={success.message} 
-            onClose={() => setSucess(null)} 
-            onRespond={() => setSucess(null)} 
+          <SuccessPopup
+            message={success.message}
+            onClose={() => setSucess(null)}
+            onRespond={() => setSucess(null)}
           />
         )}
 
