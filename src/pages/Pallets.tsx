@@ -149,6 +149,10 @@ export default function PalletViewSingle() {
     }
   }, [matricula]);
 
+  useEffect(() => {
+    setCaixasVazias("Existem caixas vazias para finalizar a montagem deste palete!");
+  }, []);
+
   const lastSoundTimeRef = useRef<number>(0);
 
   // ordem de visualização dos itens 
@@ -315,10 +319,6 @@ export default function PalletViewSingle() {
         setLoading(false);
       });
   }, [carga]);
-
-  useEffect(() => {
-    setCaixasVazias("Existem caixas vazias para finalizar a montagem deste palete!");
-  }, []);
 
   // --Inicio das validações do processo de montagem de carga--
 

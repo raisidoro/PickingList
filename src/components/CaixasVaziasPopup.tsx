@@ -60,6 +60,8 @@ interface Pallet {
 }
 
 export default function CaixasVaziasPopup({ message, matricula, onClose }: CaixasVaziasPopupProps) {
+  const embalagem = "L23ES";
+  const totalCaixas = 5;
   const location = useLocation();
   const [caixaGDBR, setCaixaGDBR] = useState("");
   const [caixaCliente, setCaixaCliente] = useState("");
@@ -147,9 +149,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
   }, [carga]);
 
   // --Inicio das validações de montagem--
-
-  const embalagem = itemEmMontagem?.embalagem || "";
-  const totalCaixas = itemEmMontagem?.qtd_caixa || ""; 
 
   // passa a matrícula do operador
   useEffect(() => {
@@ -484,7 +483,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
         <div className="flex flex-row justify-center gap-8 w-full">
           <div className="caixas flex flex-col items-center gap-2">
             <p className="text-gray-700 font-semibold">Embalagem</p>
-            <p className="text-gray-700">{}</p>
+            <p className="text-gray-700">{embalagem}</p>
           </div>
 
           <div className="embalagem flex flex-col items-center gap-2">
