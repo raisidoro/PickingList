@@ -40,3 +40,11 @@ export const apiItens = axios.create({
     password: '@Gdbr036841',   
   },
 });
+
+export const apiVzias = axios.create({
+  baseURL: env.VITE_API_VZIA_URL, 
+  auth: {
+    username: 'webservice', 
+    password: '@Gdbr036841',   
+  },
+});

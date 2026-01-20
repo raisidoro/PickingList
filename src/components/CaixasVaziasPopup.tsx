@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import ErrorPopup from "./CompErrorPopup";
 import SuccessPopup from "./CompSuccessPopup";
 import successSound from '../sounds/success.mp3';
-import { apiCarga, apiItens, apiPallets, apiLog } from "../lib/axios";
+import { apiItens, apiPallets, apiLog, apiVzias } from "../lib/axios";
 import { useLocation, useNavigate } from "react-router-dom";
 
 Modal.setAppElement("#root");
@@ -75,8 +75,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
   var [contagemCaixas, setContagemCaixas] = useState(0); //variavel para armazenar a contagem de caixas
   const [itemEmMontagem, setItemEmMontagem] = useState<PalletItem | null>(null);
   const caixaGDBRRef = useRef<HTMLInputElement>(null);
-  const embalagem = "E46DL"; //variavel para armazenar a embalagem
-  const totalCaixas = 7; //variavel para armazenar o total de caixas no palete
   const dataAtual = new Date();
   const dataformatada =
     dataAtual.getFullYear().toString() +
@@ -110,9 +108,9 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
           palletsApi
             .filter((p) => !!p.cod_palete)
             .map((p) =>
-              apiItens
+              apiVzias
                 .get("", {
-                  params: { cCarga: carga.cod_carg, cPalet: p.cod_palete },
+                  params: { cCarga: carga.cod_carg, cPalet: p.cod_palete, codEmb: "", cOperac: "", cQuant: "" },
                 })
                 .then((respItens) => ({
                   cod_palete: p.cod_palete,
@@ -122,7 +120,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
                   cod_grupo: p.cod_grupo,
                   itens: Array.isArray(respItens.data?.itens)
                     ? respItens.data.itens.map((it: any) => ({
-                      kanban: it.kanban ?? it.Kanban ?? "-",
                       sequen: it.sequen ?? it.Sequen ?? "-",
                       qtd_caixa: it.qtd_caixa ?? it.Qtd_Caixa ?? "-",
                       qtd_peca: it.qtd_peca ?? it.Qtd_Peca ?? "-",
@@ -150,6 +147,9 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
   }, [carga]);
 
   // --Inicio das validações de montagem--
+
+  const embalagem = itemEmMontagem?.embalagem || "";
+  const totalCaixas = itemEmMontagem?.qtd_caixa || ""; 
 
   // passa a matrícula do operador
   useEffect(() => {
@@ -279,8 +279,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
   }
 
   async function leituracaixa(embalagemCliente: string, embalagemGDBR: string) {
-
-    if (contagemCaixas >= totalCaixas) {
+    if (contagemCaixas >= Number(totalCaixas)) {
       setErro("Todas as caixas já foram lidas para este item.");
 
       setContagemCaixas(0);
@@ -310,147 +309,37 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
     setCaixaCliente("");
     setCaixaGDBR("");
 
-    // try {
-    //   setLoading(true);
+    enviarVzias(
+      carga?.cod_carg.toString() ?? "",
+      palletAtual?.cod_palete.trim() ?? "",
+      embalagem,
+      "2",
+      String(contagemCaixas + 1)
+    );
 
-    //  const resp = await apiItens.post("", {
-    //     codCarg: carga?.cod_carg.toString() ?? "",
-    //       codPale: palletAtual?.cod_palete.trim() ?? "",
-    //       codEmb:  embalagem,
-    //       cOperac: "1",
-    //       cQuant: contagemCaixas
-    //     });
-
-    //   const data = resp.data;
-    //   if (data === "Gravado com sucesso") {
-    //     setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
-    //     setCaixaCliente("");
-    //     setCaixaGDBR("");
-
-    //     if (contagemCaixas === 1) {
-
-    //       setItemEmMontagem(palletAtual!.itens[0]);
-    //       atualizarOp(
-    //         carga?.cod_carg.toString() ?? "",
-    //         palletAtual?.cod_palete.trim() ?? "",
-    //         embalagem,
-    //         "5",
-    //         dataformatada.toString(),
-    //         horaformatada.toString(),
-    //         String(matricula ?? ""),
-    //         "",
-    //         "",
-    //         "",
-    //         `Item ${embalagem} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} iniciada pelo operador ${matricula}`
-    //       );
-    //     }
-
-    //     atualizarOp(
-    //       carga?.cod_carg.toString() ?? "",
-    //       palletAtual?.cod_palete.trim() ?? "",
-    //       embalagem,
-    //       "4",
-    //       dataformatada.toString(),
-    //       horaformatada.toString(),
-    //       matricula ?? "",
-    //       caixaCliente,
-    //       caixaGDBR,
-    //       "1",
-    //       `Item ${embalagem} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} lido com sucesso pelo operador ${matricula} `
-    //   );
-
-    //     // Se todas as caixas foram lidas, finaliza o item   
-    //     if (contagemCaixas >= totalCaixas) {
-    //       //  finalizarItem(_pallet, _item, novaQtdCaixasLidas);
-    //       finalizarItem(palletAtual!, palletAtual!.itens[0], contagemCaixas);
-    //     }
-    //   } else if (data?.Erro) {
-    //     setErro(data.Erro);
-    //     setCaixaCliente("");
-    //     setCaixaGDBR("");
-    //   } else {
-    //     setErro("Falha ao atualizar o status do item Leitura de caixa");
-    //     setCaixaCliente("");
-    //     setCaixaGDBR("");
-    //   }
-    // } catch {
-    //   setErro("Erro ao conectar com a API.");
-    //   contagemCaixas = contagemCaixas - 1;
-    //   console.log("Revertendo caixas lidas para:", contagemCaixas);
-    //   setContagemCaixas(contagemCaixas);    
-    //   setCaixaGDBR("");
-    //   setCaixaCliente("");
-
-    //   //falha de leitua
-    //   // if (contagemCaixas === 0) {
-    //   //   setItemEmMontagem(prev => {
-    //   //     if (!prev) return null;
-    //   //     if (String(prev.sequen) === String(_item.sequen) && prev.kanban === _item.kanban) return null;
-    //   //     return prev;
-    //   //   });
-    //   // }
-    // } finally {
-    //   setLoading(false);
-    // }
-  }
-
-  async function finalizarItem(_pallet: Pallet, _item: PalletItem, qtdFinal: number) {
-    if (!_pallet || !_item) return;
-
-    if (_item.status !== "3") {
-      try {
-        // finalizandoItemRef.current = true;
-        setLoading(true);
-        const resp = await apiItens.post("",
-          {
-            codCarg: carga?.cod_carg.toString() ?? "",
-            codPale: palletAtual?.cod_palete.trim() ?? "",
-            codEmb: embalagem,
-            cOperac: "1",
-            cQuant: contagemCaixas
-          });
-
-        const data = resp.data;
-        if (data === "Kanban finalizado") {
-          // setSucess({ type: "ITEM", message: "Todas as caixas foram lidas, item finalizado com sucesso!" });
-          setContagemCaixas(0);
-
-          setItemEmMontagem(null);
-
-          atualizarOp(
-            carga?.cod_carg.toString() ?? "",
-            palletAtual?.cod_palete.trim() ?? "",
-            embalagem,
-            "5",
-            dataformatada.toString(),
-            horaformatada.toString(),
-            String(matricula ?? ""),
-            "",
-            "",
-            "",
-            `Item ${embalagem} do Pallet ${_pallet.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} foi finalizado com ${qtdFinal} caixas lidas`
-          );
-
-        } else if (data?.Erro) {
-          setErro(data.Erro);
-          setCaixaCliente("");
-          setCaixaGDBR("");
-        } else {
-          setErro("Falha ao atualizar o status do item Finalização");
-          contagemCaixas = contagemCaixas - 1;
-          setCaixaCliente("");
-          setCaixaGDBR("");
-        }
-      } catch {
-        setErro("Erro ao conectar com a API.");
-        setCaixaCliente("");
-        setCaixaGDBR("");
-      } finally {
-        setLoading(false);
-        // finalizandoItemRef.current = false;
-      }
+    if (contagemCaixas === 1) {
+      enviarVzias(
+        carga?.cod_carg.toString() ?? "",
+        palletAtual?.cod_palete.trim() ?? "",
+        embalagem,
+        "1",
+        String(contagemCaixas + 1)
+      );
     }
+
+    if (contagemCaixas === totalCaixas){
+      enviarVzias(
+        carga?.cod_carg.toString() ?? "",
+        palletAtual?.cod_palete.trim() ?? "",
+        embalagem,
+        "3",
+        String(contagemCaixas + 1)
+      );
+      setContagemCaixas(0);
+    }
+
   }
+
 
   async function atualizarOp(
     codCarga: string,
@@ -505,6 +394,45 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
     }
   }
 
+  async function enviarVzias(
+    codCarg: string,
+    codPale: string,
+    codEmb:  string,
+    cOperac: string,
+    cQuant: string ) {
+
+    try {
+      setLoading(true);
+      const resp = await apiVzias.post("", {
+        codCarg: codCarg,
+        codPale: codPale,
+        codEmb: codEmb,
+        cOperac: cOperac,
+        cQuant: cQuant
+      });
+
+      const data = resp.data;
+      console.log(resp.data)
+      if (data === "Gravado com sucessoGravado com sucesso" || data === "Gravado com sucesso") {
+        console.log("Enviado para a API de Log")
+      } else if (data?.Erro) {
+        setErro(data.Erro);
+        setCaixaCliente("");
+        setCaixaGDBR("");
+      } else {
+        setErro("Falha ao atualizar o Log do Usuário.");
+        setCaixaCliente("");
+        setCaixaGDBR("");
+      }
+    } catch {
+      setErro("Erro ao conectar com a API de Log.");
+      setCaixaCliente("");
+      setCaixaGDBR("");
+    } finally {
+      setLoading(false);
+    }
+    
+  }
   return (
     <Modal
       isOpen={!!message}
@@ -556,7 +484,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
         <div className="flex flex-row justify-center gap-8 w-full">
           <div className="caixas flex flex-col items-center gap-2">
             <p className="text-gray-700 font-semibold">Embalagem</p>
-            <p className="text-gray-700">{embalagem}</p>
+            <p className="text-gray-700">{}</p>
           </div>
 
           <div className="embalagem flex flex-col items-center gap-2">

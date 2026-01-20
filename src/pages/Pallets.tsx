@@ -120,7 +120,7 @@ export default function PalletViewSingle() {
   const totalPallets = pallets.length;
   const [, setItemIndex] = useState(0);
   const [caixasLidas, setCaixasLidas] = useState(0);
-  const [etiquetaLiberada, setEtiquetaLiberada] = useState(false);  
+  const [etiquetaLiberada, setEtiquetaLiberada] = useState(false);
   const [itemEmMontagem, setItemEmMontagem] = useState<PalletItem | null>(null);
   //Constantes para validação se a etiqueta do cliente confere o kanban GDBR
   const [kanbanGDBR, setKanbanGDBR] = useState("");
@@ -138,43 +138,43 @@ export default function PalletViewSingle() {
   const dataformatada =
     dataAtual.getFullYear().toString() +
     String(dataAtual.getMonth() + 1).padStart(2, "0") +
-    String(dataAtual.getDate()).padStart(2, "0"); 
+    String(dataAtual.getDate()).padStart(2, "0");
   const horaformatada = dataAtual.toTimeString().slice(0, 8);
   const matricula = location.state?.matricula || localStorage.getItem("matricula");
   let novaQtdCaixasLidas = 0;
 
-    useEffect(() => {
-      if (!matricula) {
-        setErro("Matrícula não encontrada. Por favor, faça login novamente.");
-      }
-    }, [matricula]);
+  useEffect(() => {
+    if (!matricula) {
+      setErro("Matrícula não encontrada. Por favor, faça login novamente.");
+    }
+  }, [matricula]);
 
   const lastSoundTimeRef = useRef<number>(0);
 
   // ordem de visualização dos itens 
   const sortedItems = palletAtual
     ? (() => {
-        const temSequencial = (it: PalletItem) => {
-          const n = Number(it.sequen);
-          return Number.isFinite(n) && n > 0;
-        };
+      const temSequencial = (it: PalletItem) => {
+        const n = Number(it.sequen);
+        return Number.isFinite(n) && n > 0;
+      };
 
-        return [...palletAtual.itens].sort((a, b) => {
-          // finalizados por último
-          if (a.status === "3" && b.status !== "3") return 1;
-          if (a.status !== "3" && b.status === "3") return -1;
+      return [...palletAtual.itens].sort((a, b) => {
+        // finalizados por último
+        if (a.status === "3" && b.status !== "3") return 1;
+        if (a.status !== "3" && b.status === "3") return -1;
 
-          const aHas = temSequencial(a);
-          const bHas = temSequencial(b);
+        const aHas = temSequencial(a);
+        const bHas = temSequencial(b);
 
-          if (aHas && !bHas) return -1;
-          if (!aHas && bHas) return 1;
+        if (aHas && !bHas) return -1;
+        if (!aHas && bHas) return 1;
 
-          if (aHas && bHas) return Number(a.sequen) - Number(b.sequen);
+        if (aHas && bHas) return Number(a.sequen) - Number(b.sequen);
 
-          return 0;
-        });
-      })()
+        return 0;
+      });
+    })()
     : [];
 
   // Ajusta o índice do pallet se necessário ao mudar a lista de pallets
@@ -218,43 +218,43 @@ export default function PalletViewSingle() {
     if (success) {
       const timeout = setTimeout(() => {
         setSucess(null);
-      }, 
-      success.type === 'CARGA' ? 8000 :
-      success.type === 'LEITURA' ? 800 :   
-      4000
+      },
+        success.type === 'CARGA' ? 8000 :
+          success.type === 'LEITURA' ? 800 :
+            4000
       );
       return () => clearTimeout(timeout);
     }
   }, [success]);
 
   useEffect(() => {
-  if (!success) return;
+    if (!success) return;
 
-  const now = Date.now();
-  const msSinceLast = now - lastSoundTimeRef.current;
+    const now = Date.now();
+    const msSinceLast = now - lastSoundTimeRef.current;
 
-  // sempre toca na LEITURA
-  if (success.type === 'LEITURA') {
-    const audio = new Audio(successSound);
-    audio.volume = 0.8;
-    audio.play().catch(err => console.error('ERRO PLAY LEITURA:', err));
-    lastSoundTimeRef.current = now;
-    return;
-  }
-
-  // para ITEM: só toca se não tiver som de leitura "grudado" (ex.: item de 1 caixa)
-  if (success.type === 'ITEM') {
-    if (msSinceLast < 400) {
-      console.log('ITEM sem som (já teve LEITURA muito recente)');
+    // sempre toca na LEITURA
+    if (success.type === 'LEITURA') {
+      const audio = new Audio(successSound);
+      audio.volume = 0.8;
+      audio.play().catch(err => console.error('ERRO PLAY LEITURA:', err));
+      lastSoundTimeRef.current = now;
       return;
     }
 
-    const audio = new Audio(successSound);
-    audio.volume = 0.8;
-    audio.play().catch(err => console.error('ERRO PLAY ITEM:', err));
-    lastSoundTimeRef.current = now;
-  }
-}, [success]);
+    // para ITEM: só toca se não tiver som de leitura "grudado" (ex.: item de 1 caixa)
+    if (success.type === 'ITEM') {
+      if (msSinceLast < 400) {
+        console.log('ITEM sem som (já teve LEITURA muito recente)');
+        return;
+      }
+
+      const audio = new Audio(successSound);
+      audio.volume = 0.8;
+      audio.play().catch(err => console.error('ERRO PLAY ITEM:', err));
+      lastSoundTimeRef.current = now;
+    }
+  }, [success]);
 
   // Carrega os paletes da API de acordo com a carga
   useEffect(() => {
@@ -316,34 +316,38 @@ export default function PalletViewSingle() {
       });
   }, [carga]);
 
+  useEffect(() => {
+    setCaixasVazias("Existem caixas vazias para finalizar a montagem deste palete!");
+  }, []);
+
   // --Inicio das validações do processo de montagem de carga--
 
   // Funções que verificam etiqueta cliente e kanban GDBR
   function handleKanbanGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
     const valor = e.target.value;
-    setKanbanGDBR(valor); 
+    setKanbanGDBR(valor);
     const etiquetaLog = etiquetaClienteRef.current?.value || "";
 
-    const kanbanRegex = /^X\|([A-Z]-\d{3})\|(\d{4})?$/i; 
-    if (valor.trim() === "" || !kanbanRegex.test(valor)) { 
+    const kanbanRegex = /^X\|([A-Z]-\d{3})\|(\d{4})?$/i;
+    if (valor.trim() === "" || !kanbanRegex.test(valor)) {
       setEtiquetaLiberada(false);
       if (valor.trim() !== "") {
         setErro("Formato do Kanban GDBR inválido. Use o formato X|KANBAN|SEQUENCIAL.");
         setEtiquetaLiberada(false);
 
         atualizarOp(
-        carga?.cod_carg.toString() ?? "",
-        palletAtual?.cod_palete.trim() ?? "",
-        kanbanitem,
-        "4",
-        dataformatada.toString(),
-        horaformatada.toString(),
-        String(matricula ?? ""),
-        valor,
-        etiquetaLog,
-        "2",
-        `Kanban GDBR: ${valor}. "Formato do Kanban GDBR inválido. `
-      );
+          carga?.cod_carg.toString() ?? "",
+          palletAtual?.cod_palete.trim() ?? "",
+          kanbanitem,
+          "4",
+          dataformatada.toString(),
+          horaformatada.toString(),
+          String(matricula ?? ""),
+          valor,
+          etiquetaLog,
+          "2",
+          `Kanban GDBR: ${valor}. "Formato do Kanban GDBR inválido. `
+        );
 
         setEtiquetaCliente("");
         setKanbanGDBR("");
@@ -379,7 +383,7 @@ export default function PalletViewSingle() {
       setErro("Informe o Kanban GDBR antes da etiqueta do cliente.");
       return;
     }
-    
+
     if (!etiqueta || etiqueta.length < 5) {
       setSucess(null);
       return;
@@ -430,7 +434,7 @@ export default function PalletViewSingle() {
         "2",
         `Kanban GDBR ${kanbanGDBR}. Formato do Kanban GDBR inválido.} `
       );
-      
+
       setSucess(null);
       return;
     }
@@ -439,7 +443,7 @@ export default function PalletViewSingle() {
     const kanbanParte1 = match[1];
     const kanbanParte2 = match[2];
     const kanbanConcatenado = `${kanbanParte1}${kanbanParte2}`;
- 
+
     const itensComKanban = palletAtual.itens.filter(item => {
       const itemKanbanRaw = (item.kanban ?? "").toString();
       const itemDigits = itemKanbanRaw.replace(/\D/g, "");
@@ -449,7 +453,7 @@ export default function PalletViewSingle() {
         itemKanbanRaw.includes(kanbanParte1)
       );
     });
- 
+
     if (itensComKanban.length === 0) {
       setErro(`Kanban ${kanbanOriginal} não encontrado no palete atual.`);
       setEtiquetaCliente("");
@@ -471,7 +475,7 @@ export default function PalletViewSingle() {
       setSucess(null);
       return;
     }
- 
+
     let foundItem: PalletItem | undefined;
 
     if (etiqueta.length === 5) {
@@ -495,13 +499,13 @@ export default function PalletViewSingle() {
         );
         return;
       }
-  }
+    }
     foundItem = itensComKanban.find(item => item.status !== "3");
- 
+
     if (!foundItem) {
       foundItem = itensComKanban.find(item => item.status !== "3");
     }
- 
+
     if (!foundItem) {
       setErro("Todos os itens com este Kanban já foram finalizados.");
       setEtiquetaCliente("");
@@ -523,7 +527,7 @@ export default function PalletViewSingle() {
       setSucess(null);
       return;
     }
- 
+
     const itemIdx = palletAtual.itens.indexOf(foundItem);
 
     const sequencialValido = verificaItem(foundItem, foundItem.sequen);
@@ -536,7 +540,7 @@ export default function PalletViewSingle() {
   }
 
   //Verifica sequencial dos itens
-  function verificaItem(selected: PalletItem | undefined, sequencialAtual: number | string): boolean { 
+  function verificaItem(selected: PalletItem | undefined, sequencialAtual: number | string): boolean {
     const etiquetaLog = etiquetaClienteRef.current?.value || "";
     if (!palletAtual || !palletAtual.itens) {
       setErro("Pallet ou itens não definidos");
@@ -715,7 +719,7 @@ export default function PalletViewSingle() {
       setErro("Todas as caixas do item já foram lidas. Não é possível continuar.");
       setEtiquetaCliente("");
       setKanbanGDBR("");
-      
+
       atualizarOp(
         carga?.cod_carg.toString() ?? "",
         palletAtual?.cod_palete.trim() ?? "",
@@ -790,7 +794,7 @@ export default function PalletViewSingle() {
             `Item ${_item.kanban} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} iniciada pelo operador ${matricula}`
           );
         }
-        
+
         atualizarOp(
           carga?.cod_carg.toString() ?? "",
           palletAtual?.cod_palete.trim() ?? "",
@@ -823,7 +827,7 @@ export default function PalletViewSingle() {
       novaQtdCaixasLidas = novaQtdCaixasLidas - 1;
       console.log("Revertendo caixas lidas para:", novaQtdCaixasLidas);
       setCaixasLidas(novaQtdCaixasLidas);
-      
+
       setEtiquetaCliente("");
       setKanbanGDBR("");
 
@@ -917,7 +921,7 @@ export default function PalletViewSingle() {
           ...updated[palletIndex],
           itens: novosItens.map((it: any) => ({
             ...it,
-            status: it.status ?? "0" 
+            status: it.status ?? "0"
           }))
         };
 
@@ -938,12 +942,12 @@ export default function PalletViewSingle() {
   }
 
   async function atualizarStatusPalete(status: string) {
-  if (!palletAtual || !carga) return;
+    if (!palletAtual || !carga) return;
 
-  if (status === "3") {
-    if (finalizandoPaleteRef.current) return;
+    if (status === "3") {
+      if (finalizandoPaleteRef.current) return;
       finalizandoPaleteRef.current = true;
-  }
+    }
 
     try {
       setLoading(true);
@@ -958,23 +962,23 @@ export default function PalletViewSingle() {
 
         if (status === "1") {
           atualizarOp(
-          carga?.cod_carg.toString() ?? "", 
-          palletAtual.cod_palete.trim(),
-          "",
-          "2",
-          dataformatada.toString(),
-          horaformatada.toString(),
-          String(matricula ?? ""),
-          "",
-          "",
-          "",
-          `Pallet ${palletAtual.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} iniciada pelo operador ${matricula} `
+            carga?.cod_carg.toString() ?? "",
+            palletAtual.cod_palete.trim(),
+            "",
+            "2",
+            dataformatada.toString(),
+            horaformatada.toString(),
+            String(matricula ?? ""),
+            "",
+            "",
+            "",
+            `Pallet ${palletAtual.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} iniciada pelo operador ${matricula} `
           );
         }
 
         if (status === "3") {
           atualizarOp(
-            carga?.cod_carg.toString() ?? "", 
+            carga?.cod_carg.toString() ?? "",
             palletAtual.cod_palete.trim(),
             "",
             "6",
@@ -985,8 +989,8 @@ export default function PalletViewSingle() {
             "",
             "",
             `Pallet ${palletAtual.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} finalizada pelo operador ${matricula}  `
-            );
-          }
+          );
+        }
 
         setPallets(prev => {
           const updated = [...prev];
@@ -1021,7 +1025,7 @@ export default function PalletViewSingle() {
     }
   }
 
-   //verifica se a carga não foi completada (com palletes pendentes)
+  //verifica se a carga não foi completada (com palletes pendentes)
   async function verificaCarga(palletsAtualizados?: Pallet[]) {
     const lista = palletsAtualizados ?? pallets;
     if (lista.length === 0) return;
@@ -1061,8 +1065,8 @@ export default function PalletViewSingle() {
           "",
           "",
           `Carga ${carga?.cod_carg.toString() ?? ""} finalizada pelo operador ${matricula} `
-          );
-        
+        );
+
       } else if (data?.Erro) {
         setErro(data.Erro);
         setEtiquetaCliente("");
@@ -1091,42 +1095,42 @@ export default function PalletViewSingle() {
   }
 
   async function refreshPalletsCompletos(): Promise<Pallet[] | undefined> {
-  if (!carga) return;
-  
-  setLoading(true);
-  setErro(null);
+    if (!carga) return;
 
-  try {
-    const respPallets = await apiPallets.get("/PICK_PALETE", { 
-      params: { cCarga: carga.cod_carg } 
-    });
-    
-    const palletsApi: PalletApi[] = Array.isArray(respPallets.data?.paletes)
-      ? respPallets.data.paletes
-      : [];
-      
-    if (palletsApi.length === 0) {
-      setErro("Nenhum palete encontrado.");
-      setPallets([]);
-      return;
-    }
+    setLoading(true);
+    setErro(null);
 
-    const palletsDetalhados = await Promise.all(
-      palletsApi
-        .filter((p) => !!p.cod_palete)
-        .map((p) =>
-          apiItens
-            .get("", {
-              params: { cCarga: carga.cod_carg, cPalet: p.cod_palete },
-            })
-            .then((respItens) => ({
-              cod_palete: p.cod_palete,
-              stat_pale: p.stat_pale,
-              cod_lane: p.cod_lane,
-              num_order: p.num_order,
-              cod_grupo: p.cod_grupo,
-              itens: Array.isArray(respItens.data?.itens)
-                ? respItens.data.itens.map((it: any) => ({
+    try {
+      const respPallets = await apiPallets.get("/PICK_PALETE", {
+        params: { cCarga: carga.cod_carg }
+      });
+
+      const palletsApi: PalletApi[] = Array.isArray(respPallets.data?.paletes)
+        ? respPallets.data.paletes
+        : [];
+
+      if (palletsApi.length === 0) {
+        setErro("Nenhum palete encontrado.");
+        setPallets([]);
+        return;
+      }
+
+      const palletsDetalhados = await Promise.all(
+        palletsApi
+          .filter((p) => !!p.cod_palete)
+          .map((p) =>
+            apiItens
+              .get("", {
+                params: { cCarga: carga.cod_carg, cPalet: p.cod_palete },
+              })
+              .then((respItens) => ({
+                cod_palete: p.cod_palete,
+                stat_pale: p.stat_pale,
+                cod_lane: p.cod_lane,
+                num_order: p.num_order,
+                cod_grupo: p.cod_grupo,
+                itens: Array.isArray(respItens.data?.itens)
+                  ? respItens.data.itens.map((it: any) => ({
                     lido: false,
                     kanban: it.kanban ?? it.Kanban ?? "-",
                     sequen: it.sequen ?? it.Sequen ?? "-",
@@ -1136,41 +1140,41 @@ export default function PalletViewSingle() {
                     multiplo: it.multiplo ?? it.Multiplo ?? "-",
                     status: it.status ?? it.Status ?? "-",
                   }))
-                : [],
-            }))
-        )
-    );
+                  : [],
+              }))
+          )
+      );
 
-    const novoIndice = Math.min(palletIndex, palletsDetalhados.length - 1);
-    setPalletIndex(novoIndice);
-    setPallets(palletsDetalhados);
-    return palletsDetalhados;
-    
-  } catch (error) {
-    setErro("Erro ao atualizar pallets.");
-    return undefined;
-  } finally {
-    setLoading(false);
-  }
+      const novoIndice = Math.min(palletIndex, palletsDetalhados.length - 1);
+      setPalletIndex(novoIndice);
+      setPallets(palletsDetalhados);
+      return palletsDetalhados;
+
+    } catch (error) {
+      setErro("Erro ao atualizar pallets.");
+      return undefined;
+    } finally {
+      setLoading(false);
+    }
   }
 
-  async function confirmaPalete(response: string, selectedCod: string | null){
-      if (response === "s" && selectedCod) {
-        atualizarStatusPalete("1");
-      } 
+  async function confirmaPalete(response: string, selectedCod: string | null) {
+    if (response === "s" && selectedCod) {
+      atualizarStatusPalete("1");
+    }
   }
 
   async function atualizarOp(
-    codCarga: string, 
-    codPale: string, 
-    codItem: string, 
-    cOperac: string, 
-    cData: string, 
-    cHora: string, 
-    cUser: string, 
-    cLeit1: string, 
-    cLeit2: string, 
-    cStatus: string, 
+    codCarga: string,
+    codPale: string,
+    codItem: string,
+    cOperac: string,
+    cData: string,
+    cHora: string,
+    cUser: string,
+    cLeit1: string,
+    cLeit2: string,
+    cStatus: string,
     cHistor: string) {
 
     console.log("Função de operação")
@@ -1189,28 +1193,28 @@ export default function PalletViewSingle() {
         "cLeit2": cLeit2,
         "cStatus": cStatus,
         "cHistor": cHistor
-        });
+      });
 
-        const data = resp.data;
-        console.log(resp.data)
-        if (data === "Gravado com sucessoGravado com sucesso" || data === "Gravado com sucesso") {
-          console.log("Enviado para a API de Log")
-        } else if (data?.Erro) {
-          setErro(data.Erro);
-          setEtiquetaCliente("");
-          setKanbanGDBR("");
-        } else {
-          setErro("Falha ao atualizar o Log do Usuário.");
-          setEtiquetaCliente("");
-          setKanbanGDBR("");
-        }
-      } catch {
-        setErro("Erro ao conectar com a API de Log.");
+      const data = resp.data;
+      console.log(resp.data)
+      if (data === "Gravado com sucessoGravado com sucesso" || data === "Gravado com sucesso") {
+        console.log("Enviado para a API de Log")
+      } else if (data?.Erro) {
+        setErro(data.Erro);
         setEtiquetaCliente("");
         setKanbanGDBR("");
-      } finally {
-        setLoading(false);
+      } else {
+        setErro("Falha ao atualizar o Log do Usuário.");
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
       }
+    } catch {
+      setErro("Erro ao conectar com a API de Log.");
+      setEtiquetaCliente("");
+      setKanbanGDBR("");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -1234,14 +1238,14 @@ export default function PalletViewSingle() {
             <button
               onClick={() => {
                 if (palletAtual?.stat_pale !== "1") {
-                  navigate("/Carga", { state: { matricula: matricula } }) 
+                  navigate("/Carga", { state: { matricula: matricula } })
                 } else {
                   setErro("Pallet está em conferência! Por favor, finalize antes de retornar a página de cargas.");
                   setEtiquetaCliente("");
                   setKanbanGDBR("");
 
                 }
-                }}
+              }}
               className="focus:outline-none"
               title="Voltar"
             >
@@ -1258,9 +1262,9 @@ export default function PalletViewSingle() {
           </div>
 
           <div className="flex justify-between items-center px-4">
-              <span onClick={() => refreshPalletsCompletos()}>
-                <TfiReload className="text-gray-500 w-6 h-6 cursor-pointer hover:text-gray-700 cursor-pointer" title="Atualizar pallets" />
-              </span>
+            <span onClick={() => refreshPalletsCompletos()}>
+              <TfiReload className="text-gray-500 w-6 h-6 cursor-pointer hover:text-gray-700 cursor-pointer" title="Atualizar pallets" />
+            </span>
           </div>
 
           {loading && (
@@ -1270,7 +1274,7 @@ export default function PalletViewSingle() {
           )}
 
           {erro && (
-          <ErrorPopup
+            <ErrorPopup
               message={erro}
               onClose={() => setErro(null)}
             />
@@ -1298,7 +1302,7 @@ export default function PalletViewSingle() {
 
           {!loading && !erro && palletAtual && (
             <>
-      
+
               <div className="flex justify-center">
                 {palletAtual.stat_pale === "0" && (
                   <button
@@ -1314,48 +1318,48 @@ export default function PalletViewSingle() {
 
               {palletAtual.stat_pale === "1" && (
                 <div className="w-full flex flex-col gap-4 mb-6 max-w-lg">
-                 <input
-                  type="text"
-                  autoFocus
-                  placeholder="Kanban GDBR"
-                  className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
-                  value={kanbanGDBR} 
-                  onChange={handleKanbanGDBRChange}
-                />
-                <div className="flex items-center gap-2">
                   <input
-                    ref={etiquetaClienteRef}
                     type="text"
-                    placeholder="Etiqueta Cliente"
+                    autoFocus
+                    placeholder="Kanban GDBR"
                     className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
-                    disabled={!etiquetaLiberada} 
-                    onChange={(e) => {
-                      handleEtiquetaClienteChange(e);
-                      verificaKanban({ etiqueta: e.target.value });
-                      setEtiquetaLiberada(false);
-                    }}
+                    value={kanbanGDBR}
+                    onChange={handleKanbanGDBRChange}
                   />
-                  {success && (
-                    <SuccessPopup 
-                      message={success.message} 
-                      onClose={() => setSucess(null)} 
-                      onRespond={() => setSucess(null)} 
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={etiquetaClienteRef}
+                      type="text"
+                      placeholder="Etiqueta Cliente"
+                      className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
+                      disabled={!etiquetaLiberada}
+                      onChange={(e) => {
+                        handleEtiquetaClienteChange(e);
+                        verificaKanban({ etiqueta: e.target.value });
+                        setEtiquetaLiberada(false);
+                      }}
                     />
-                  )}
+                    {success && (
+                      <SuccessPopup
+                        message={success.message}
+                        onClose={() => setSucess(null)}
+                        onRespond={() => setSucess(null)}
+                      />
+                    )}
+                  </div>
                 </div>
-                </div>
-                )}
+              )}
 
-               <div className="max-w-lg w-full flex items-center justify-between gap-4">
+              <div className="max-w-lg w-full flex items-center justify-between gap-4">
                 <button
                   onClick={() => {
-                  if (palletAtual?.stat_pale !== "1") {
-                    setPalletIndex(i => Math.max(i - 1, 0));
-                  } else {
-                    setErro("Pallet está em conferência! Por favor, finalize antes de retornar ao palete anterior.");
-                    setEtiquetaCliente("");
-                    setKanbanGDBR("");
-                  }
+                    if (palletAtual?.stat_pale !== "1") {
+                      setPalletIndex(i => Math.max(i - 1, 0));
+                    } else {
+                      setErro("Pallet está em conferência! Por favor, finalize antes de retornar ao palete anterior.");
+                      setEtiquetaCliente("");
+                      setKanbanGDBR("");
+                    }
                   }}
                   className="text-blue-600 hover:text-blue-800 flex-shrink-0 disabled:opacity-50"
                   disabled={palletIndex === 0}
@@ -1365,21 +1369,21 @@ export default function PalletViewSingle() {
                 </button>
                 <div className="flex flex-col gap-2">
                   <div className="text-xl">
-                  <strong>Lane: </strong> {palletAtual.cod_lane} | <strong>Group: </strong> {palletAtual.cod_grupo}
+                    <strong>Lane: </strong> {palletAtual.cod_lane} | <strong>Group: </strong> {palletAtual.cod_grupo}
                   </div>
                   <div className="text-xl">
-                  <strong>Order: </strong> {palletAtual.num_order}
+                    <strong>Order: </strong> {palletAtual.num_order}
                   </div>
                 </div>
                 <button
                   onClick={() => {
-                  if (palletAtual?.stat_pale !== "1") {
-                    setPalletIndex(i => Math.min(i + 1, totalPallets - 1));
-                  } else {
-                    setErro("Pallet está em conferência! Por favor, finalize antes de avançar.");
-                    setEtiquetaCliente("");
-                    setKanbanGDBR("");
-                  }
+                    if (palletAtual?.stat_pale !== "1") {
+                      setPalletIndex(i => Math.min(i + 1, totalPallets - 1));
+                    } else {
+                      setErro("Pallet está em conferência! Por favor, finalize antes de avançar.");
+                      setEtiquetaCliente("");
+                      setKanbanGDBR("");
+                    }
                   }}
                   className="text-blue-600 hover:text-blue-800 flex-shrink-0 disabled:opacity-50"
                   disabled={palletIndex === totalPallets - 1}
@@ -1387,7 +1391,7 @@ export default function PalletViewSingle() {
                 >
                   <GoChevronRight className="w-6 h-6 text-gray-600" />
                 </button>
-                </div>
+              </div>
 
               <div className="max-w-lg w-full">
                 <div className="text-base font-bold text-center mb-2"
@@ -1396,7 +1400,7 @@ export default function PalletViewSingle() {
                   {palletAtual?.cod_palete ??
                     String(palletIndex + 1).padStart(2, "0")}/{totalPallets.toString().padStart(2, "0")}
                 </div>
-              <div className="text-center font-bold text-lg mt-2 select-none">
+                <div className="text-center font-bold text-lg mt-2 select-none">
                   {palletAtual.stat_pale === "0" && (
                     <span className="text-red-700">Pendente</span>
                   )}
@@ -1459,14 +1463,14 @@ export default function PalletViewSingle() {
                         <span className="font-semibold text-xs">Status</span>
                         <span
                           className={`font-bold text-xs ${item.status === "0"
-                              ? "text-red-700"
-                              : item.status === "1"
-                                ? "text-yellow-700"
-                                : item.status === "2"
-                                  ? "text-orange-700"
-                                  : item.status === "3"
-                                    ? "text-green-700"
-                                    : ""
+                            ? "text-red-700"
+                            : item.status === "1"
+                              ? "text-yellow-700"
+                              : item.status === "2"
+                                ? "text-orange-700"
+                                : item.status === "3"
+                                  ? "text-green-700"
+                                  : ""
                             }`}
                         >
                           {item.status === "0" && "Pendente"}
