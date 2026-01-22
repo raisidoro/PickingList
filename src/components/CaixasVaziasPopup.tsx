@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import ErrorPopup from "./CompErrorPopup";
 import SuccessPopup from "./CompSuccessPopup";
 import successSound from '../sounds/success.mp3';
-import { apiItens, apiPallets, apiLog, apiVzias } from "../lib/axios";
+import {  apiItens, apiPallets, apiLog, apiVzias } from "../lib/axios";
 import { useLocation, useNavigate } from "react-router-dom";
 
 Modal.setAppElement("#root");
@@ -60,8 +60,9 @@ interface Pallet {
 }
 
 export default function CaixasVaziasPopup({ message, matricula, onClose }: CaixasVaziasPopupProps) {
-  const embalagem = "L23ES";
-  const totalCaixas = 5;
+  const [itens, setItens] = useState<any[]>([]);
+  const [embalagem, setEmbalagem] = useState<string>("");
+  const [totalCaixas, setTotalCaixas] = useState<number>(0);
   const location = useLocation();
   const [caixaGDBR, setCaixaGDBR] = useState("");
   const [caixaCliente, setCaixaCliente] = useState("");
@@ -74,7 +75,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
   const [loading, setLoading] = useState(false);
   // const [caixaLiberada, setcaixaLiberada] = useState(false);  
-  var [contagemCaixas, setContagemCaixas] = useState(0); //variavel para armazenar a contagem de caixas
+  var [contagemCaixas, setContagemCaixas] = useState(0); 
   const [itemEmMontagem, setItemEmMontagem] = useState<PalletItem | null>(null);
   const caixaGDBRRef = useRef<HTMLInputElement>(null);
   const dataAtual = new Date();
@@ -109,32 +110,33 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
         Promise.all(
           palletsApi
             .filter((p) => !!p.cod_palete)
-            .map((p) =>
+                .map((p) =>
               apiVzias
                 .get("", {
-                  params: { cCarga: carga.cod_carg, cPalet: p.cod_palete, codEmb: "", cOperac: "", cQuant: "" },
+                  params: { cCarga: carga.cod_carg, cPalet: p.cod_palete},
                 })
                 .then((respItens) => ({
-                  cod_palete: p.cod_palete,
-                  stat_pale: p.stat_pale,
-                  cod_lane: p.cod_lane,
-                  num_order: p.num_order,
-                  cod_grupo: p.cod_grupo,
                   itens: Array.isArray(respItens.data?.itens)
                     ? respItens.data.itens.map((it: any) => ({
-                      sequen: it.sequen ?? it.Sequen ?? "-",
-                      qtd_caixa: it.qtd_caixa ?? it.Qtd_Caixa ?? "-",
-                      qtd_peca: it.qtd_peca ?? it.Qtd_Peca ?? "-",
-                      embalagem: it.embalagem ?? it.Embalagem ?? "-",
-                      multiplo: it.multiplo ?? it.Multiplo ?? "-",
-                      status: it.status ?? it.Status ?? "-",
+                        embalagem: it.embalagem ?? "-",
+                        qtd_caixa: Number(it.quantidade ?? 0),
                     }))
                     : [],
                 }))
             )
         )
-          .then((palletsDetalhados) => {
-            setPallets(palletsDetalhados);
+          .then((itensPorPalete) => {
+            const palletsComItens: Pallet[] = palletsApi.map((p, index) => ({
+              cod_palete: p.cod_palete,
+              stat_pale: p.stat_pale,
+              itens: itensPorPalete[index]?.itens || [],
+              cod_lane: p.cod_lane,
+              cod_grupo: p.cod_grupo,
+              num_order: p.num_order,
+            }));
+            setPallets(palletsComItens);
+            const todosItens = palletsComItens.flatMap(p => p.itens);
+            setItens(todosItens);
           })
           .catch(() => {
             setErro("Erro ao buscar itens dos paletes.");
@@ -185,9 +187,9 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
   // Remove espaços, tabs, quebras de linha, e normaliza Unicode
   function sanitize(input: string): string {
     return input
-      .normalize('NFKC')         // normaliza caracteres Unicode "parecidos"
-      .replace(/\s+/g, '')       // remove todos os espaços/brancos (inclui \r \n \t)
-      .replace(/\u0000/g, '')    // remove NUL, se existir
+      .normalize('NFKC')         
+      .replace(/\s+/g, '')       
+      .replace(/\u0000/g, '')    
       .trim()
       .toUpperCase();
   }
@@ -199,21 +201,17 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
     const caixaNorm = sanitize(caixa);
     const embalagemNorm = sanitize(embalagemEsperada);
 
-    // DEBUG: ver exatamente o que estamos comparando
     console.log('[DEBUG extrairEmbalagem] caixaNorm:', caixaNorm, 'embalagemNorm:', embalagemNorm);
 
-    // Caso Cliente: tudo antes do primeiro ';'
     if (caixa.includes(';')) {
       const primeiraParte = caixa.split(';')[0].trim().toUpperCase();
       return primeiraParte || null;
     }
 
-    // Caso GDBR: verificar substring
     if (caixaNorm.includes(embalagemNorm)) {
       return embalagemNorm;
     }
 
-    // Tentativa extra: remover caracteres não alfanuméricos e comparar
     const alnum = caixaNorm.replace(/[^A-Z0-9]/g, '');
     if (alnum.includes(embalagemNorm.replace(/[^A-Z0-9]/g, ''))) {
       return embalagemNorm;
@@ -326,7 +324,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
       );
     }
 
-    if (contagemCaixas === totalCaixas){
+    if (contagemCaixas === Number(totalCaixas)){
       enviarVzias(
         carga?.cod_carg.toString() ?? "",
         palletAtual?.cod_palete.trim() ?? "",
@@ -338,7 +336,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
     }
 
   }
-
 
   async function atualizarOp(
     codCarga: string,
@@ -483,6 +480,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
         <div className="flex flex-row justify-center gap-8 w-full">
           <div className="caixas flex flex-col items-center gap-2">
             <p className="text-gray-700 font-semibold">Embalagem</p>
+            <p className="text-gray-700">{}</p>
             <p className="text-gray-700">{embalagem}</p>
           </div>
 
@@ -490,8 +488,27 @@ export default function CaixasVaziasPopup({ message, matricula, onClose }: Caixa
             <p className="text-gray-700 font-semibold">Quantidade</p>
             <p className="text-gray-700">{totalCaixas}</p>
           </div>
-        </div>
+        </div> 
 
+        
+
+        {/* <div className="w-full flex flex-col gap-4"></div>
+          {itens.map((item, idx) => (
+            
+            <div key={idx} className="flex flex-row justify-between p-3 rounded-xl bg-gray-100 shadow">
+              <div className="caixas flex flex-col items-center gap-2">
+                <p className="text-gray-700 font-semibold">Embalagem</p>
+                <p className="text-gray-700">{item.embalagem}</p>
+              </div>
+
+              <div className="embalagem flex flex-col items-center gap-2">
+                <p className="text-gray-700 font-semibold">Quantidade</p>
+                <p className="text-gray-700">{item.totalCaixas}</p>
+              </div>
+            </div>
+          ))}
+        </div> */}
+        
         {erro && (
           <ErrorPopup
             message={erro}
