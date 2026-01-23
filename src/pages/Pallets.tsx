@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { apiCarga, apiItens, apiPallets } from "../lib/axios";
+import { apiCarga, apiItens, apiPallets, apiVzias } from "../lib/axios";
 import { MdArrowBack } from "react-icons/md";
 import { GoChevronLeft, GoChevronRight } from "react-icons/go";
 import { TfiReload } from "react-icons/tfi";
@@ -150,7 +150,7 @@ export default function PalletViewSingle() {
   }, [matricula]);
 
   useEffect(() => {
-    setCaixasVazias(`Existem caixas vazias para finalizar a montagem do Pallet ${palletIndex}`);
+    setCaixasVazias("Existem caixas vazias para finalizar a montagem deste palete!");
   }, []);
   
   const lastSoundTimeRef = useRef<number>(0);
@@ -957,24 +957,24 @@ export default function PalletViewSingle() {
       if (finalizandoPaleteRef.current) return;
       finalizandoPaleteRef.current = true;
 
-    // // Verifica caixas vazias antes de finalizar o palete
-    //   try {
-    //     console.log("Verificando caixas vazias para palete:", palletAtual.cod_palete);
-    //     const respVzias = await apiVzias.get("", {
-    //       params: { cCarga: carga.cod_carg, cPalet: palletAtual.cod_palete }
-    //     });
-    //     console.log("Resposta apiVzias.data:", respVzias.data);
-    //     const itens = Array.isArray(respVzias.data?.itens) ? respVzias.data.itens : [];
-    //     const hasCaixasVazias = itens.length > 0;
-    //     console.log("hasCaixasVazias:", hasCaixasVazias);
-    //     if (hasCaixasVazias) {
-    //       setCaixasVazias("Existem caixas vazias para finalizar a montagem deste palete!");
-    //       finalizandoPaleteRef.current = false;
-    //       return;
-    //     }
-    //   } catch (error) {
-    //     console.error("Erro ao verificar caixas vazias:", error);
-    //   }
+    // Verifica caixas vazias antes de finalizar o palete
+      try {
+        console.log("Verificando caixas vazias para palete:", palletAtual.cod_palete);
+        const respVzias = await apiVzias.get("", {
+          params: { cCarga: carga.cod_carg, cPalet: palletAtual.cod_palete }
+        });
+        console.log("Resposta apiVzias.data:", respVzias.data);
+        const itens = Array.isArray(respVzias.data?.itens) ? respVzias.data.itens : [];
+        const hasCaixasVazias = itens.length > 0;
+        console.log("hasCaixasVazias:", hasCaixasVazias);
+        if (hasCaixasVazias) {
+          setCaixasVazias("Existem caixas vazias para finalizar a montagem deste palete!");
+          finalizandoPaleteRef.current = false;
+          return;
+        }
+      } catch (error) {
+        console.error("Erro ao verificar caixas vazias:", error);
+      }
    }
 
     try {
@@ -1265,13 +1265,13 @@ export default function PalletViewSingle() {
           <div className="flex items-center gap-2 mb-4">
             <button
               onClick={() => {
-                //if (palletAtual?.stat_pale !== "1") {
+                if (palletAtual?.stat_pale !== "1") {
                   navigate("/Carga", { state: { matricula: matricula } })
-                //} else {
-                //   setErro("Palete está em conferência! Por favor, finalize antes de retornar a página de cargas.");
-                //   setEtiquetaCliente("");
-                //   setKanbanGDBR("");
-                // }
+                } else {
+                   setErro("Palete está em conferência! Por favor, finalize antes de retornar a página de cargas.");
+                   setEtiquetaCliente("");
+                   setKanbanGDBR("");
+                }
               }}
               className="focus:outline-none"
               title="Voltar"
@@ -1352,6 +1352,7 @@ export default function PalletViewSingle() {
                     placeholder="Kanban GDBR"
                     className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
                     value={kanbanGDBR}
+                    disabled={palletAtual?.itens.every(item => item.status === "3")}
                     onChange={handleKanbanGDBRChange}
                   />
                   <div className="flex items-center gap-2">
@@ -1360,7 +1361,7 @@ export default function PalletViewSingle() {
                       type="text"
                       placeholder="Etiqueta Cliente"
                       className="border-b border-gray-400 bg-transparent px-3 py-2 text-base focus:outline-none focus:border-blue-400 rounded-none w-full max-w-xs"
-                      disabled={!etiquetaLiberada}
+                      disabled={!etiquetaLiberada || palletAtual?.itens.every(item => item.status === "3")}
                       onChange={(e) => {
                         handleEtiquetaClienteChange(e);
                         verificaKanban({ etiqueta: e.target.value });
@@ -1381,13 +1382,13 @@ export default function PalletViewSingle() {
               <div className="max-w-lg w-full flex items-center justify-between gap-4">
                 <button
                   onClick={() => {
-                    //if (palletAtual?.stat_pale !== "1") {
+                    if (palletAtual?.stat_pale !== "1") {
                       setPalletIndex(i => Math.max(i - 1, 0));
-                    //} else {
-                     // setErro("Pallet está em conferência! Por favor, finalize antes de retornar ao palete anterior.");
-                     // setEtiquetaCliente("");
-                      //setKanbanGDBR("");
-                   // }
+                    } else {
+                      setErro("Pallet está em conferência! Por favor, finalize antes de retornar ao palete anterior.");
+                      setEtiquetaCliente("");
+                      setKanbanGDBR("");
+                    }
                   }}
                   className="text-blue-600 hover:text-blue-800 flex-shrink-0 disabled:opacity-50"
                   disabled={palletIndex === 0}
@@ -1405,13 +1406,13 @@ export default function PalletViewSingle() {
                 </div>
                 <button
                   onClick={() => {
-                    //if (palletAtual?.stat_pale !== "1") {
+                    if (palletAtual?.stat_pale !== "1") {
                       setPalletIndex(i => Math.min(i + 1, totalPallets - 1));
-                    //} else {
-                      //setErro("Pallet está em conferência! Por favor, finalize antes de avançar.");
-                      //setEtiquetaCliente("");
-                      //setKanbanGDBR("");
-                    //}
+                    } else {
+                      setErro("Pallet está em conferência! Por favor, finalize antes de avançar.");
+                      setEtiquetaCliente("");
+                      setKanbanGDBR("");
+                    }
                   }}
                   className="text-blue-600 hover:text-blue-800 flex-shrink-0 disabled:opacity-50"
                   disabled={palletIndex === totalPallets - 1}
