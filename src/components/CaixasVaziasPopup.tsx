@@ -57,10 +57,10 @@ interface Pallet {
 }
 
 interface VaziaItem {
-  embalagem: string;
-  quantidade: number;
+  cod_emb: string;
+  qtd_total: number;
   status: string;
-
+  qtd_restante: number;
 }
 
 export default function CaixasVaziasPopup({ message, matricula, onClose, palletIndex }: CaixasVaziasPopupProps) {
@@ -171,9 +171,10 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
 
       const itensVazios: VaziaItem[] = Array.isArray(response.data?.itens)
         ? response.data.itens.map((item: any) => ({
-            embalagem: item.embalagem ?? "-",
-            quantidade: Number(item.quantidade ?? "-"),
+            cod_emb: item.cod_emb ?? "-",
+            qtd_total: Number(item.qtd_total ?? "-"),
             status: String(item.status ?? "0"),
+            qtd_restante: Number(item.qtd_restante ?? "0"),
           }))
         : [];
 
@@ -184,7 +185,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
         setContagens(prev => {
           const novo = { ...prev };
           for (const it of itensVazios) {
-            if (novo[it.embalagem] == null) novo[it.embalagem] = 0;
+            if (novo[it.cod_emb] == null) novo[it.cod_emb] = 0;
           }
           return novo;
         });
@@ -192,8 +193,8 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
         setShowModal(true); 
         const currentItem = itensVazios.find(item => item.status !== "3");
         if (currentItem) {
-          setEmbalagem(currentItem.embalagem);
-          setTotalCaixas(currentItem.quantidade);
+          setEmbalagem(currentItem.cod_emb);
+          setTotalCaixas(currentItem.qtd_total);
           setContagemCaixas(0);
         } else {
           setShowModal(false);
@@ -270,10 +271,10 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
   
 function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): string | null {
   for (const it of vaziasItens) {
-    const emb = sanitize(it.embalagem);
+    const emb = sanitize(it.cod_emb);
     const c1 = extrairEmbalagem(caixaClienteVal, emb);
     const c2 = extrairEmbalagem(caixaGDBRVal, emb);
-    if (c1 === emb && c2 === emb) return it.embalagem;
+    if (c1 === emb && c2 === emb) return it.cod_emb;
   }
   return null;
 }
@@ -302,13 +303,13 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
   }
   
   async function leituracaixa(embalagemAlvo: string) {
-    const itemAlvo = vaziasItens.find(i => i.embalagem === embalagemAlvo);
+    const itemAlvo = vaziasItens.find(i => i.cod_emb === embalagemAlvo);
     if (!itemAlvo) {
       setErro("Item não encontrado no palete.");
       return;
     }
 
-    const total = Number(itemAlvo.quantidade ?? 0);
+    const total = Number(itemAlvo.qtd_total ?? 0);
     const lidasAtuais = contagens[embalagemAlvo] ?? 0;
 
     if (lidasAtuais >= total) {
@@ -334,8 +335,9 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
 
     const novaContagem = lidasAtuais + 1;
     setContagens(prev => ({ ...prev, [embalagemAlvo]: novaContagem }));
-    
-    await enviarVzias(
+
+    // === CORREÇÃO: Tenta gravar e SÓ continua se der certo ===
+    const sucessoVzias = await enviarVzias(
       carga?.cod_carg ?? "",
       palletAtual?.cod_palete?.trim() ?? "",
       embalagemAlvo,
@@ -343,6 +345,67 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
       String(novaContagem)
     );
 
+    if (!sucessoVzias) {
+      // Reverte contagem se falhou
+      setContagens(prev => ({ ...prev, [embalagemAlvo]: lidasAtuais }));
+      return; // SAI AQUI - não faz log falso
+    }
+
+    // Primeira caixa do item
+    if (novaContagem === 1) {
+      const sucessoPrimeira = await enviarVzias(
+        carga?.cod_carg ?? "", 
+        palletAtual?.cod_palete?.trim() ?? "", 
+        embalagemAlvo, 
+        "1", 
+        String(novaContagem)
+      );
+
+      if (sucessoPrimeira) {
+        await atualizarOp(
+          carga?.cod_carg ?? "", 
+          palletAtual?.cod_palete?.trim() ?? "",
+          embalagemAlvo, 
+          "8", 
+          dataformatada, 
+          horaformatada, 
+          String(matricula ?? ""),
+          caixaCliente, 
+          caixaGDBR, 
+          "1",
+          `Item ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} iniciado pelo operador ${matricula}`
+        );
+      }
+    }
+
+    if (novaContagem === total) {
+      const sucessoFinal = await enviarVzias(
+        carga?.cod_carg ?? "", 
+        palletAtual?.cod_palete?.trim() ?? "", 
+        embalagemAlvo, "3", 
+        String(novaContagem)
+      );
+
+      if (sucessoFinal) {
+        await atualizarOp(
+          carga?.cod_carg ?? "", 
+          palletAtual?.cod_palete?.trim() ?? "",
+          embalagemAlvo, 
+          "8", 
+          dataformatada, 
+          horaformatada, 
+          String(matricula ?? ""),
+          caixaCliente, 
+          caixaGDBR, 
+          "1",
+          `Caixa ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} concluido pelo operador ${matricula}`
+        );
+
+        setVaziasItens(prev => prev.map(it => it.cod_emb === embalagemAlvo ? { ...it, status: "3" } : it));
+      }
+    }
+
+    // ÚNICO LOG DE SUCESSO (fora das condições especiais)
     await atualizarOp(
       carga?.cod_carg ?? "",
       palletAtual?.cod_palete?.trim() ?? "",
@@ -355,58 +418,6 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
       caixaGDBR, "1",
       `Caixa ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} lida com sucesso pelo operador ${matricula}`
     );
-
-    // Primeira caixa do item
-    if (novaContagem === 1) {
-
-      await enviarVzias(
-        carga?.cod_carg ?? "", 
-        palletAtual?.cod_palete?.trim() ?? "", 
-        embalagemAlvo, 
-        "1", 
-        String(novaContagem)
-      );
-
-      await atualizarOp(
-        carga?.cod_carg ?? "", 
-        palletAtual?.cod_palete?.trim() ?? "",
-        embalagemAlvo, 
-        "8", 
-        dataformatada, 
-        horaformatada, 
-        String(matricula ?? ""),
-        caixaCliente, 
-        caixaGDBR, 
-        "1",
-        `Item ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} iniciado pelo operador ${matricula}`
-      );
-    }
-
-    if (novaContagem === total) {
-
-      await enviarVzias(
-        carga?.cod_carg ?? "", 
-        palletAtual?.cod_palete?.trim() ?? "", 
-        embalagemAlvo, "3", 
-        String(novaContagem)
-      );
-
-      await atualizarOp(
-        carga?.cod_carg ?? "", 
-        palletAtual?.cod_palete?.trim() ?? "",
-        embalagemAlvo, 
-        "8", 
-        dataformatada, 
-        horaformatada, 
-        String(matricula ?? ""),
-        caixaCliente, 
-        caixaGDBR, 
-        "1",
-        `Caixa ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} concluido pelo operador ${matricula}`
-      );
-
-      setVaziasItens(prev => prev.map(it => it.embalagem === embalagemAlvo ? { ...it, status: "3" } : it));
-    }
 
     setCaixaCliente(""); 
     setCaixaGDBR("");
@@ -474,60 +485,36 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
     }
   }
 
-  async function enviarVzias(
-    codCarg: string,
-    codPale: string,
-    codEmb: string,
-    cOperac: string,
-    cQuant: string
-  ) {
+  async function enviarVzias(codCarg: string, codPale: string, codEmb: string, cOperac: string, cQuant: string): Promise<boolean> {
     console.log("Enviando VZIAS:", { codCarg, codPale, codEmb, cOperac, cQuant });
 
     try {
       setLoading(true);
       const resp = await apiVzias.post("", {
-        codCarg, 
-        codPale, 
-        codEmb, 
-        cOperac, 
-        cQuant
+        codCarg, codPale, codEmb, cOperac, cQuant
       });
 
-      const data = resp.data;
-      console.log("RESPOSTA VZIAS:", data);
+      console.log("RESPOSTA VZIAS status:", resp.status, "data:", resp.data);
 
-      if (data === "Gravado com sucessoGravado com sucesso" || data === "Gravado com sucesso") {
+      if (resp.status >= 200 && resp.status < 300 && 
+          (resp.data === "Gravado com sucesso" || resp.data === "Gravado com sucessoGravado com sucesso")) {
         setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
-        setCaixaCliente("");
-        setCaixaGDBR("");
-        console.log("VZIAS enviado com sucesso");
-        return;
+        console.log("VZIAS OK");
+        return true;
       }
 
-      console.error("VZIAS falhou:", data);
-      if (contagemCaixas > 0) {
-        setContagemCaixas(prev => Math.max(0, prev - 1));
-      }
-      console.log("Contagem após:", contagemCaixas - 1);
+      console.error("VZIAS falhou (status não 2xx):", resp.status, resp.data);
+      setErro("Falha no servidor VZIAS");
+      return false;
 
-      if (data?.Erro) {
-        setErro(data.Erro);
+    } catch (error: any) {
+      console.error("Erro API VZIAS 500:", error.response?.status, error.response?.data);
+      if (error.response?.data) {
+        setErro(`Erro servidor: ${error.response.data}`);
       } else {
-        setErro("Falha ao atualizar VZIAS.");
+        setErro("Erro ao conectar com VZIAS");
       }
-      setCaixaCliente("");
-      setCaixaGDBR("");
-    } catch (error) {
-      console.error("Erro API VZIAS:", error);
-
-      if (contagemCaixas > 0) {
-        setContagemCaixas(prev => Math.max(0, prev - 1));
-      }
-      console.log("Contagem após:", contagemCaixas - 1);
-
-      setErro("Erro ao conectar com a API de VZIAS.");
-      setCaixaCliente("");
-      setCaixaGDBR("");
+      return false;
     } finally {
       setLoading(false);
     }
@@ -620,13 +607,13 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
               <div key={index} className={`flex items-center justify-center h-11 ${getStatusColor
               (item.status)} rounded-full px-3 py-2.5`}>
                 <p className="text-lg font-bold text-blue-600 min-w-[55px] text-center">
-                  {item.embalagem}
+                  {item.cod_emb}
                 </p>
                 <p className="text-lg font-bold text-blue-600 min-w-[25px] text-center mx-1">
-                  {item.quantidade}
+                  {item.qtd_total}
                 </p>
                 <p className="text-lg font-bold text-blue-600 min-w-[25px] text-center mx-1">
-                  {contagens[item.embalagem] ?? 0}
+                  {contagens[item.cod_emb] ?? 0}
                 </p>
               </div>
           ))}
