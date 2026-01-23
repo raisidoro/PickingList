@@ -190,14 +190,12 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
         });
 
         setShowModal(true); 
-        // Find the first item not finalized
         const currentItem = itensVazios.find(item => item.status !== "3");
         if (currentItem) {
           setEmbalagem(currentItem.embalagem);
           setTotalCaixas(currentItem.quantidade);
           setContagemCaixas(0);
         } else {
-          // All finalized, close popup
           setShowModal(false);
         }
       } else {
@@ -287,7 +285,7 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
       atualizarOp(
         carga?.cod_carg ?? "", 
         palletAtual?.cod_palete?.trim() ?? "",
-        "-",
+        embalagem,
         "8", 
         dataformatada, 
         horaformatada, 
