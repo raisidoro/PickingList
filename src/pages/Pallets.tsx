@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { apiCarga, apiItens, apiPallets, apiVzias } from "../lib/axios";
+import { apiCarga, apiItens, apiPallets } from "../lib/axios";
 import { MdArrowBack } from "react-icons/md";
 import { GoChevronLeft, GoChevronRight } from "react-icons/go";
 import { TfiReload } from "react-icons/tfi";
@@ -150,9 +150,9 @@ export default function PalletViewSingle() {
   }, [matricula]);
 
   useEffect(() => {
-    setCaixasVazias("Existem caixas vazias para finalizar a montagem deste palete!");
+    setCaixasVazias(`Existem caixas vazias para finalizar a montagem do Pallet ${palletIndex}`);
   }, []);
-
+  
   const lastSoundTimeRef = useRef<number>(0);
 
   // ordem de visualização dos itens 
@@ -319,6 +319,14 @@ export default function PalletViewSingle() {
         setLoading(false);
       });
   }, [carga]);
+
+   useEffect(() => {
+    if (caixasVazias && palletAtual) {
+      setCaixasVazias(`Existem caixas vazias para o Pallet: ${palletAtual.cod_palete}`);
+      console.log("Popup recarregado pallet:", palletIndex, palletAtual.cod_palete);
+    }
+  }, [palletIndex]);
+
 
   // --Inicio das validações do processo de montagem de carga--
 
@@ -1316,6 +1324,7 @@ export default function PalletViewSingle() {
               matricula={matricula}             
               onClose={() => setCaixasVazias(null)}
               onRespond={() => setCaixasVazias(null)}
+              palletIndex={palletIndex}
             />
           )}
 
