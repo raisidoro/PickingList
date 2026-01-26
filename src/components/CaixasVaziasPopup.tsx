@@ -299,10 +299,10 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
       setCaixaGDBR("");
       return false;
     }
-    leituracaixa(alvo);
+    leituracaixa(alvo, caixaClienteVal, caixaGDBRVal);
   }
   
-  async function leituracaixa(embalagemAlvo: string) {
+  async function leituracaixa(embalagemAlvo: string, caixaClienteVal: string, caixaGDBRVal: string) {
     const itemAlvo = vaziasItens.find(i => i.cod_emb === embalagemAlvo);
     if (!itemAlvo) {
       setErro("Item não encontrado no palete.");
@@ -323,8 +323,8 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
         dataformatada, 
         horaformatada, 
         String(matricula ?? ""),
-        caixaCliente, 
-        caixaGDBR, 
+        caixaClienteVal, 
+        caixaGDBRVal, 
         "2",
         `Embalagem: ${embalagemAlvo}. Todas as caixas desse item já foram lidas.`
       );
@@ -372,8 +372,8 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
           dataformatada, 
           horaformatada, 
           String(matricula ?? ""),
-          caixaCliente, 
-          caixaGDBR, 
+          caixaClienteVal, 
+          caixaGDBRVal, 
           "1",
           `Item ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} iniciado pelo operador ${matricula}`
         );
@@ -399,8 +399,8 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
           dataformatada, 
           horaformatada, 
           String(matricula ?? ""),
-          caixaCliente, 
-          caixaGDBR, 
+          caixaClienteVal, 
+          caixaGDBRVal, 
           "1",
           `Caixa ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} concluido pelo operador ${matricula}`
         );
@@ -425,8 +425,8 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
       dataformatada, 
       horaformatada, 
       String(matricula ?? ""),
-      caixaCliente, 
-      caixaGDBR, 
+      caixaClienteVal, 
+      caixaGDBRVal, 
       "1",
       `Caixa ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} lida com sucesso pelo operador ${matricula}`
     );
