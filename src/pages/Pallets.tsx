@@ -148,10 +148,6 @@ export default function PalletViewSingle() {
       setErro("Matrícula não encontrada. Por favor, faça login novamente.");
     }
   }, [matricula]);
-
-  useEffect(() => {
-    setCaixasVazias("Existem caixas vazias para finalizar a montagem deste palete!");
-  }, []);
   
   const lastSoundTimeRef = useRef<number>(0);
 
@@ -202,6 +198,27 @@ export default function PalletViewSingle() {
   useEffect(() => {
     setSucess(null);
   }, [palletIndex]);
+
+  // Verificar caixas vazias pendentes quando o pallet muda
+  useEffect(() => {
+    if (palletAtual && carga && palletAtual.itens.every(item => item.status === "3")) {
+      const checkVazias = async () => {
+        try {
+          const resp = await apiVzias.get("", {
+            params: { cCarga: carga.cod_carg, cPalet: palletAtual.cod_palete }
+          });
+          const itens = Array.isArray(resp.data?.itens) ? resp.data.itens : [];
+          const hasPendingVazias = itens.some((item: any) => item.status !== "3");
+          if (hasPendingVazias) {
+            setCaixasVazias("Há caixas vazias pendentes para este pallet.");
+          }
+        } catch (error) {
+          console.error("Erro ao verificar caixas vazias:", error);
+        }
+      };
+      checkVazias();
+    }
+  }, [palletAtual?.cod_palete, carga, palletAtual?.itens]);
 
   if (!carga) {
     return (
@@ -965,10 +982,10 @@ export default function PalletViewSingle() {
         });
         console.log("Resposta apiVzias.data:", respVzias.data);
         const itens = Array.isArray(respVzias.data?.itens) ? respVzias.data.itens : [];
-        const hasCaixasVazias = itens.length > 0;
-        console.log("hasCaixasVazias:", hasCaixasVazias);
-        if (hasCaixasVazias) {
-          setCaixasVazias("Existem caixas vazias para finalizar a montagem deste palete!");
+        const hasPendingCaixasVazias = itens.some((item: any) => item.status !== "3");
+        console.log("hasPendingCaixasVazias:", hasPendingCaixasVazias);
+        if (hasPendingCaixasVazias) {
+          setCaixasVazias("Existem caixas vazias pendentes para finalizar a montagem deste palete!");
           finalizandoPaleteRef.current = false;
           return;
         }
@@ -1322,7 +1339,12 @@ export default function PalletViewSingle() {
             <CaixasVaziasPopup
               message={caixasVazias}
               matricula={matricula}             
-              onClose={() => setCaixasVazias(null)}
+              onClose={(finalized) => {
+                setCaixasVazias(null);
+                if (finalized) {
+                  atualizarStatusPalete("3");
+                }
+              }}
               onRespond={() => setCaixasVazias(null)}
               palletIndex={palletIndex}
             />

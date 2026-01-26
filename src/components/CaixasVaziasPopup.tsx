@@ -11,7 +11,7 @@ Modal.setAppElement("#root");
 interface CaixasVaziasPopupProps {
   message: string | null;
   matricula?: string | null;
-  onClose: () => void;
+  onClose: (finalized?: boolean) => void;
   onRespond: (response: string) => void;
   palletIndex?: number;
 }
@@ -185,7 +185,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
         setContagens(prev => {
           const novo = { ...prev };
           for (const it of itensVazios) {
-            if (novo[it.cod_emb] == null) novo[it.cod_emb] = 0;
+            novo[it.cod_emb] = it.qtd_total - it.qtd_restante;
           }
           return novo;
         });
@@ -336,6 +336,8 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
     const novaContagem = lidasAtuais + 1;
     setContagens(prev => ({ ...prev, [embalagemAlvo]: novaContagem }));
 
+    setVaziasItens(prev => prev.map(it => it.cod_emb === embalagemAlvo ? { ...it, qtd_restante: it.qtd_total - novaContagem } : it));
+
     // === CORREÇÃO: Tenta gravar e SÓ continua se der certo ===
     const sucessoVzias = await enviarVzias(
       carga?.cod_carg ?? "",
@@ -375,6 +377,8 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
           "1",
           `Item ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} iniciado pelo operador ${matricula}`
         );
+
+        setVaziasItens(prev => prev.map(it => it.cod_emb === embalagemAlvo ? { ...it, status: "1" } : it));
       }
     }
 
@@ -402,10 +406,17 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
         );
 
         setVaziasItens(prev => prev.map(it => it.cod_emb === embalagemAlvo ? { ...it, status: "3" } : it));
+
+        // Verificar se todos os itens estão finalizados (status "3")
+        const updatedItens = vaziasItens.map(it => it.cod_emb === embalagemAlvo ? { ...it, status: "3" } : it);
+        const allFinalized = updatedItens.every(item => item.status === "3");
+        if (allFinalized) {
+          setSucess({ type: "LEITURA", message: "Todas as caixas vazias foram lidas com sucesso!" });
+          setTimeout(() => onClose(true), 2000); 
+        }
       }
     }
 
-    // ÚNICO LOG DE SUCESSO (fora das condições especiais)
     await atualizarOp(
       carga?.cod_carg ?? "",
       palletAtual?.cod_palete?.trim() ?? "",
@@ -415,7 +426,8 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
       horaformatada, 
       String(matricula ?? ""),
       caixaCliente, 
-      caixaGDBR, "1",
+      caixaGDBR, 
+      "1",
       `Caixa ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} lida com sucesso pelo operador ${matricula}`
     );
 
@@ -511,8 +523,12 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
       console.error("Erro API VZIAS 500:", error.response?.status, error.response?.data);
       if (error.response?.data) {
         setErro(`Erro servidor: ${error.response.data}`);
+        setCaixaCliente("");
+        setCaixaGDBR("");
       } else {
         setErro("Erro ao conectar com VZIAS");
+        setCaixaCliente("");
+        setCaixaGDBR("");
       }
       return false;
     } finally {
@@ -540,7 +556,7 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
       onRequestClose={() => {
         const allFinalized = vaziasItens.every(item => item.status === "3");
         if (allFinalized) {
-          onClose();
+          onClose(true);
         } else {
           setErro("Finalize todos os itens antes de fechar o popup.");
         }
@@ -613,7 +629,7 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
                   {item.qtd_total}
                 </p>
                 <p className="text-lg font-bold text-blue-600 min-w-[25px] text-center mx-1">
-                  {contagens[item.cod_emb] ?? 0}
+                  {item.qtd_total - item.qtd_restante}
                 </p>
               </div>
           ))}
