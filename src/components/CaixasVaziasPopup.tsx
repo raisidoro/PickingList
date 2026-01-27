@@ -4,7 +4,7 @@ import ErrorPopup from "./CompErrorPopup";
 import SuccessPopup from "./CompSuccessPopup";
 import successSound from '../sounds/success.mp3';
 import { apiPallets, apiLog, apiVzias } from "../lib/axios";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, } from "react-router-dom";
 
 Modal.setAppElement("#root");
 
@@ -66,7 +66,7 @@ interface VaziaItem {
 export default function CaixasVaziasPopup({ message, matricula, onClose, palletIndex }: CaixasVaziasPopupProps) {
   const [embalagem, setEmbalagem] = useState<string>("");
   const [contagens, setContagens] = useState<Record<string, number>>({});
-  const [totalCaixas, setTotalCaixas] = useState<number>(0);
+  const [, setTotalCaixas] = useState<number>(0);
   const location = useLocation();
   const [caixaGDBR, setCaixaGDBR] = useState("");
   const [caixaCliente, setCaixaCliente] = useState("");
@@ -77,7 +77,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
   const [erro, setErro] = useState<string | null>(null);
   type SuccessType = "LEITURA" 
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [contagemCaixas, setContagemCaixas] = useState(0);
   const caixaGDBRRef = useRef<HTMLInputElement>(null);
   const dataAtual = new Date();
