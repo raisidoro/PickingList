@@ -4,7 +4,7 @@ import ErrorPopup from "./CompErrorPopup";
 import SuccessPopup from "./CompSuccessPopup";
 import successSound from '../sounds/success.mp3';
 import { apiPallets, apiLog, apiVzias } from "../lib/axios";
-import { useLocation, } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 Modal.setAppElement("#root");
 
@@ -80,6 +80,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
   const [, setLoading] = useState(false);
   const [contagemCaixas, setContagemCaixas] = useState(0);
   const caixaGDBRRef = useRef<HTMLInputElement>(null);
+  const caixaClienteRef = useRef<HTMLInputElement>(null);
   const dataAtual = new Date();
   const dataformatada =
     dataAtual.getFullYear().toString() +
@@ -572,6 +573,7 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
         <p className="text-gray-700 break-words text-center">{message || "Ler todas as caixas vazias"}</p>
 
         <input
+          ref={caixaClienteRef}
           type="text"
           autoFocus
           placeholder="Caixa Cliente"
@@ -581,6 +583,9 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
             handleCaixaClienteChange(e);
             setCaixaCliente(e.target.value);
             if (erro) setErro(null);
+            if (e.target.value.trim()) {
+              caixaGDBRRef.current?.focus();
+            }
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && e.currentTarget.value.trim()) {
@@ -639,15 +644,24 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
         {erro && (
           <ErrorPopup
             message={erro}
-            onClose={() => setErro(null)}
+            onClose={() => {
+              setErro(null);
+              caixaClienteRef.current?.focus();
+            }}
           />
         )}
 
         {success && (
           <SuccessPopup
             message={success.message}
-            onClose={() => setSucess(null)}
-            onRespond={() => setSucess(null)}
+            onClose={() => {
+              setSucess(null);
+              caixaClienteRef.current?.focus();
+            }}
+            onRespond={() => {
+              setSucess(null);
+              caixaClienteRef.current?.focus();
+            }}
           />
         )}
       </div>
