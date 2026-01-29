@@ -4,7 +4,7 @@ import ErrorPopup from "./CompErrorPopup";
 import SuccessPopup from "./CompSuccessPopup";
 import successSound from '../sounds/success.mp3';
 import { apiPallets, apiLog, apiVzias } from "../lib/axios";
-import { useLocation } from "react-router-dom";
+import { useLocation, } from "react-router-dom";
 
 Modal.setAppElement("#root");
 
