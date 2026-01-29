@@ -155,7 +155,9 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     }
   }, [palletAtual?.cod_palete, carga]);
 
-  const carregarVaziasItens = async (codCarga: string, codPalete: string) => {
+  const carregarVaziasItens = async (
+    codCarga: string, 
+    codPalete: string) => {
     console.log("CHAMANDO /PICK_VZIA:", { codCarga, codPalete });
     try {
       const response = await apiVzias.get("/PICK_VZIA", {
@@ -236,7 +238,8 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     setCaixaCliente(caixaCliente);
   }
 
-  function sanitize(input: string): string {
+  function sanitize(
+    input: string): string {
     return input
       .normalize('NFKC')
       .replace(/\s+/g, '')
@@ -245,7 +248,9 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
       .toUpperCase();
   }
 
-  function extrairEmbalagem(caixa: string, embalagemEsperada: string): string | null {
+  function extrairEmbalagem(
+    caixa: string, 
+    embalagemEsperada: string): string | null {
     if (!caixa) return null;
 
     const caixaNorm = sanitize(caixa);
@@ -268,19 +273,22 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     }
     return null;
   }
-
   
-function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): string | null {
-  for (const it of vaziasItens) {
-    const emb = sanitize(it.cod_emb);
-    const c1 = extrairEmbalagem(caixaClienteVal, emb);
-    const c2 = extrairEmbalagem(caixaGDBRVal, emb);
-    if (c1 === emb && c2 === emb) return it.cod_emb;
+  function descobrirEmbalagem(
+    caixaClienteVal: string, 
+    caixaGDBRVal: string): string | null {
+    for (const it of vaziasItens) {
+      const emb = sanitize(it.cod_emb);
+      const c1 = extrairEmbalagem(caixaClienteVal, emb);
+      const c2 = extrairEmbalagem(caixaGDBRVal, emb);
+      if (c1 === emb && c2 === emb) return it.cod_emb;
+    }
+    return null;
   }
-  return null;
-}
 
-  function verificaCaixas(caixaClienteVal: string, caixaGDBRVal: string) {
+  function verificaCaixas(
+    caixaClienteVal: string, 
+    caixaGDBRVal: string) {
     const alvo = descobrirEmbalagem(caixaClienteVal, caixaGDBRVal);
     if (!alvo) {
       setErro("Embalagem não pertence ao palete ou leituras não conferem.");
@@ -303,7 +311,10 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
     leituracaixa(alvo, caixaClienteVal, caixaGDBRVal);
   }
   
-  async function leituracaixa(embalagemAlvo: string, caixaClienteVal: string, caixaGDBRVal: string) {
+  async function leituracaixa(
+    embalagemAlvo: string, 
+    caixaClienteVal: string, 
+    caixaGDBRVal: string) {
     const itemAlvo = vaziasItens.find(i => i.cod_emb === embalagemAlvo);
     if (!itemAlvo) {
       setErro("Item não encontrado no palete.");
@@ -498,7 +509,12 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
     }
   }
 
-  async function enviarVzias(codCarg: string, codPale: string, codEmb: string, cOperac: string, cQuant: string): Promise<boolean> {
+  async function enviarVzias(
+    codCarg: string, 
+    codPale: string, 
+    codEmb: string, 
+    cOperac: string, 
+    cQuant: string): Promise<boolean> {
     console.log("Enviando VZIAS:", { codCarg, codPale, codEmb, cOperac, cQuant });
 
     try {
@@ -538,7 +554,8 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
   }
 
   //Função para definir a cor da borda 
-  function getStatusColor(status: string | undefined) {
+  function getStatusColor(
+    status: string | undefined) {
     switch (status) {
       case "0":
         return "bg-gray-100 border-gray-300 text-black";
@@ -627,7 +644,7 @@ function descobrirEmbalagem(caixaClienteVal: string, caixaGDBRVal: string): stri
           {vaziasItens.map((item, index) => (
               <div key={index} className={`flex items-center justify-center h-11 ${getStatusColor
               (item.status)} rounded-full px-3 py-2.5`}>
-                <p className="text-lg font-bold text-blue-600 min-w-[55px] text-center">
+                <p className="text-lg font-bold text-blue-600 min-w-[65px] text-center">
                   {item.cod_emb}
                 </p>
                 <p className="text-lg font-bold text-blue-600 min-w-[25px] text-center mx-1">
