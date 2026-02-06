@@ -199,26 +199,46 @@ export default function PalletViewSingle() {
     setSucess(null);
   }, [palletIndex]);
 
+  // Confere no servidor se TODOS os itens do palete realmente estão finalizados
+  async function allItemsFinalizedServer(cPalete: string): Promise<boolean> {
+    try {
+      const resp = await apiItens.get("", {
+        params: { cCarga: carga?.cod_carg ?? "", cPalet: cPalete }
+      });
+
+      const itens = Array.isArray(resp.data?.itens) ? resp.data.itens : [];
+
+      return itens.length > 0 && itens.every(
+        (it: any) => String(it.status ?? it.Status) === "3"
+      );
+    } catch (error) {
+      console.error("Erro ao revalidar itens no servidor:", error);
+      return false;
+    }
+  }
+
   // Verificar caixas vazias pendentes quando o pallet muda
   useEffect(() => {
-    if (palletAtual && carga && palletAtual.itens.every(item => item.status === "3")) {
-      const checkVazias = async () => {
-        try {
-          const resp = await apiVzias.get("", {
-            params: { cCarga: carga.cod_carg, cPalet: palletAtual.cod_palete }
-          });
-          const itens = Array.isArray(resp.data?.itens) ? resp.data.itens : [];
-          const hasPendingVazias = itens.some((item: any) => item.status !== "3");
-          if (hasPendingVazias) {
-            setCaixasVazias("Há caixas vazias pendentes para este pallet.");
-          }
-        } catch (error) {
-          console.error("Erro ao verificar caixas vazias:", error);
+  if (!palletAtual || !carga) return;
+
+    (async () => {
+      const itemsOk = await allItemsFinalizedServer(palletAtual.cod_palete);
+      if (!itemsOk) return; // Não abre popup se itens não finalizados no servidor
+
+      try {
+        const resp = await apiVzias.get("", {
+          params: { cCarga: carga.cod_carg, cPalet: palletAtual.cod_palete }
+        });
+        const itens = Array.isArray(resp.data?.itens) ? resp.data.itens : [];
+        const hasPendingVazias = itens.some((item: any) => item.status !== "3");
+        if (hasPendingVazias) {
+          setCaixasVazias("Há caixas vazias pendentes para este pallet.");
         }
-      };
-      checkVazias();
-    }
-  }, [palletAtual?.cod_palete, carga, palletAtual?.itens]);
+      } catch (error) {
+        console.error("Erro ao verificar caixas vazias:", error);
+      }
+    })();
+  }, [palletAtual?.cod_palete, carga]); 
 
   if (!carga) {
     return (
