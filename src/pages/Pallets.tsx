@@ -3,6 +3,7 @@ import { apiCarga, apiItens, apiPallets, apiVzias } from "../lib/axios";
 import { MdArrowBack } from "react-icons/md";
 import { GoChevronLeft, GoChevronRight } from "react-icons/go";
 import { TfiReload } from "react-icons/tfi";
+import { LuPackageSearch } from "react-icons/lu";
 import { useLocation, useNavigate } from "react-router-dom";
 import { type JSX } from "react";
 import ErrorPopup from '../components/CompErrorPopup.tsx';
@@ -11,6 +12,7 @@ import ConfirmationPopup from "../components/CompConfirmationPopup.tsx";
 import { apiLog } from "../lib/axios";
 import successSound from '../sounds/success.mp3';
 import CaixasVaziasPopup from "../components/CaixasVaziasPopup.tsx";
+import CaixasVaziasView from "../components/CompCaixasVaziasView.tsx";
 
 // Define tipo de texto com variantes
 const textVariants = {
@@ -142,6 +144,7 @@ export default function PalletViewSingle() {
   const horaformatada = dataAtual.toTimeString().slice(0, 8);
   const matricula = location.state?.matricula || localStorage.getItem("matricula");
   let novaQtdCaixasLidas = 0;
+  const [showCaixasVazias, setShowCaixasVazias] = useState(false);
 
   useEffect(() => {
     if (!matricula) {
@@ -1329,6 +1332,13 @@ export default function PalletViewSingle() {
             <span onClick={() => refreshPalletsCompletos()}>
               <TfiReload className="text-gray-500 w-6 h-6 cursor-pointer hover:text-gray-700 cursor-pointer" title="Atualizar pallets" />
             </span>
+            <span
+                onClick={() => setShowCaixasVazias(true)}
+                className="cursor-pointer hover:text-gray-700"
+                title="Ver caixas vazias"
+              >
+                <LuPackageSearch className="text-gray-500 w-6 h-6" />
+              </span>
           </div>
 
           {loading && (
@@ -1369,6 +1379,12 @@ export default function PalletViewSingle() {
               palletIndex={palletIndex}
             />
           )}
+
+          <CaixasVaziasView
+            palletIndex={palletIndex}
+            isOpen={showCaixasVazias}
+            onClose={() => setShowCaixasVazias(false)}
+          />
 
           {!loading && !erro && palletAtual && (
             <>
