@@ -220,29 +220,6 @@ export default function PalletViewSingle() {
     }
   }
 
-  // Verificar caixas vazias pendentes quando o pallet muda
-  useEffect(() => {
-  if (!palletAtual || !carga) return;
-
-    (async () => {
-      const itemsOk = await allItemsFinalizedServer(palletAtual.cod_palete);
-      if (!itemsOk) return; // Não abre popup se itens não finalizados no servidor
-
-      try {
-        const resp = await apiVzias.get("", {
-          params: { cCarga: carga.cod_carg, cPalet: palletAtual.cod_palete }
-        });
-        const itens = Array.isArray(resp.data?.itens) ? resp.data.itens : [];
-        const hasPendingVazias = itens.some((item: any) => item.status !== "3");
-        if (hasPendingVazias) {
-          setCaixasVazias("Há caixas vazias pendentes para este pallet.");
-        }
-      } catch (error) {
-        console.error("Erro ao verificar caixas vazias:", error);
-      }
-    })();
-  }, [palletAtual?.cod_palete, carga]); 
-
   if (!carga) {
     return (
       <main className="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-gray-200 to-gray-300">

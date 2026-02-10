@@ -6,7 +6,7 @@ import successSound from '../sounds/success.mp3';
 import { apiPallets, apiLog, apiVzias } from "../lib/axios";
 import { useLocation, } from "react-router-dom";
 
-Modal.setAppElement("#root");
+1/Modal.setAppElement("#root");
 
 interface CaixasVaziasPopupProps {
   message: string | null;

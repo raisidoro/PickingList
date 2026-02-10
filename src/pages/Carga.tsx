@@ -8,6 +8,8 @@ import { TfiReload } from "react-icons/tfi";
 import { useNavigate, useLocation } from "react-router-dom";
 import ErrorPopup from "../components/CompErrorPopup.tsx";
 import ConfirmationPopup from "../components/CompConfirmationPopup.tsx";
+import { LuPackageSearch } from "react-icons/lu";
+import CompCaixasVaziasCarga from "../components/CompCaixasVaziasCarga";
 
 const textVariants = {
   default: "text-xl sm:text-2xl",
@@ -103,6 +105,7 @@ export default function CargaList({}: Props) {
   const matriculaStorage = localStorage.getItem("matricula") || undefined;
   const matricula = matriculaState || matriculaStorage || "";
 
+  const [cargaParaVazias, setCargaParaVazias] = useState<Carga | null>(null);
 
   async function confirmaCarga(response: string) {
     console.log(">> confirmaCarga chamada com:", { response, selectedCod, matricula });
@@ -554,6 +557,8 @@ export default function CargaList({}: Props) {
                     {getStatusText(safeTrim(carga.stat_col))}
                   </span>
 
+                <div className="botoes" style={{ display: "flex", justifyContent: "space-between", gap: "10px" }}>
+
                   <span
                     onClick={() =>
                       navigate("/PalletsView", { state: { carga, matricula } })
@@ -568,10 +573,36 @@ export default function CargaList({}: Props) {
                       title="Visualizar Paletes"
                     />
                   </span>
+
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();     
+                      setCargaParaVazias(carga);
+                    }}
+                    className="cursor-pointer hover:text-black-700"
+                    title="Ver caixas vazias da carga"
+                  >
+                    <LuPackageSearch className="text-black-500 w-6 h-6" />
+                  </span>
+                
+                </div>
+
                 </Text>
               </Card>
             ))}
           </div>
+
+            {cargaParaVazias && (
+              <CompCaixasVaziasCarga
+                isOpen={true}
+                onClose={() => {
+                  setCargaParaVazias(null);
+                  navigate("/Carga", { state: { matricula } });
+                }}
+                carga={cargaParaVazias}
+              />
+            )}
+
         </div>
       </Card>
     </main>
