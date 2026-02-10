@@ -89,6 +89,11 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
   const horaformatada = dataAtual.toTimeString().slice(0, 8);
   const [vaziasItens, setVaziasItens] = useState<VaziaItem[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const vaziasItensRef = useRef<VaziaItem[]>([]);
+
+  useEffect(() => {
+    vaziasItensRef.current = vaziasItens;
+  }, [vaziasItens]);
 
   //Carrega informações na montagem do componente
   useEffect(() => {
@@ -308,14 +313,16 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
       setCaixaGDBR("");
       return false;
     }
+    setEmbalagem(alvo);
     leituracaixa(alvo, caixaClienteVal, caixaGDBRVal);
+    return true;
   }
   
   async function leituracaixa(
     embalagemAlvo: string, 
     caixaClienteVal: string, 
     caixaGDBRVal: string) {
-    const itemAlvo = vaziasItens.find(i => i.cod_emb === embalagemAlvo);
+    const itemAlvo = vaziasItensRef.current?.find(i => i.cod_emb === embalagemAlvo);
     if (!itemAlvo) {
       setErro("Item não encontrado no palete.");
       return;
@@ -417,31 +424,42 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
           `Caixa ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} concluido pelo operador ${matricula}`
         );
 
-        setVaziasItens(prev => prev.map(it => it.cod_emb === embalagemAlvo ? { ...it, status: "3" } : it));
+        setVaziasItens(prev => {
+            const updatedItens = prev.map(it =>
+              it.cod_emb === embalagemAlvo ? { ...it, status: "3" } : it
+            );
 
-        // Verificar se todos os itens estão finalizados (status "3")
-        const updatedItens = vaziasItens.map(it => it.cod_emb === embalagemAlvo ? { ...it, status: "3" } : it);
-        const allFinalized = updatedItens.every(item => item.status === "3");
-        if (allFinalized) {
-          setSucess({ type: "LEITURA", message: "Todas as caixas vazias foram lidas com sucesso!" });
-          setTimeout(() => onClose(true), 2000); 
-        }
+            const proximoItem = updatedItens.find(it => it.status !== "3");
+
+            if (proximoItem) {
+              setEmbalagem(proximoItem.cod_emb);
+              setContagemCaixas(0);
+              setContagens(p => ({ ...p, [proximoItem.cod_emb]: 0 }));
+            } else {
+              setSucess({ type: "LEITURA", message: "Todas as caixas vazias foram lidas com sucesso!" });
+              setTimeout(() => onClose(true), 2000);
+            }
+
+            return updatedItens;
+          });
       }
     }
 
-    await atualizarOp(
-      carga?.cod_carg ?? "",
-      palletAtual?.cod_palete?.trim() ?? "",
-      embalagemAlvo, 
-      "8", 
-      dataformatada, 
-      horaformatada, 
-      String(matricula ?? ""),
-      caixaClienteVal, 
-      caixaGDBRVal, 
-      "1",
-      `Caixa ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} lida com sucesso pelo operador ${matricula}`
-    );
+    if (novaContagem <= total) {
+      await atualizarOp(
+        carga?.cod_carg ?? "",
+        palletAtual?.cod_palete?.trim() ?? "",
+        embalagemAlvo, 
+        "8", 
+        dataformatada, 
+        horaformatada, 
+        String(matricula ?? ""),
+        caixaClienteVal, 
+        caixaGDBRVal, 
+        "1",
+        `Caixa ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} lida com sucesso pelo operador ${matricula}`
+      );
+    }
 
     setCaixaCliente(""); 
     setCaixaGDBR("");
@@ -460,7 +478,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     cStatus: string,
     cHistor: string
     ){
-    console.log("LOG: ", { codCarga, codPale, codItem, cOperac, cLeit1, cLeit2 });
+    console.log("atualizarOp foi chamado", {codCarga, codPale, codItem, cOperac, cData, cHora, cUser, cLeit1, cLeit2, cStatus, cHistor});
 
     try {
       setLoading(true);
@@ -479,7 +497,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
       });
 
       const data = resp.data;
-      console.log("RESPOSTA LOG:", data);
+      console.log("RESPOSTA LOG:", data, resp.status);
       
       if (data === "Gravado com sucessoGravado com sucesso" || data === "Gravado com sucesso") {
         console.log("LOG enviado com sucesso");
