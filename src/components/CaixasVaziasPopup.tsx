@@ -253,6 +253,82 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
       .toUpperCase();
   }
 
+  // function temPontoEVirgula(input: string) {
+  //   return input.includes(';');
+  // }
+
+  // function normalizaCodEmb(cod: string): string {
+  //   return sanitize(cod).replace(/[^A-Z0-9\-]/g, '');
+  // }
+
+  // function existeCodEmbNoPallet(codEmb: string, itens: VaziaItem[]): boolean {
+  //   const alvo = normalizaCodEmb(codEmb);
+  //   return itens.some(i => normalizaCodEmb(i.cod_emb) === alvo);
+  // }
+
+  // function parseClienteEtiqueta(
+  //   etiqueta: string,
+  //   itens: VaziaItem[]
+  // ): { codEmb?: string; erro?: string } {
+  //   if (!temPontoEVirgula(etiqueta)) {
+  //     setErro("Formato de etiqueta do Cliente inválido.");
+  //     atualizarOp(
+  //       carga?.cod_carg ?? "", 
+  //       palletAtual?.cod_palete?.trim() ?? "",
+  //       embalagem,
+  //       "8", 
+  //       dataformatada, 
+  //       horaformatada, 
+  //       String(matricula ?? ""),
+  //       caixaCliente, 
+  //       caixaGDBR,
+  //       "2",
+  //       "Leitura inválida: Formato de etiqueta do Cliente inválido"
+  //     );
+  //   }
+
+  //   const primeiraParte = etiqueta.split(';')[0]?.trim();
+  //   const codEmb = normalizaCodEmb(primeiraParte);
+
+  //   if (!existeCodEmbNoPallet(codEmb, itens)) {
+  //     setErro("Embalagem da etiqueta do Cliente não pertence ao palete.");
+  //     atualizarOp(
+  //       carga?.cod_carg ?? "", 
+  //       palletAtual?.cod_palete?.trim() ?? "",
+  //       embalagem,
+  //       "8", 
+  //       dataformatada, 
+  //       horaformatada, 
+  //       String(matricula ?? ""),
+  //       caixaCliente, 
+  //       caixaGDBR,
+  //       "2",
+  //       "Leitura inválida: Embalagem da etiqueta do Cliente não pertence ao palete."
+  //     );
+  //   }
+
+  //   if (temPontoEVirgula(etiqueta)) {
+  //     setErro("Etiqueta do Cliente não deve conter ponto e vírgula.");
+  //     atualizarOp(
+  //       carga?.cod_carg ?? "", 
+  //       palletAtual?.cod_palete?.trim() ?? "",
+  //       embalagem,
+  //       "8", 
+  //       dataformatada, 
+  //       horaformatada, 
+  //       String(matricula ?? ""),
+  //       caixaCliente, 
+  //       caixaGDBR,
+  //       "2",
+  //       "Leitura inválida: Formato de etiqueta GDBR inválido"
+  //     );
+  //   }
+
+  //   //Log de erro
+
+  //   return { codEmb };
+  // }
+
   function extrairEmbalagem(
     caixa: string, 
     embalagemEsperada: string): string | null {
@@ -262,7 +338,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     const embalagemNorm = sanitize(embalagemEsperada);
 
     console.log('[DEBUG extrairEmbalagem] caixaNorm:', caixaNorm, 'embalagemNorm:', embalagemNorm);
-
     if (caixa.includes(';')) {
       const primeiraParte = caixa.split(';')[0].trim().toUpperCase();
       return primeiraParte || null;
@@ -306,7 +381,8 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
         horaformatada, 
         String(matricula ?? ""),
         caixaClienteVal, 
-        caixaGDBRVal, "2",
+        caixaGDBRVal, 
+        "2",
         "Leitura inválida: embalagem não encontrada ou divergente"
       );
       setCaixaCliente(""); 
@@ -622,12 +698,8 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
               caixaGDBRRef.current?.focus();
             }
           }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-              caixaGDBRRef.current?.focus();
-            }
-          }}
         />
+
 
         <input
           ref={caixaGDBRRef}

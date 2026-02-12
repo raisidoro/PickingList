@@ -220,6 +220,35 @@ export default function PalletViewSingle() {
     }
   }
 
+  // ADD: helper que checa e dispara popup quando necessário
+async function checkAndOpenCaixasVaziasIfNeededFor(pallet: Pallet) {
+  if (!carga || !pallet) return;
+
+  // Só faz sentido quando o palete está em montagem
+  if (pallet.stat_pale !== "1") return;
+
+  try {
+    const allFinal = await allItemsFinalizedServer(pallet.cod_palete);
+    if (!allFinal) return;
+
+    // Todos os itens finalizados -> checar caixas vazias
+    const respVzias = await apiVzias.get("", {
+      params: { cCarga: carga.cod_carg, cPalet: pallet.cod_palete }
+    });
+
+    const itensVzias = Array.isArray(respVzias.data?.itens) ? respVzias.data.itens : [];
+    const hasPendingCaixasVazias = itensVzias.some((it: any) => String(it.status) !== "3");
+
+    if (hasPendingCaixasVazias) {
+      setCaixasVazias(`Existem caixas vazias para o Pallet: ${pallet.cod_palete}`);
+    } else {
+        await atualizarStatusPalete("3");
+    }
+  } catch (err) {
+    console.error("Erro ao checar caixas vazias na entrada do palete:", err);
+  }
+}
+
   if (!carga) {
     return (
       <main className="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-gray-200 to-gray-300">
@@ -343,6 +372,12 @@ export default function PalletViewSingle() {
       console.log("Popup recarregado pallet:", palletIndex, palletAtual.cod_palete);
     }
   }, [palletIndex]);
+
+  useEffect(() => {
+    if (palletAtual) {
+      checkAndOpenCaixasVaziasIfNeededFor(palletAtual);
+    }
+  }, [palletAtual?.cod_palete, palletAtual?.stat_pale]);
 
 
   // --Inicio das validações do processo de montagem de carga--
@@ -906,6 +941,14 @@ export default function PalletViewSingle() {
             "",
             `Item ${kanbanitem} do Pallet ${_pallet.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} foi finalizado com ${qtdFinal} caixas lidas`
           );
+
+          const todosFinalizadosNoServidor = await allItemsFinalizedServer(_pallet.cod_palete);
+
+          if (todosFinalizadosNoServidor) {
+            console.log("Todos os itens do palete estão finalizados. Exibindo popup de caixas vazias.");
+            setCaixasVazias(`Existem caixas vazias para o Pallet: ${_pallet.cod_palete}`);
+            return;
+          }
 
         } else if (data?.Erro) {
           setErro(data.Erro);
