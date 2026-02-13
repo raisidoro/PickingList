@@ -69,6 +69,7 @@ interface PalletItem {
   embalagem: string;
   multiplo: string;
   status: string;
+  qtd_contada: number;
 }
 
 // Formato do pallet com seus itens
@@ -121,7 +122,6 @@ export default function PalletViewSingle() {
   const palletAtual = pallets.length > 0 ? pallets[palletIndex] : undefined;
   const totalPallets = pallets.length;
   const [, setItemIndex] = useState(0);
-  const [caixasLidas, setCaixasLidas] = useState(0);
   const [etiquetaLiberada, setEtiquetaLiberada] = useState(false);
   const [itemEmMontagem, setItemEmMontagem] = useState<PalletItem | null>(null);
   //Constantes para validação se a etiqueta do cliente confere o kanban GDBR
@@ -143,7 +143,6 @@ export default function PalletViewSingle() {
     String(dataAtual.getDate()).padStart(2, "0");
   const horaformatada = dataAtual.toTimeString().slice(0, 8);
   const matricula = location.state?.matricula || localStorage.getItem("matricula");
-  let novaQtdCaixasLidas = 0;
   const [showCaixasVazias, setShowCaixasVazias] = useState(false);
 
   useEffect(() => {
@@ -220,34 +219,31 @@ export default function PalletViewSingle() {
     }
   }
 
-  // ADD: helper que checa e dispara popup quando necessário
-async function checkAndOpenCaixasVaziasIfNeededFor(pallet: Pallet) {
-  if (!carga || !pallet) return;
+  async function checkAndOpenCaixasVaziasIfNeededFor(pallet: Pallet) {
+    if (!carga || !pallet) return;
 
-  // Só faz sentido quando o palete está em montagem
-  if (pallet.stat_pale !== "1") return;
+    if (pallet.stat_pale !== "1") return;
 
-  try {
-    const allFinal = await allItemsFinalizedServer(pallet.cod_palete);
-    if (!allFinal) return;
+    try {
+      const allFinal = await allItemsFinalizedServer(pallet.cod_palete);
+      if (!allFinal) return;
 
-    // Todos os itens finalizados -> checar caixas vazias
-    const respVzias = await apiVzias.get("", {
-      params: { cCarga: carga.cod_carg, cPalet: pallet.cod_palete }
-    });
+      const respVzias = await apiVzias.get("", {
+        params: { cCarga: carga.cod_carg, cPalet: pallet.cod_palete }
+      });
 
-    const itensVzias = Array.isArray(respVzias.data?.itens) ? respVzias.data.itens : [];
-    const hasPendingCaixasVazias = itensVzias.some((it: any) => String(it.status) !== "3");
+      const itensVzias = Array.isArray(respVzias.data?.itens) ? respVzias.data.itens : [];
+      const hasPendingCaixasVazias = itensVzias.some((it: any) => String(it.status) !== "3");
 
-    if (hasPendingCaixasVazias) {
-      setCaixasVazias(`Existem caixas vazias para o Pallet: ${pallet.cod_palete}`);
-    } else {
-        await atualizarStatusPalete("3");
+      if (hasPendingCaixasVazias) {
+        setCaixasVazias(`Existem caixas vazias para o Pallet: ${pallet.cod_palete}`);
+      } else {
+          await atualizarStatusPalete("3");
+      }
+    } catch (err) {
+      console.error("Erro ao checar caixas vazias na entrada do palete:", err);
     }
-  } catch (err) {
-    console.error("Erro ao checar caixas vazias na entrada do palete:", err);
   }
-}
 
   if (!carga) {
     return (
@@ -346,6 +342,7 @@ async function checkAndOpenCaixasVaziasIfNeededFor(pallet: Pallet) {
                       embalagem: it.embalagem ?? it.Embalagem ?? "-",
                       multiplo: it.multiplo ?? it.Multiplo ?? "-",
                       status: it.status ?? it.Status ?? "-",
+                      qtd_contada: it.qtd_contada ?? it.qtd_con?? "-",
                     }))
                     : [],
                 }))
@@ -594,7 +591,6 @@ async function checkAndOpenCaixasVaziasIfNeededFor(pallet: Pallet) {
     if (sequencialValido) {
       setItemEmMontagem(foundItem);
       setItemIndex(itemIdx);
-      setCaixasLidas(0);
       caixas(palletAtual, foundItem, itemIdx);
     }
   }
@@ -770,12 +766,12 @@ async function checkAndOpenCaixasVaziasIfNeededFor(pallet: Pallet) {
   //Valida quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
   async function caixas(_pallet: Pallet, _item: PalletItem, _itemIdx: number) {
     const etiquetaLog = etiquetaClienteRef.current?.value || "";
-    console.log("etiquetaLOG pós preenchimento" + etiquetaClienteRef.current?.value);
     if (!_pallet || !_item) return;
 
     const totalCaixas = Number(_item.qtd_caixa);
+    const lidasAtuais = Number(_item.qtd_contada);
 
-    if (caixasLidas >= totalCaixas || _item.status === "3") {
+    if (lidasAtuais >= totalCaixas || _item.status === "3") {
       setErro("Todas as caixas do item já foram lidas. Não é possível continuar.");
       setEtiquetaCliente("");
       setKanbanGDBR("");
@@ -793,13 +789,10 @@ async function checkAndOpenCaixasVaziasIfNeededFor(pallet: Pallet) {
         "2",
         `Kanban GDBR ${kanbanGDBR}. Todas as caixas desse item já foram lidas. `
       );
-
       return;
     }
 
-    novaQtdCaixasLidas = caixasLidas + 1;
-    console.log("Caixas lidas atualizadas para:", novaQtdCaixasLidas);
-    setCaixasLidas(novaQtdCaixasLidas);
+    const proximaQtd = lidasAtuais + 1; 
 
     try {
       setLoading(true);
@@ -809,7 +802,7 @@ async function checkAndOpenCaixasVaziasIfNeededFor(pallet: Pallet) {
         codPale: _pallet.cod_palete.trim(),
         codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
         codSequ: _item.sequen,
-        qtdrest: novaQtdCaixasLidas,
+        qtdrest: proximaQtd,    
         operac: "1"
       });
 
@@ -819,155 +812,139 @@ async function checkAndOpenCaixasVaziasIfNeededFor(pallet: Pallet) {
         setKanbanGDBR("");
         setEtiquetaCliente("");
         setEtiquetaLiberada(false);
+
         const updatedPallets = await refreshPalletsCompletos();
 
-        //pra atualizar o status do item
         try {
           const updated = updatedPallets ?? pallets;
           const currentPallet = updated.find(p => p.cod_palete === _pallet.cod_palete) || updated[palletIndex];
           if (currentPallet) {
-            const updatedItem = currentPallet.itens.find(it => String(it.sequen) === String(_item.sequen) || it.kanban === _item.kanban);
+            const updatedItem = currentPallet.itens.find(it =>
+              String(it.sequen) === String(_item.sequen) || it.kanban === _item.kanban);
             if (updatedItem) {
               if (updatedItem.status === "3") {
                 setItemEmMontagem(null);
               } else {
                 setItemEmMontagem(updatedItem as PalletItem);
               }
+
+              if (proximaQtd === 1) {
+                atualizarOp(
+                  carga?.cod_carg.toString() ?? "",
+                  palletAtual?.cod_palete.trim() ?? "",
+                  kanbanitem,
+                  "5",
+                  dataformatada.toString(),
+                  horaformatada.toString(),
+                  String(matricula ?? ""),
+                  "",
+                  "",
+                  "",
+                  `Item ${_item.kanban} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} iniciada pelo operador ${matricula}`
+                );
+              }
+
+              atualizarOp(
+                carga?.cod_carg.toString() ?? "",
+                palletAtual?.cod_palete.trim() ?? "",
+                kanbanitem,
+                "4",
+                dataformatada.toString(),
+                horaformatada.toString(),
+                matricula,
+                kanbanGDBR,
+                etiquetaLog,
+                "1",
+                `Item ${_item.kanban ?? ""} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} lido com sucesso pelo operador ${matricula} `
+              );
+
+              if (proximaQtd >= totalCaixas) {
+                await finalizarItem(_pallet, updatedItem);
+              }
             }
           }
-        } catch (err) {
-        }
+        } catch {}
+      } else if (data?.Erro) {
+        setErro(data.Erro);
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
+      } else {
+        setErro("Falha ao atualizar o status do item (Leitura de caixa)");
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
+      }
+    } catch {
+      setErro("Erro ao conectar com a API.");
+      setEtiquetaCliente("");
+      setKanbanGDBR("");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-        if (novaQtdCaixasLidas === 1) {
-          setItemEmMontagem(_item);
-          atualizarOp(
-            carga?.cod_carg.toString() ?? "",
-            palletAtual?.cod_palete.trim() ?? "",
-            kanbanitem,
-            "5",
-            dataformatada.toString(),
-            horaformatada.toString(),
-            String(matricula ?? ""),
-            "",
-            "",
-            "",
-            `Item ${_item.kanban} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} iniciada pelo operador ${matricula}`
-          );
-        }
+  async function finalizarItem(_pallet: Pallet, _item: PalletItem) {
+    if (!_pallet || !_item) return;
+
+    if (_item.status === "3") return;
+
+    try {
+      finalizandoItemRef.current = true;
+      setLoading(true);
+
+      const qtdFinal = Number(_item.qtd_contada);
+
+      const resp = await apiItens.post("", {
+        codCarg: carga?.cod_carg,
+        codPale: _pallet.cod_palete.trim(),
+        codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
+        codSequ: _item.sequen,
+        qtdrest: qtdFinal,  
+        operac: "3"
+      });
+
+      const data = resp.data;
+      if (data === "Kanban finalizado") {
+        setSucess({ type: "ITEM", message: "Todas as caixas foram lidas, item finalizado com sucesso!" });
+
+        setItemEmMontagem(null);
+        await atualizarItensDoPallet();
 
         atualizarOp(
           carga?.cod_carg.toString() ?? "",
           palletAtual?.cod_palete.trim() ?? "",
           kanbanitem,
-          "4",
+          "5",
           dataformatada.toString(),
           horaformatada.toString(),
-          matricula,
-          kanbanGDBR,
-          etiquetaLog,
-          "1",
-          `Item ${_item.kanban ?? ""} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} lido com sucesso pelo operador ${matricula} `
+          String(matricula ?? ""),
+          "",
+          "",
+          "",
+          `Item ${kanbanitem} do Pallet ${_pallet.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} foi finalizado com ${qtdFinal} caixas lidas`
         );
 
-        // Se todas as caixas foram lidas, finaliza o item   
-        if (novaQtdCaixasLidas >= totalCaixas) {
-          finalizarItem(_pallet, _item, novaQtdCaixasLidas);
+        const todosFinalizadosNoServidor = await allItemsFinalizedServer(_pallet.cod_palete);
+
+        if (todosFinalizadosNoServidor) {
+          setCaixasVazias(`Existem caixas vazias para o Pallet: ${_pallet.cod_palete}`);
+          return;
         }
       } else if (data?.Erro) {
         setErro(data.Erro);
         setEtiquetaCliente("");
         setKanbanGDBR("");
       } else {
-        setErro("Falha ao atualizar o status do item Leitura de caixa");
+        setErro("Falha ao atualizar o status do item (Finalização)");
         setEtiquetaCliente("");
         setKanbanGDBR("");
       }
     } catch {
       setErro("Erro ao conectar com a API.");
-      novaQtdCaixasLidas = novaQtdCaixasLidas - 1;
-      console.log("Revertendo caixas lidas para:", novaQtdCaixasLidas);
-      setCaixasLidas(novaQtdCaixasLidas);
-
       setEtiquetaCliente("");
       setKanbanGDBR("");
-
-      //falha de leitua
-      if (novaQtdCaixasLidas === 0) {
-        setItemEmMontagem(prev => {
-          if (!prev) return null;
-          if (String(prev.sequen) === String(_item.sequen) && prev.kanban === _item.kanban) return null;
-          return prev;
-        });
-      }
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function finalizarItem(_pallet: Pallet, _item: PalletItem, qtdFinal: number) {
-    if (!_pallet || !_item) return;
-
-    if (_item.status !== "3") {
-      try {
-        finalizandoItemRef.current = true;
-        setLoading(true);
-        const resp = await apiItens.post("", {
-          codCarg: carga?.cod_carg,
-          codPale: _pallet.cod_palete.trim(),
-          codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
-          codSequ: _item.sequen,
-          qtdrest: qtdFinal,
-          operac: "3"
-        });
-
-        const data = resp.data;
-        if (data === "Kanban finalizado") {
-          setSucess({ type: "ITEM", message: "Todas as caixas foram lidas com sucesso, item finalizado com sucesso!" });
-          setCaixasLidas(0);
-
-          setItemEmMontagem(null);
-          atualizarItensDoPallet();
-
-          atualizarOp(
-            carga?.cod_carg.toString() ?? "",
-            palletAtual?.cod_palete.trim() ?? "",
-            kanbanitem,
-            "5",
-            dataformatada.toString(),
-            horaformatada.toString(),
-            String(matricula ?? ""),
-            "",
-            "",
-            "",
-            `Item ${kanbanitem} do Pallet ${_pallet.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} foi finalizado com ${qtdFinal} caixas lidas`
-          );
-
-          const todosFinalizadosNoServidor = await allItemsFinalizedServer(_pallet.cod_palete);
-
-          if (todosFinalizadosNoServidor) {
-            console.log("Todos os itens do palete estão finalizados. Exibindo popup de caixas vazias.");
-            setCaixasVazias(`Existem caixas vazias para o Pallet: ${_pallet.cod_palete}`);
-            return;
-          }
-
-        } else if (data?.Erro) {
-          setErro(data.Erro);
-          setEtiquetaCliente("");
-          setKanbanGDBR("");
-        } else {
-          setErro("Falha ao atualizar o status do item Finalização");
-          novaQtdCaixasLidas = novaQtdCaixasLidas - 1;
-          setEtiquetaCliente("");
-          setKanbanGDBR("");
-        }
-      } catch {
-        setErro("Erro ao conectar com a API.");
-        setEtiquetaCliente("");
-        setKanbanGDBR("");
-      } finally {
-        setLoading(false);
-        finalizandoItemRef.current = false;
-      }
+      finalizandoItemRef.current = false;
     }
   }
 
@@ -989,7 +966,8 @@ async function checkAndOpenCaixasVaziasIfNeededFor(pallet: Pallet) {
           ...updated[palletIndex],
           itens: novosItens.map((it: any) => ({
             ...it,
-            status: it.status ?? "0"
+            status: it.status ?? "0",
+            qtd_contada: it.qtd_contada ?? it.qtd_contada ?? "-",
           }))
         };
 
@@ -1227,6 +1205,7 @@ async function checkAndOpenCaixasVaziasIfNeededFor(pallet: Pallet) {
                     embalagem: it.embalagem ?? it.Embalagem ?? "-",
                     multiplo: it.multiplo ?? it.Multiplo ?? "-",
                     status: it.status ?? it.Status ?? "-",
+                    qtd_contada: it.qtd_contada ?? it.qtd_contada ?? "-",
                   }))
                   : [],
               }))
