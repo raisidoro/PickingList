@@ -150,7 +150,7 @@ export default function PalletViewSingle() {
       setErro("Matrícula não encontrada. Por favor, faça login novamente.");
     }
   }, [matricula]);
-  
+
   const lastSoundTimeRef = useRef<number>(0);
 
   // ordem de visualização dos itens 
@@ -238,7 +238,7 @@ export default function PalletViewSingle() {
       if (hasPendingCaixasVazias) {
         setCaixasVazias(`Existem caixas vazias para o Pallet: ${pallet.cod_palete}`);
       } else {
-          await atualizarStatusPalete("3");
+        await atualizarStatusPalete("3");
       }
     } catch (err) {
       console.error("Erro ao checar caixas vazias na entrada do palete:", err);
@@ -342,7 +342,7 @@ export default function PalletViewSingle() {
                       embalagem: it.embalagem ?? it.Embalagem ?? "-",
                       multiplo: it.multiplo ?? it.Multiplo ?? "-",
                       status: it.status ?? it.Status ?? "-",
-                      qtd_contada: it.qtd_contada ?? it.qtd_con?? "-",
+                      qtd_contada: it.qtd_contada ?? it.qtd_con ?? "-",
                     }))
                     : [],
                 }))
@@ -363,7 +363,7 @@ export default function PalletViewSingle() {
       });
   }, [carga]);
 
-   useEffect(() => {
+  useEffect(() => {
     if (caixasVazias && palletAtual) {
       setCaixasVazias(`Existem caixas vazias para o Pallet: ${palletAtual.cod_palete}`);
       console.log("Popup recarregado pallet:", palletIndex, palletAtual.cod_palete);
@@ -792,7 +792,7 @@ export default function PalletViewSingle() {
       return;
     }
 
-    const proximaQtd = lidasAtuais + 1; 
+    const proximaQtd = lidasAtuais + 1;
 
     try {
       setLoading(true);
@@ -802,7 +802,7 @@ export default function PalletViewSingle() {
         codPale: _pallet.cod_palete.trim(),
         codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
         codSequ: _item.sequen,
-        qtdrest: proximaQtd,    
+        qtdrest: proximaQtd,
         operac: "1"
       });
 
@@ -863,7 +863,7 @@ export default function PalletViewSingle() {
               }
             }
           }
-        } catch {}
+        } catch { }
       } else if (data?.Erro) {
         setErro(data.Erro);
         setEtiquetaCliente("");
@@ -885,8 +885,6 @@ export default function PalletViewSingle() {
   async function finalizarItem(_pallet: Pallet, _item: PalletItem) {
     if (!_pallet || !_item) return;
 
-    if (_item.status === "3") return;
-
     try {
       finalizandoItemRef.current = true;
       setLoading(true);
@@ -898,7 +896,7 @@ export default function PalletViewSingle() {
         codPale: _pallet.cod_palete.trim(),
         codKanb: kanbanGDBR.includes("|") ? kanbanGDBR.split("|")[1] : "",
         codSequ: _item.sequen,
-        qtdrest: qtdFinal,  
+        qtdrest: qtdFinal,
         operac: "3"
       });
 
@@ -923,12 +921,15 @@ export default function PalletViewSingle() {
           `Item ${kanbanitem} do Pallet ${_pallet.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} foi finalizado com ${qtdFinal} caixas lidas`
         );
 
-        const todosFinalizadosNoServidor = await allItemsFinalizedServer(_pallet.cod_palete);
+        setTimeout(async () => {
+          console.log("Aguardando 300ms e revalidando pallet após finalizar item");
+          const todosFinalizadosNoServidor = await allItemsFinalizedServer(_pallet.cod_palete);
+          console.log("Resultado allItemsFinalizedServer após item finalizado:", todosFinalizadosNoServidor);
 
-        if (todosFinalizadosNoServidor) {
-          setCaixasVazias(`Existem caixas vazias para o Pallet: ${_pallet.cod_palete}`);
-          return;
-        }
+          if (todosFinalizadosNoServidor) {
+            await checkAndOpenCaixasVaziasIfNeededFor(_pallet);
+          }
+        }, 300);
       } else if (data?.Erro) {
         setErro(data.Erro);
         setEtiquetaCliente("");
@@ -995,7 +996,7 @@ export default function PalletViewSingle() {
       if (finalizandoPaleteRef.current) return;
       finalizandoPaleteRef.current = true;
 
-    // Verifica caixas vazias antes de finalizar o palete
+      // Verifica caixas vazias antes de finalizar o palete
       try {
         console.log("Verificando caixas vazias para palete:", palletAtual.cod_palete);
         const respVzias = await apiVzias.get("", {
@@ -1013,7 +1014,7 @@ export default function PalletViewSingle() {
       } catch (error) {
         console.error("Erro ao verificar caixas vazias:", error);
       }
-   }
+    }
 
     try {
       setLoading(true);
@@ -1307,9 +1308,9 @@ export default function PalletViewSingle() {
                 if (palletAtual?.stat_pale !== "1") {
                   navigate("/Carga", { state: { matricula: matricula } })
                 } else {
-                   setErro("Palete está em conferência! Por favor, finalize antes de retornar a página de cargas.");
-                   setEtiquetaCliente("");
-                   setKanbanGDBR("");
+                  setErro("Palete está em conferência! Por favor, finalize antes de retornar a página de cargas.");
+                  setEtiquetaCliente("");
+                  setKanbanGDBR("");
                 }
               }}
               className="focus:outline-none"
@@ -1332,12 +1333,12 @@ export default function PalletViewSingle() {
               <TfiReload className="text-gray-500 w-6 h-6 cursor-pointer hover:text-gray-700 cursor-pointer" title="Atualizar pallets" />
             </span>
             <span
-                onClick={() => setShowCaixasVazias(true)}
-                className="cursor-pointer hover:text-gray-700"
-                title="Ver caixas vazias"
-              >
-                <LuPackageSearch className="text-gray-500 w-6 h-6" />
-              </span>
+              onClick={() => setShowCaixasVazias(true)}
+              className="cursor-pointer hover:text-gray-700"
+              title="Ver caixas vazias"
+            >
+              <LuPackageSearch className="text-gray-500 w-6 h-6" />
+            </span>
           </div>
 
           {loading && (
@@ -1363,11 +1364,11 @@ export default function PalletViewSingle() {
               onClose={() => setConfirm(null)}
             />
           )}
-          
+
           {caixasVazias && (
             <CaixasVaziasPopup
               message={caixasVazias}
-              matricula={matricula}             
+              matricula={matricula}
               onClose={(finalized) => {
                 setCaixasVazias(null);
                 if (finalized) {
