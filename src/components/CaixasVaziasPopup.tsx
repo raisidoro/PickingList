@@ -732,6 +732,9 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
             message={erro}
             onClose={() => {
               setErro(null);
+              setCaixaCliente("");
+              setCaixaGDBR("");
+              setClienteValido(false);
               caixaClienteRef.current?.focus();
             }}
           />
