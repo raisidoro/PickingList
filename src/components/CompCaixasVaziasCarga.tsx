@@ -211,7 +211,7 @@ export default function CompCaixasVaziasCarga({
         )}
 
         {!loading && !erro && agregados.length > 0 && (
-          <div className="flex flex-col gap-1.5 max-h-[52vh] overflow-auto">
+          <div className="flex flex-col gap-1.5 max-h-[30vh] overflow-auto">
             <p className="text-center text-gray-700 font-semibold text-xs">
               Embalagem | Total | Lidas | Restante
             </p>
