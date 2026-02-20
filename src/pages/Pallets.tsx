@@ -236,7 +236,7 @@ export default function PalletViewSingle() {
       const hasPendingCaixasVazias = itensVzias.some((it: any) => String(it.status) !== "3");
 
       if (hasPendingCaixasVazias) {
-        setCaixasVazias(`Existem caixas vazias para o Pallet: ${pallet.cod_palete}`);
+        setCaixasVazias(`Existem caixas vazias para o palete: ${pallet.cod_palete}`);
       } else {
         await atualizarStatusPalete("3");
       }

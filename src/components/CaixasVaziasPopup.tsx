@@ -70,6 +70,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
   const location = useLocation();
   const [caixaGDBR, setCaixaGDBR] = useState("");
   const [caixaCliente, setCaixaCliente] = useState("");
+  const [clienteValido, setClienteValido] = useState<boolean>(false);
   const carga = location.state?.carga as Carga | undefined;
   const [pallets, setPallets] = useState<Pallet[]>([]);
   const palletIndexFinal = palletIndex ?? 0;
@@ -253,81 +254,23 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
       .toUpperCase();
   }
 
-  // function temPontoEVirgula(input: string) {
-  //   return input.includes(';');
-  // }
+  // validações de formato das etiquetas
+  function isClienteFormatoValido(etiqueta: string): boolean {
+    const s = sanitize(etiqueta);
+    if (!s.includes(";")) return false;
+    const primeira = s.split(";")[0];
+    return primeira.length > 0 && s !== primeira;
+  }
 
-  // function normalizaCodEmb(cod: string): string {
-  //   return sanitize(cod).replace(/[^A-Z0-9\-]/g, '');
-  // }
-
-  // function existeCodEmbNoPallet(codEmb: string, itens: VaziaItem[]): boolean {
-  //   const alvo = normalizaCodEmb(codEmb);
-  //   return itens.some(i => normalizaCodEmb(i.cod_emb) === alvo);
-  // }
-
-  // function parseClienteEtiqueta(
-  //   etiqueta: string,
-  //   itens: VaziaItem[]
-  // ): { codEmb?: string; erro?: string } {
-  //   if (!temPontoEVirgula(etiqueta)) {
-  //     setErro("Formato de etiqueta do Cliente inválido.");
-  //     atualizarOp(
-  //       carga?.cod_carg ?? "", 
-  //       palletAtual?.cod_palete?.trim() ?? "",
-  //       embalagem,
-  //       "8", 
-  //       dataformatada, 
-  //       horaformatada, 
-  //       String(matricula ?? ""),
-  //       caixaCliente, 
-  //       caixaGDBR,
-  //       "2",
-  //       "Leitura inválida: Formato de etiqueta do Cliente inválido"
-  //     );
-  //   }
-
-  //   const primeiraParte = etiqueta.split(';')[0]?.trim();
-  //   const codEmb = normalizaCodEmb(primeiraParte);
-
-  //   if (!existeCodEmbNoPallet(codEmb, itens)) {
-  //     setErro("Embalagem da etiqueta do Cliente não pertence ao palete.");
-  //     atualizarOp(
-  //       carga?.cod_carg ?? "", 
-  //       palletAtual?.cod_palete?.trim() ?? "",
-  //       embalagem,
-  //       "8", 
-  //       dataformatada, 
-  //       horaformatada, 
-  //       String(matricula ?? ""),
-  //       caixaCliente, 
-  //       caixaGDBR,
-  //       "2",
-  //       "Leitura inválida: Embalagem da etiqueta do Cliente não pertence ao palete."
-  //     );
-  //   }
-
-  //   if (temPontoEVirgula(etiqueta)) {
-  //     setErro("Etiqueta do Cliente não deve conter ponto e vírgula.");
-  //     atualizarOp(
-  //       carga?.cod_carg ?? "", 
-  //       palletAtual?.cod_palete?.trim() ?? "",
-  //       embalagem,
-  //       "8", 
-  //       dataformatada, 
-  //       horaformatada, 
-  //       String(matricula ?? ""),
-  //       caixaCliente, 
-  //       caixaGDBR,
-  //       "2",
-  //       "Leitura inválida: Formato de etiqueta GDBR inválido"
-  //     );
-  //   }
-
-  //   //Log de erro
-
-  //   return { codEmb };
-  // }
+  function isGDBRFormatoValido(etiqueta: string, embalagemEsperada?: string): boolean {
+    const s = sanitize(etiqueta);
+    // gdbg nunca deve conter ponto-e-vírgula
+    if (s.includes(";")) return false;
+    // não pode ser somente a embalagem
+    if (embalagemEsperada && s === sanitize(embalagemEsperada)) return false;
+    // deve ter pelo menos um caractere além da embalagem (ou ao menos ser não vazio)
+    return s.length > 0;
+  }
 
   function extrairEmbalagem(
     caixa: string, 
@@ -369,6 +312,19 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
   function verificaCaixas(
     caixaClienteVal: string, 
     caixaGDBRVal: string) {
+    // valida formato básico antes de tentar descobrir embalagem
+    if (!isClienteFormatoValido(caixaClienteVal)) {
+      setErro("Formato de etiqueta da Caixa Cliente inválido.");
+      setCaixaCliente("");
+      return false;
+    }
+
+    if (!isGDBRFormatoValido(caixaGDBRVal, embalagem)) {
+      setErro("Formato de etiqueta da Caixa GDBR inválido.");
+      setCaixaGDBR("");
+      return false;
+    }
+
     const alvo = descobrirEmbalagem(caixaClienteVal, caixaGDBRVal);
     if (!alvo) {
       setErro("Embalagem não pertence ao palete ou leituras não conferem.");
@@ -389,6 +345,18 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
       setCaixaGDBR("");
       return false;
     }
+
+    // não aceitamos apenas a embalagem nas leituras
+    if (
+      sanitize(caixaClienteVal) === sanitize(alvo) ||
+      sanitize(caixaGDBRVal) === sanitize(alvo)
+    ) {
+      setErro("Etiqueta inválida, informe a etiqueta completa!");
+      setCaixaCliente("");
+      setCaixaGDBR("");
+      return false;
+    }
+
     setEmbalagem(alvo);
     leituracaixa(alvo, caixaClienteVal, caixaGDBRVal);
     return true;
@@ -691,10 +659,16 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
           className="border-b-2 border-gray-400 bg-transparent px-2 py-2 text-lg focus:outline-none focus:border-blue-500 rounded-none w-full max-w-xs text-center"
           value={caixaCliente}
           onChange={(e) => {
+            const val = e.target.value;
             handleCaixaClienteChange(e);
-            setCaixaCliente(e.target.value);
+            setCaixaCliente(val);
             if (erro) setErro(null);
-            if (e.target.value.trim()) {
+            if (val.trim() && isClienteFormatoValido(val)) {
+              setClienteValido(true);
+            } else {
+              setClienteValido(false);
+            }
+            if (val.trim()) {
               caixaGDBRRef.current?.focus();
             }
           }}
@@ -712,15 +686,20 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
             handleCaixaGDBRChange(e);
             setCaixaGDBR(val);
 
-            if (caixaCliente?.trim()) {
-              verificaCaixas(caixaCliente, val);
-            } else {
-              setErro("Informe a Caixa Cliente antes de ler a Caixa GDBR.");
+            if (!clienteValido) {
+              setErro("Formato de etiqueta cliente inválido!");
               setCaixaGDBR("");
+              return;
             }
+
+            verificaCaixas(caixaCliente, val);
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+              if (!clienteValido) {
+                setErro("Formato de etiqueta cliente inválido!");
+                return;
+              }
               verificaCaixas(caixaCliente, e.currentTarget.value);
             }
           }}
