@@ -195,6 +195,10 @@ export default function CompCaixasVaziasCarga({
           </div>
         </div>
 
+        <p className="text-center text-gray-700 font-semibold text-xs">
+          Embalagem | Total | Lidas | Restante
+        </p>
+
         {/* Corpo */}
         {loading && (
           <p className="text-gray-700 text-center text-sm">Carregando caixas vazias...</p>
@@ -211,10 +215,7 @@ export default function CompCaixasVaziasCarga({
         )}
 
         {!loading && !erro && agregados.length > 0 && (
-          <div className="flex flex-col gap-1.5 max-h-[30vh] overflow-auto">
-            <p className="text-center text-gray-700 font-semibold text-xs">
-              Embalagem | Total | Lidas | Restante
-            </p>
+          <div className="flex flex-col gap-1.5 max-h-[25vh] overflow-auto">
             {agregados.map((a) => (
               <div
                 key={a.cod_emb}
