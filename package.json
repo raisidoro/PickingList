@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@capacitor/android": "^7.4.4",
-    "@capacitor/core": "^7.4.4",
+    "@capacitor/android": "^7.6.6",
+    "@capacitor/core": "^7.6.6",
     "@react-icons/all-files": "^4.1.0",
     "@tailwindcss/postcss": "^4.1.11",
     "@tailwindcss/vite": "^4.1.11",
@@ -30,7 +30,7 @@
     "zod": "^4.0.10"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.0.0",
+    "@capacitor/cli": "^8.4.0",
     "@react-native-community/cli": "latest",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",

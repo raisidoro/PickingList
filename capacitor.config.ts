@@ -1,25 +1,9 @@
-import { CapacitorConfig } from '@capacitor/cli';
+import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.example.app',  
-  appName: 'PickingList',
-  webDir: 'dist',
-
-  server: {
-    androidScheme: 'http',
-    cleartext: true
-  },
-
-  plugins: {
-    SplashScreen: {
-      launchShowDuration: 0
-    }
-  },
-
-  android: {
-    allowMixedContent: true,
-    webContentsDebuggingEnabled: true  
-  }
+  appId: 'picking.list',
+  appName: 'pickinglist',
+  webDir: 'dist'
 };
 
 export default config;
