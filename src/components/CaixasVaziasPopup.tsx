@@ -674,7 +674,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
           }}
         />
 
-
         <input
           ref={caixaGDBRRef}
           type="text"
@@ -693,15 +692,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
             }
 
             verificaCaixas(caixaCliente, val);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-              if (!clienteValido) {
-                setErro("Formato de etiqueta cliente inválido!");
-                return;
-              }
-              verificaCaixas(caixaCliente, e.currentTarget.value);
-            }
           }}
         />
 
