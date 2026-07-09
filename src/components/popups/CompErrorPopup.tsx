@@ -1,7 +1,7 @@
 import Modal from "react-modal";
 import useSound from 'use-sound';
 import React from "react";
-import errorSound from '../sounds/error.mp3';
+import errorSound from '../../sounds/error.mp3';
 
 Modal.setAppElement("#root");
 

@@ -2,8 +2,8 @@ import Modal from "react-modal";
 import React, { useState, useEffect, useRef } from "react";
 import ErrorPopup from "./CompErrorPopup";
 import SuccessPopup from "./CompSuccessPopup";
-import successSound from '../sounds/success.mp3';
-import { apiPallets, apiLog, apiVzias } from "../lib/axios";
+import successSound from '../../sounds/success.mp3';
+import { apiPallets, apiLog, apiVzias } from "../../lib/axios";
 import { useLocation, } from "react-router-dom";
 
 1/Modal.setAppElement("#root");

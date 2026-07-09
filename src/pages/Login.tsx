@@ -1,121 +1,13 @@
 import React, { type JSX } from "react";
 import { useState } from "react";
-import { apiOperadores } from "../lib/axios";
+import { autenticarOperador } from "../services/operadorService";
 import { useNavigate } from "react-router-dom";
-import SuccessPopup from "../components/CompSuccessPopup";
+import SuccessPopup from "../components/popups/CompSuccessPopup";
 
-const textVariants = {
-  default: "text-xl sm:text-2xl",
-  muted: "text-xl sm:text-2xl text-gray-500",
-  heading: "text-xl sm:text-2xl",
-  blast: "text-2xl sm:text-3xl",
-  title: "text-3xl sm:text-4xl",
-};
-
-type TextProps = {
-  as?: keyof JSX.IntrinsicElements;
-  variant?: keyof typeof textVariants;
-  className?: string;
-  children: React.ReactNode;
-} & React.HTMLAttributes<HTMLElement>;
-
-function Text({
-  as = "span",
-  variant = "default",
-  className = "",
-  children,
-  ...props
-}: TextProps) {
-  const Component = as;
-  return React.createElement(
-    Component,
-    {
-      className: `${textVariants[variant]} ${className}`,
-      ...props,
-    },
-    children
-  );
-}
-
-const buttonVariants = {
-  default: "bg-gray-100",
-  primary: "bg-gray-700",
-};
-
-type ButtonProps = {
-  variant?: keyof typeof buttonVariants;
-  className?: string;
-  children: React.ReactNode;
-} & React.ButtonHTMLAttributes<HTMLButtonElement>;
-
-function Button({
-  variant = "default",
-  className = "",
-  children,
-  ...props
-}: ButtonProps) {
-  return (
-    <button
-      className={`
-        flex items-center justify-center rounded-xl
-        p-3 cursor-pointer text-gray-100
-        bg-gray-800
-        ${buttonVariants[variant]}
-        ${className}
-      `}
-      {...props}
-    >
-      <Text as="span" variant="heading">
-        {children}
-      </Text>
-    </button>
-  );
-}
-
-type CardProps = {
-  children: React.ReactNode;
-  className?: string;
-};
-
-function Card({ children, className = "" }: CardProps) {
-  return (
-    <div
-      className={`
-        bg-gray-100 shadow-md
-        rounded-2xl
-        ${className}
-      `}
-    >
-      {children}
-    </div>
-  );
-}
-
-type InputProps = {
-  label: string;
-  type?: string;
-  className?: string;
-} & React.InputHTMLAttributes<HTMLInputElement>;
-
-function Input({ label, type = "text", className = "", ...props }: InputProps) {
-  return (
-    <label className="flex flex-col gap-1">
-      <Text variant="muted" className="text-base">
-        {label}
-      </Text>
-      <input
-        type={type}
-        className={`
-          bg-transparent border border-gray-500
-          rounded-xl px-2 py-2 text-gray-800
-          focus:outline-none focus:border-gray-700
-          ${className}
-        `}
-        {...props}
-      />
-    </label>
-  );
-}
+import { Text } from "../components/ui/text.tsx";
+import { Card } from "../components/ui/card.tsx";
+import { Input } from "../components/ui/input.tsx";
+import { Button } from "../components/ui/button.tsx";
 
 function LoginForm() {
   const [matricula, setMatricula] = useState("");
@@ -132,14 +24,11 @@ function LoginForm() {
     setErro(null);
 
     try {
-      const params = {
-      cNfc: "-", 
-      cMat: matricula.trim(),
-      cPass: senha.trim(),
-      };
 
-      const resp = await apiOperadores.get("", { params });
-      const data = resp.data;
+      const data = await autenticarOperador(
+        matricula.trim(),
+        senha.trim()
+      );
 
       if (data && data.Nome && data.Matricula) {
       setSucess(`Bem-vindo, ${data.Nome.trim()}`);
@@ -234,3 +123,8 @@ export default function Login() {
     </main>
   );
 }
+
+//EE22HM40152144258
+//E22HM;0152-1;4;I;10;600;400;330
+
+//X|G-052|0001

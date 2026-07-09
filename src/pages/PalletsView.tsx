@@ -4,98 +4,15 @@ import { MdArrowBack } from "react-icons/md";
 import { GoChevronLeft, GoChevronRight } from "react-icons/go";
 import { TfiReload } from "react-icons/tfi";
 import { useLocation, useNavigate } from "react-router-dom";
-import { type JSX } from "react";
-import ErrorPopup from '../components/CompErrorPopup.tsx';
+import ErrorPopup from '../components/popups/CompErrorPopup.tsx';
 
-const textVariants = {
-  default: "text-xl sm:text-2xl",
-  muted: "text-xl sm:text-2xl text-gray-500",
-  heading: "text-xl sm:text-2xl",
-  blast: "text-2xl sm:text-3xl",
-  title: "text-3xl sm:text-4xl",
-} as const;
+import type { Carga } from "../types/carga";
+import type { Pallet, PalletItem, PalletApi} from "../types/pallet.ts";
 
-type Variant = keyof typeof textVariants;
+import { getStatusColorPalete } from "../utils/status.ts";
 
-type TextProps = {
-  as?: keyof JSX.IntrinsicElements;
-  variant?: Variant;
-  className?: string;
-  children: React.ReactNode;
-} & React.HTMLAttributes<HTMLElement>;
-
-type CardProps = React.HTMLAttributes<HTMLDivElement> & {
-  children: React.ReactNode;
-  className?: string;
-};
-
-export interface Carga {
-  cod_carg: string;
-  cod_cli: string;
-  nome_cli: string;
-  data_col: string;
-  hora_col: string;
-  qtd_pale: string;
-  stat_col: string;
-}
-
-interface PalletApi {
-  cod_palete: string;
-  num_order: string;
-  cod_doca: string;
-  sup_doc: string;
-  cod_grupo: string;
-  cod_lane: string;
-  stat_pale: string;
-}
-
-interface PalletItem {
-  kanban: string;
-  sequen: string;
-  qtd_caixa: string;
-  qtd_peca: string;
-  embalagem: string;
-  multiplo: string;
-  status: string;
-}
-
-interface Pallet {
-  cod_palete: string;
-  stat_pale: string;
-  itens: PalletItem[];
-  cod_lane: string;
-  cod_grupo: string;
-  num_order: string;
-}
-
-function Text({
-  as = "span",
-  variant = "default",
-  className = "",
-  children,
-  ...props
-}: TextProps) {
-  const Component = as;
-  return React.createElement(
-    Component,
-    {
-      className: `${textVariants[variant]} ${className}`,
-      ...props,
-    },
-    children
-  );
-}
-
-function Card({ children, className = "", ...props }: CardProps) {
-  return (
-    <div
-      className={`bg-gray-100 shadow-md rounded-2xl ${className}`}
-      {...props}
-    >
-      {children}
-    </div>
-  );
-}
+import { Text } from "../components/ui/text.tsx";
+import { Card } from "../components/ui/card.tsx";
 
 export default function PalletViewSingle() {
   const navigate = useNavigate();
@@ -208,18 +125,6 @@ export default function PalletViewSingle() {
         setLoading(false);
       });
   }, [carga]);
-
-  //Função para definir a cor da borda 
-  function getStatusColor(status: string) {
-    switch (status) {
-      case "0":
-        return "bg-gray-100 border-gray-300 text-black";
-      case "1":
-        return "bg-orange-200 border-orange-400 text-black";
-      case "3":
-        return "bg-green-200 border-green-400 text-black";
-    }
-  }
 
   return (
     <main
@@ -337,7 +242,7 @@ export default function PalletViewSingle() {
                   {sortedItems.map((item, idx) => (
                     <Card
                       key={idx}
-                      className={`p-2 rounded-xl ${getStatusColor(item.status)} shadow-sm`}
+                      className={`p-2 rounded-xl ${getStatusColorPalete(item.status)} shadow-sm`}
                     >
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="font-semibold text-xs">Seq</span>

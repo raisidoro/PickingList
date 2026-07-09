@@ -1,6 +1,6 @@
 import Modal from "react-modal";
 import { useEffect, useMemo, useState } from "react";
-import { apiPallets, apiVzias } from "../lib/axios";
+import { apiPallets, apiVzias } from "../../lib/axios";
 
 Modal.setAppElement("#root");
 

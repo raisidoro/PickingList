@@ -1,91 +1,25 @@
-import React, { useEffect, useState } from "react";
-import { type JSX } from "react";
+import  { useEffect, useState } from "react";
 import { apiCarga, apiLog } from "../lib/axios";
 import { MdArrowBack } from "react-icons/md";
 import { CiFilter } from "react-icons/ci";
 import { IoEyeSharp } from "react-icons/io5";
 import { TfiReload } from "react-icons/tfi";
 import { useNavigate, useLocation } from "react-router-dom";
-import ErrorPopup from "../components/CompErrorPopup.tsx";
-import ConfirmationPopup from "../components/CompConfirmationPopup.tsx";
+import ErrorPopup from "../components/popups/CompErrorPopup.tsx";
+import ConfirmationPopup from "../components/popups/CompConfirmationPopup.tsx";
 import { LuPackageSearch } from "react-icons/lu";
-import CompCaixasVaziasCarga from "../components/CompCaixasVaziasCarga";
+import CompCaixasVaziasCarga from "../components/popups/CompCaixasVaziasCarga";
 
-const textVariants = {
-  default: "text-xl sm:text-2xl",
-  muted: "text-xl sm:text-2xl text-gray-500",
-  heading: "text-xl sm:text-2xl",
-  blast: "text-2xl sm:text-3xl",
-  title: "text-3xl sm:text-4xl",
-};
+import type { Carga } from "../types/carga";
+import {getStatusTextCarga, getStatusColorCarga, getStatusOrderCarga} from "../utils/status.ts";
+import { getDataHoraAtual } from "../utils/date.ts";
 
-type TextProps = {
-  as?: keyof JSX.IntrinsicElements;
-  variant?: keyof typeof textVariants;
-  className?: string;
-  children: React.ReactNode;
-} & React.HTMLAttributes<HTMLElement>;
-
-function Text({
-  as = "span",
-  variant = "default",
-  className = "",
-  children,
-  ...props
-}: TextProps) {
-  const Component = as;
-  return React.createElement(
-    Component,
-    {
-      className: `${textVariants[variant]} ${className}`,
-      ...props,
-    },
-    children
-  );
-}
-
-type CardProps = React.HTMLAttributes<HTMLDivElement> & {
-  children: React.ReactNode;
-  className?: string;
-};
-
-function Card({ children, className = "", ...props }: CardProps) {
-  return (
-    <div
-      className={`bg-gray-100 shadow-md rounded-2xl ${className}`}
-      {...props}
-    >
-      {children}
-    </div>
-  );
-}
-
-export interface Carga {
-  cod_carg: string;
-  cod_cli: string;
-  nome_cli: string;
-  data_col: string;
-  hora_col: string;
-  qtd_pale: string;
-  stat_col: string;
-}
+import { Text } from "../components/ui/text.tsx";
+import { Card } from "../components/ui/card.tsx";
 
 type Props = {
   handleSelectCarga?: (carga: Carga) => void;
 };
-
-function getStatusText(code: string) {
-  switch (code) {
-    case "0":
-      return "Pendente";
-    case "1":
-      return "Em montagem";
-    case "3":
-      return "Concluída ";
-    default:
-      return code;
-  }
-}
 
 export default function CargaList({}: Props) {
   const [cargas, setCargas] = useState<Carga[]>([]);
@@ -136,12 +70,7 @@ export default function CargaList({}: Props) {
 
       console.log("Resposta da API de Carga ao iniciar carga:", resp.data);
 
-      const dataAtual = new Date();
-      const dataLog =
-        dataAtual.getFullYear().toString() +
-        String(dataAtual.getMonth() + 1).padStart(2, "0") +
-        String(dataAtual.getDate()).padStart(2, "0"); 
-      const horaLog = dataAtual.toTimeString().slice(0, 8); 
+      const { dataLog, horaLog } = getDataHoraAtual();
 
       const userLog = matricula || localStorage.getItem("matricula") || "";
       if (!userLog) {
@@ -187,20 +116,6 @@ export default function CargaList({}: Props) {
     { code: "3", label: "Concluída" },
   ];
 
-  // Ordem de visualização das cargas
-  const getStatusOrder = (status: string) => {
-    switch (status) {
-      case "0":
-        return 0; // Pendente (primeiro)
-      case "1":
-        return 1; // Em montagem (segundo)
-      case "3":
-        return 2; // Concluída (último)
-      default:
-        return 3;
-    }
-  };
-
   const cargasFiltradas = cargas
     .filter((carga) => {
       const busca = searchTerm.toLowerCase();
@@ -223,8 +138,8 @@ export default function CargaList({}: Props) {
     })
     .sort((a, b) => {
       // Primeiro ordena por status
-      const statusOrderA = getStatusOrder(safeTrim(a.stat_col));
-      const statusOrderB = getStatusOrder(safeTrim(b.stat_col));
+      const statusOrderA = getStatusOrderCarga(safeTrim(a.stat_col));
+      const statusOrderB = getStatusOrderCarga(safeTrim(b.stat_col));
 
       if (statusOrderA !== statusOrderB) {
         return statusOrderA - statusOrderB;
@@ -276,19 +191,6 @@ export default function CargaList({}: Props) {
     }
     fetchCargas();
   }, []);
-
-  function getStatusColor(status: string) {
-    switch (status) {
-      case "0":
-        return "bg-gray-200 border-gray-400";
-      case "1":
-        return "bg-orange-200 border-orange-400";
-      case "3":
-        return "bg-green-200 border-green-400";
-      default:
-        return "bg-white border-gray-200";
-    }
-  }
 
   async function atualizarOp(
     codCarga: string,
@@ -514,7 +416,7 @@ export default function CargaList({}: Props) {
                 key={carga.cod_carg}
                 className={`
                   p-4 sm:p-6 cursor-pointer border rounded-2xl transition-shadow duration-300
-                  ${getStatusColor(safeTrim(carga.stat_col))}
+                  ${getStatusColorCarga(safeTrim(carga.stat_col))}
                   ${
                     selectedCod === carga.cod_carg
                       ? "border-black-600 shadow-black-300 shadow-lg"
@@ -554,7 +456,7 @@ export default function CargaList({}: Props) {
                   </span>
                   <span className="block">
                     <strong>Status:</strong>{" "}
-                    {getStatusText(safeTrim(carga.stat_col))}
+                    {getStatusTextCarga(safeTrim(carga.stat_col))}
                   </span>
 
                 <div className="botoes" style={{ display: "flex", justifyContent: "space-between", gap: "10px" }}>
