@@ -704,20 +704,39 @@ export default function PalletViewSingle() {
       }
     } catch {
       const itensAtualizados = await tentarReconciliar(_pallet);
+
       if (itensAtualizados) {
         const itemNoServidor = itensAtualizados.find(
           (it: any) => String(it.sequen) === String(_item.sequen) || it.kanban === _item.kanban
         );
-        if (itemNoServidor?.status === "3") {
-          // servidor já finalizou, cliente só não recebeu a resposta a tempo
-          setSucess({ type: "ITEM", message: "Item já estava finalizado no servidor. Estado sincronizado." });
-          setItemEmMontagem(null);
+
+        if (!itemNoServidor) {
+          setErro("Conexão instável. Não foi possível confirmar a leitura. Tente novamente.");
         } else {
-          setErro("Conexão instável. Leitura pode não ter sido salva. Tente novamente.");
+          const totalCaixasServidor = Number(itemNoServidor.qtd_caixa);
+          const lidasServidor = Number(itemNoServidor.qtd_contada);
+
+          if (itemNoServidor.status === "3") {
+            // já estava tudo certo no servidor (leitura + finalização)
+            setSucess({ type: "ITEM", message: "Item já estava finalizado no servidor. Estado sincronizado." });
+            setItemEmMontagem(null);
+          } else if (lidasServidor >= totalCaixasServidor && totalCaixasServidor > 0) {
+            // a leitura foi salva, mas a finalização nunca chegou a ser disparada — completa agora
+            setErro(null);
+            await finalizarItem(_pallet, itemNoServidor as PalletItem);
+          } else if (lidasServidor === proximaQtd) {
+            // a leitura foi salva normalmente, só a resposta que se perdeu
+            setSucess({ type: "LEITURA", message: "Leitura sincronizada com sucesso!" });
+            setItemEmMontagem(itemNoServidor as PalletItem);
+          } else {
+            // realmente não foi salva
+            setErro("Conexão instável. Leitura pode não ter sido salva. Tente novamente.");
+          }
         }
       } else {
         setErro("Sem conexão com o servidor. Verifique a internet e tente novamente.");
       }
+
       setEtiquetaCliente("");
       setKanbanGDBR("");
     } finally {
