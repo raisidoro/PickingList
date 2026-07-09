@@ -60,6 +60,7 @@ export default function PalletViewSingle() {
   const finalizandoPaleteRef = useRef(false);
   const finalizandoCargaRef = useRef(false);
   const finalizandoItemRef = useRef(false);
+  const autoCorrigindoRef = useRef<Set<string>>(new Set());
   const { dataLog, horaLog } = getDataHoraAtual();
 
   const matricula = location.state?.matricula || localStorage.getItem("matricula");
@@ -87,6 +88,12 @@ export default function PalletViewSingle() {
       }
     }
   }, [pallets]);
+
+  useEffect(() => {
+    if (palletAtual && palletAtual.stat_pale === "1" && palletAtual.itens?.length) {
+      autoCorrigirPendencias(palletAtual, palletAtual.itens);
+    }
+  }, [palletAtual?.cod_palete, palletAtual?.itens]);
 
   useEffect(() => {
     setSucess(null);
@@ -858,44 +865,60 @@ export default function PalletViewSingle() {
     }
   }
 
-  async function atualizarItensDoPallet() {
-    try {
-      const resp = await apiItens.get("", {
-        params: {
-          cCarga: carga?.cod_carg,
-          cPalet: palletAtual?.cod_palete
+  function precisaFinalizarNoServidor(item: any): boolean {
+    const total = Number(item.qtd_caixa);
+    const lidas = Number(item.qtd_contada);
+    return item.status !== "3" && total > 0 && lidas >= total;
+  }
+
+  async function autoCorrigirPendencias(pallet: Pallet, itens: any[]) {
+    for (const item of itens) {
+      const chave = `${pallet.cod_palete}-${item.sequen}`;
+      if (precisaFinalizarNoServidor(item) && !autoCorrigindoRef.current.has(chave)) {
+        autoCorrigindoRef.current.add(chave);
+        console.log("Auto-correção: item com todas as caixas lidas mas não finalizado. Corrigindo:", item.kanban);
+        try {
+          await finalizarItem(pallet, item as PalletItem);
+        } finally {
+          autoCorrigindoRef.current.delete(chave);
         }
-      });
-
-      const novosItens = resp.data?.itens ?? [];
-
-      setPallets((prevPallets) => {
-        const updated = [...prevPallets];
-
-        updated[palletIndex] = {
-          ...updated[palletIndex],
-          itens: novosItens.map((it: any) => ({
-            ...it,
-            status: it.status ?? "0",
-            qtd_contada: it.qtd_contada ?? it.qtd_contada ?? "-",
-          }))
-        };
-
-        const todosFinalizados = updated[palletIndex].itens.every(
-          (item) => item.status === "3"
-        );
-
-        if (todosFinalizados) {
-          console.log("Todos os itens finalizados, chamando atualizarStatusPalete(3)");
-          atualizarStatusPalete("3");
-        }
-
-        return updated;
-      });
-    } catch {
-      setErro("Erro ao atualizar itens do palete.");
+      }
     }
   }
+
+ async function atualizarItensDoPallet() {
+  try {
+    const resp = await apiItens.get("", {
+      params: { cCarga: carga?.cod_carg, cPalet: palletAtual?.cod_palete }
+    });
+
+    const novosItens = resp.data?.itens ?? [];
+
+    setPallets((prevPallets) => {
+      const updated = [...prevPallets];
+      updated[palletIndex] = {
+        ...updated[palletIndex],
+        itens: novosItens.map((it: any) => ({
+          ...it,
+          status: it.status ?? "0",
+          qtd_contada: it.qtd_contada ?? "-",
+        }))
+      };
+      const todosFinalizados = updated[palletIndex].itens.every((item) => item.status === "3");
+      if (todosFinalizados) {
+        atualizarStatusPalete("3");
+      }
+      return updated;
+    });
+
+    // NOVO: corrige qualquer item que já tem todas as caixas lidas mas não foi finalizado
+    if (palletAtual) {
+      await autoCorrigirPendencias(palletAtual, novosItens);
+    }
+  } catch {
+    setErro("Erro ao atualizar itens do palete.");
+  }
+}
 
   async function atualizarStatusPalete(status: string) {
   if (!palletAtual || !carga) return;
