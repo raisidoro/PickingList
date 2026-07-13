@@ -28,3 +28,18 @@ export interface Pallet {
   cod_grupo: string;
   num_order: string;
 }
+
+export interface CaixasVazias {
+  message: string | null;
+  matricula?: string | null;
+  onClose: (finalized?: boolean) => void;
+  onRespond: (response: string) => void;
+  palletIndex?: number;
+}
+
+export interface VaziaItem {
+  cod_emb: string;
+  qtd_total: number;
+  status: string;
+  qtd_restante: number;
+}
