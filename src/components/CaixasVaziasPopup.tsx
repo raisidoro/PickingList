@@ -489,9 +489,10 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
       });
 
       const data = resp.data;
+      const httpOk = resp && typeof resp.status === "number" && resp.status >= 200 && resp.status < 300;
       console.log("RESPOSTA LOG:", data, resp.status);
       
-      if (data === "Gravado com sucessoGravado com sucesso" || data === "Gravado com sucesso") {
+      if (data === "Gravado com sucessoGravado com sucesso" || data === "Gravado com sucesso" || (httpOk && !data?.Erro)) {
         console.log("LOG enviado com sucesso");
         setCaixaCliente("");
         setCaixaGDBR("");

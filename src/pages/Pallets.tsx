@@ -12,6 +12,7 @@ import { apiLog } from "../lib/axios";
 import successSound from '../sounds/success.mp3';
 import CaixasVaziasPopup from "../components/popups/CaixasVaziasPopup.tsx";
 import CaixasVaziasView from "../components/popups/CompCaixasVaziasView.tsx";
+import SkidRfidPopup from "../components/popups/SkidRfidPopup.tsx";
 
 import type { Carga } from "../types/carga";
 import type { Pallet, PalletApi, PalletItem } from "../types/pallet";
@@ -53,8 +54,11 @@ export default function PalletViewSingle() {
   const [, setEtiquetaCliente] = useState("");
   const etiquetaClienteRef = useRef<HTMLInputElement>(null);
   type SuccessType = "LEITURA" | "ITEM" | "CARGA";
+
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
   const [Confirm, setConfirm] = useState<string | null>(null);
+  const [showSkidPopup, setShowSkidPopup] = useState(false);
+  
   const [caixasVazias, setCaixasVazias] = useState<string | null>(null);
   const kanbanitem = palletAtual?.itens.find(item => item.status !== "3")?.kanban ?? "";
   const finalizandoPaleteRef = useRef(false);
@@ -98,6 +102,17 @@ export default function PalletViewSingle() {
   useEffect(() => {
     setSucess(null);
   }, [palletIndex]);
+
+  function isSuccessfulApiResponse(data: unknown): boolean {
+    if (typeof data !== "string") return false;
+
+    const normalized = data.trim();
+    return normalized === "Kanban finalizado"
+      || normalized === "Gravado com sucesso"
+      || normalized === "Gravado com sucessoGravado com sucesso"
+      || normalized.includes("Kanban finalizado")
+      || normalized.includes("Gravado com sucesso");
+  }
 
   // Confere no servidor se TODOS os itens do palete realmente estão finalizados
   async function allItemsFinalizedServer(cPalete: string): Promise<boolean> {
@@ -636,7 +651,9 @@ export default function PalletViewSingle() {
       });
 
       const data = resp.data;
-      if (data === "Gravado com sucesso") {
+      const httpOk = resp && typeof resp.status === "number" && resp.status >= 200 && resp.status < 300;
+
+      if (data === "Gravado com sucesso" || data === "Gravado com sucessoGravado com sucesso" || (httpOk && !data?.Erro)) {
         setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
         setKanbanGDBR("");
         setEtiquetaCliente("");
@@ -757,7 +774,9 @@ export default function PalletViewSingle() {
       });
 
       const data = resp.data;
-      if (data === "Kanban finalizado") {
+      const httpOk = resp && typeof resp.status === 'number' && resp.status >= 200 && resp.status < 300;
+
+      if (isSuccessfulApiResponse(data) || (httpOk && !data?.Erro)) {
         setSucess({ type: "ITEM", message: "Todas as caixas foram lidas, item finalizado com sucesso!" });
 
         setItemEmMontagem(null);
@@ -777,9 +796,35 @@ export default function PalletViewSingle() {
         setEtiquetaCliente("");
         setKanbanGDBR("");
       } else {
-        setErro("Falha ao atualizar o status do item (Finalização)");
-        setEtiquetaCliente("");
-        setKanbanGDBR("");
+        // tentativa de reconciliação: revalida estado no servidor antes de marcar erro
+        const itensAtualizados = await tentarReconciliar(_pallet);
+        const itemNoServidor = itensAtualizados?.find(
+          (it: any) => String(it.sequen) === String(_item.sequen) || it.kanban === _item.kanban
+        );
+
+        if (itemNoServidor?.status === "3") {
+          setSucess({ type: "ITEM", message: "Item finalizado com sucesso!" });
+          setItemEmMontagem(null);
+          await atualizarItensDoPallet();
+        } else if (httpOk) {
+          // Se o POST retornou 2xx mas a reconciliação não mostra finalização, aguarda e tenta uma vez mais.
+          await new Promise((r) => setTimeout(r, 300));
+          const itensRetry = await tentarReconciliar(_pallet);
+          const itemRetry = itensRetry?.find((it: any) => String(it.sequen) === String(_item.sequen) || it.kanban === _item.kanban);
+          if (itemRetry?.status === "3") {
+            setSucess({ type: "ITEM", message: "Item finalizado com sucesso!" });
+            setItemEmMontagem(null);
+            await atualizarItensDoPallet();
+          } else {
+            setErro("Falha ao atualizar o status do item (Finalização)");
+            setEtiquetaCliente("");
+            setKanbanGDBR("");
+          }
+        } else {
+          setErro("Falha ao atualizar o status do item (Finalização)");
+          setEtiquetaCliente("");
+          setKanbanGDBR("");
+        }
       }
 
     } catch {
@@ -968,7 +1013,9 @@ export default function PalletViewSingle() {
     });
   
     const data = resp.data;
-    if (data === "Gravado com sucesso") {
+    const httpOk = resp && typeof resp.status === "number" && resp.status >= 200 && resp.status < 300;
+
+    if (data === "Gravado com sucesso" || data === "Gravado com sucessoGravado com sucesso" || (httpOk && !data?.Erro)) {
 
       setPallets(prev => {
         const updated = [...prev];
@@ -1040,8 +1087,9 @@ export default function PalletViewSingle() {
       });
 
       const data = resp.data;
+      const httpOk = resp && typeof resp.status === "number" && resp.status >= 200 && resp.status < 300;
 
-      if (data === "Gravado com sucesso") {
+      if (data === "Gravado com sucesso" || data === "Gravado com sucessoGravado com sucesso" || (httpOk && !data?.Erro)) {
         setSucess({ type: "CARGA", message: "Carga finalizada com sucesso! Todos os paletes concluídos." });
       } else if (data?.Erro) {
         setErro(data.Erro);
@@ -1063,6 +1111,32 @@ export default function PalletViewSingle() {
     if (response === "s" && selectedCod) {
       atualizarStatusPalete("1");
     }
+  }
+
+  function iniciarPaleteComSkid() {
+    if (!palletAtual) return;
+    setShowSkidPopup(true);
+  }
+
+  function handleSkidPopupResponse(
+    response: string,
+    values?: { skidLabel: string; rfid: string }
+  ) {
+    setShowSkidPopup(false);
+
+    if (response !== "s") {
+      return;
+    }
+
+    if (values) {
+      console.log("Skid Label e RFID validados para o palete:", {
+        codPalete: palletAtual?.cod_palete,
+        skidLabel: values.skidLabel,
+        rfid: values.rfid,
+      });
+    }
+
+    setConfirm(`Iniciar montagem do palete ${palletAtual?.cod_palete}?`);
   }
 
   function montarLog(params: {
@@ -1109,8 +1183,9 @@ export default function PalletViewSingle() {
       const resp = await apiLog.post("", montarLog(params));
 
       const data = resp.data;
+      const httpOk = resp && typeof resp.status === "number" && resp.status >= 200 && resp.status < 300;
       console.log(resp.data)
-      if (data === "Gravado com sucessoGravado com sucesso" || data === "Gravado com sucesso") {
+      if (data === "Gravado com sucessoGravado com sucesso" || data === "Gravado com sucesso" || (httpOk && !data?.Erro)) {
         console.log("Enviado para a API de Log")
       } else if (data?.Erro) {
         setErro(data.Erro);
@@ -1199,6 +1274,13 @@ export default function PalletViewSingle() {
             />
           )}
 
+          <SkidRfidPopup
+            isOpen={showSkidPopup}
+            message={`Informe o Skid Label e o RFID para iniciar o palete ${palletAtual?.cod_palete ?? "atual"}.`}
+            onClose={() => setShowSkidPopup(false)}
+            onRespond={handleSkidPopupResponse}
+          />
+
           {Confirm && (
             <ConfirmationPopup
               message={Confirm}
@@ -1239,7 +1321,7 @@ export default function PalletViewSingle() {
                   <button
                     className="rounded-xl px-3 py-2 text-base bg-blue-300 hover:bg-gray-400 disabled:opacity-50 transition w-60 h-10"
                     onClick={() => {
-                      setConfirm(`Iniciar montagem do palete ${palletAtual.cod_palete}?`);
+                      iniciarPaleteComSkid();
                     }}
                   >
                     Iniciar Palete

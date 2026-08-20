@@ -237,8 +237,9 @@ export default function CargaList({}: Props) {
 
       console.log(">> Resposta apiLog:", resp.status, resp.data);
       const data = resp.data;
+      const httpOk = resp && typeof resp.status === "number" && resp.status >= 200 && resp.status < 300;
 
-      if (data === "Gravado com sucesso") {
+      if (data === "Gravado com sucesso" || data === "Gravado com sucessoGravado com sucesso" || (httpOk && !data?.Erro)) {
         console.log("Log gravado com sucesso na API de Log");
       } else if (data?.Erro) {
         setErro(data.Erro);
