@@ -7,12 +7,12 @@ import { LuPackageSearch } from "react-icons/lu";
 import { useLocation, useNavigate } from "react-router-dom";
 import ErrorPopup from '../components/popups/CompErrorPopup.tsx';
 import SuccessPopup from "../components/popups/CompSuccessPopup.tsx";
-import ConfirmationPopup from "../components/popups/CompConfirmationPopup.tsx";
 import { apiLog } from "../lib/axios";
 import successSound from '../sounds/success.mp3';
 import CaixasVaziasPopup from "../components/popups/CaixasVaziasPopup.tsx";
 import CaixasVaziasView from "../components/popups/CompCaixasVaziasView.tsx";
-import SkidRfidPopup from "../components/popups/SkidRfidPopup.tsx";
+import SkidRfidPopup from "../components/popups/CaixasRfid.tsx";
+import CaixasRfidPopup from "../components/popups/CaixasRfid.tsx";
 
 import type { Carga } from "../types/carga";
 import type { Pallet, PalletApi, PalletItem } from "../types/pallet";
@@ -56,8 +56,8 @@ export default function PalletViewSingle() {
   type SuccessType = "LEITURA" | "ITEM" | "CARGA";
 
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
-  const [Confirm, setConfirm] = useState<string | null>(null);
   const [showSkidPopup, setShowSkidPopup] = useState(false);
+  const [showCaixasRfidPopup, setShowCaixasRfidPopup] = useState(false);
   
   const [caixasVazias, setCaixasVazias] = useState<string | null>(null);
   const kanbanitem = palletAtual?.itens.find(item => item.status !== "3")?.kanban ?? "";
@@ -654,7 +654,7 @@ export default function PalletViewSingle() {
       const httpOk = resp && typeof resp.status === "number" && resp.status >= 200 && resp.status < 300;
 
       if (data === "Gravado com sucesso" || data === "Gravado com sucessoGravado com sucesso" || (httpOk && !data?.Erro)) {
-        setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
+        setShowCaixasRfidPopup(true);
         setKanbanGDBR("");
         setEtiquetaCliente("");
         setEtiquetaLiberada(false);
@@ -721,6 +721,7 @@ export default function PalletViewSingle() {
           } else if (lidasServidor === proximaQtd) {
             // a leitura foi salva normalmente, só a resposta que se perdeu
             setSucess({ type: "LEITURA", message: "Leitura sincronizada com sucesso!" });
+            setShowCaixasRfidPopup(true);
             setItemEmMontagem(itemNoServidor as PalletItem);
           } else {
             // realmente não foi salva
@@ -1107,12 +1108,6 @@ export default function PalletViewSingle() {
   }
 }
 
-  async function confirmaPalete(response: string, selectedCod: string | null) {
-    if (response === "s" && selectedCod) {
-      atualizarStatusPalete("1");
-    }
-  }
-
   function iniciarPaleteComSkid() {
     if (!palletAtual) return;
     setShowSkidPopup(true);
@@ -1134,9 +1129,29 @@ export default function PalletViewSingle() {
         skidLabel: values.skidLabel,
         rfid: values.rfid,
       });
-    }
 
-    setConfirm(`Iniciar montagem do palete ${palletAtual?.cod_palete}?`);
+      void atualizarStatusPalete("1");
+    }
+  }
+
+  function handleCaixasRfidPopupResponse(
+    response: string,
+    values?: { partLabel: string; rfid: string }
+  ) {
+    setShowCaixasRfidPopup(false);
+
+    if (response !== "s") {
+      return;
+    } 
+
+    if (values) {
+      console.log("Part Label e RFID validados para as caixas:", {
+        codPalete: palletAtual?.cod_palete,
+        partLabel: values.partLabel,
+        rfid: values.rfid,
+      });
+      setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
+    }
   }
 
   function montarLog(params: {
@@ -1281,16 +1296,12 @@ export default function PalletViewSingle() {
             onRespond={handleSkidPopupResponse}
           />
 
-          {Confirm && (
-            <ConfirmationPopup
-              message={Confirm}
-              onRespond={(response: string) => {
-                setConfirm(null);
-                confirmaPalete(response, palletAtual?.cod_palete ?? null);
-              }}
-              onClose={() => setConfirm(null)}
-            />
-          )}
+          <CaixasRfidPopup
+            isOpen={showCaixasRfidPopup}
+            message={`Informe o Part Label e o RFID para adicionar à caixa.`}
+            onClose={() => setShowCaixasRfidPopup(false)}
+            onRespond={handleCaixasRfidPopupResponse}
+          />
 
           {caixasVazias && (
             <CaixasVaziasPopup

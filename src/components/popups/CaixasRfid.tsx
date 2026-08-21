@@ -41,7 +41,7 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
     setSucess(null);
   };
 
-  const handleConfirm = () => {
+  const handleRfid = () => {
     const skid = skidLabel.trim();
     const rfidValue = rfid.trim();
 
@@ -104,19 +104,9 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
           value={rfid}
           onChange={(e) => {
             setRfid(e.target.value);
-            handleConfirm();
+            handleRfid();
           }}
         />
-
-        <div className="flex w-full gap-2">
-          <button
-            type="button"
-            className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
-            onClick={handleClose}
-          >
-            Cancelar
-          </button>
-        </div>
 
         {erro && (
           <ErrorPopup
