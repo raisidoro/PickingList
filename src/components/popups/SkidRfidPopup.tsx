@@ -41,32 +41,41 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
     setSucess(null);
   };
 
-  const handleConfirm = () => {
-    const skid = skidLabel.trim();
-    const rfidValue = rfid.trim();
-
-    if (!skid) {
-      setErro("Informe o Skid Label antes de continuar.");
-      return;
+    function handleSkidLabelChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const skidLabel = e.target.value;
+        setSkidLabel(skidLabel);
     }
 
-    if (!rfidValue) {
-      setErro("Informe o RFID antes de continuar.");
-      return;
-    }
+    function handleRfidChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const rfid = e.target.value;
+        setRfid(rfid);
 
-    setErro(null);
-    setSucess({ type: "LEITURA", message: "Skid Label e RFID validados." });
-    onRespond("s", { skidLabel: skid, rfid: rfidValue });
-    resetFields();
-    setShowModal(false);
+
+        const skid = skidLabel.trim();
+        const rfidValue = rfid.trim();
+
+        if (!skid) {
+        setErro("Informe o Skid Label antes de continuar.");
+        return;
+        }
+
+        if (!rfidValue) {
+        setErro("Informe o RFID antes de continuar.");
+        return;
+        }
+
+        setErro(null);
+        setSucess({ type: "LEITURA", message: "Skid Label e RFID validados." });
+        onRespond("s", { skidLabel: skid, rfid: rfidValue });
+        resetFields();
+        setShowModal(false);
   };
 
   const handleClose = () => {
     resetFields();
     setShowModal(false);
     onClose();
-  };
+    }
 
   console.log("SkidLabel: ", skidLabel);
   console.log("RFID: ", rfid);
@@ -93,7 +102,17 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
           className="border-b-2 border-gray-400 bg-transparent px-2 py-2 text-lg focus:outline-none focus:border-blue-500 rounded-none w-full max-w-xs text-center"
           value={skidLabel}
           maxLength={20}
-          onChange={(e) => setSkidLabel(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value;
+            handleSkidLabelChange(e);
+            setSkidLabel(val);
+            if (erro) setErro(null);
+
+
+            if(val.trim()){
+                rfidInputRef.current?.focus();
+            }
+          }}
         />
 
         <input
@@ -103,8 +122,11 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
           className="border-b-2 border-gray-400 bg-transparent px-2 py-2 text-lg focus:outline-none focus:border-blue-500 rounded-none w-full max-w-xs text-center"
           value={rfid}
           onChange={(e) => {
-            setRfid(e.target.value);
-            handleConfirm();
+            const val = e.target.value;
+            handleRfidChange(e);
+            setRfid(val);
+            if (erro) setErro(null);
+
           }}
         />
 

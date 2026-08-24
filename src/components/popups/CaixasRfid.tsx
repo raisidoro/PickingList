@@ -9,11 +9,11 @@ interface SkidRfidPopupProps {
   isOpen: boolean;
   message: string | null;
   onClose: () => void;
-  onRespond: (response: string, values?: { skidLabel: string; rfid: string }) => void;
+  onRespond: (response: string, values?: { partLabel: string; rfid: string }) => void;
 }
 
 export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: SkidRfidPopupProps) {
-  const [skidLabel, setSkidLabel] = useState<string>("");
+  const [partLabel, setPartLabel] = useState<string>("");
   const [rfid, setRfid] = useState<string>("");
   const skidLabelInputRef = React.useRef<HTMLInputElement>(null);
   const rfidInputRef = React.useRef<HTMLInputElement>(null);
@@ -35,17 +35,17 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
   }, [showModal]);
 
   const resetFields = () => {
-    setSkidLabel("");
+    setPartLabel("");
     setRfid("");
     setErro(null);
     setSucess(null);
   };
 
   const handleRfid = () => {
-    const skid = skidLabel.trim();
+    const part = partLabel.trim();
     const rfidValue = rfid.trim();
 
-    if (!skid) {
+    if (!part) {
       setErro("Informe o Skid Label antes de continuar.");
       return;
     }
@@ -57,7 +57,7 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
 
     setErro(null);
     setSucess({ type: "LEITURA", message: "Skid Label e RFID validados." });
-    onRespond("s", { skidLabel: skid, rfid: rfidValue });
+    onRespond("s", { partLabel: part, rfid: rfidValue });
     resetFields();
     setShowModal(false);
   };
@@ -68,7 +68,7 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
     onClose();
   };
 
-  console.log("SkidLabel: ", skidLabel);
+  console.log("PartLabel: ", partLabel);
   console.log("RFID: ", rfid);
 
   return (
@@ -91,9 +91,9 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
           autoFocus
           placeholder="Skid Label"
           className="border-b-2 border-gray-400 bg-transparent px-2 py-2 text-lg focus:outline-none focus:border-blue-500 rounded-none w-full max-w-xs text-center"
-          value={skidLabel}
+          value={partLabel}
           maxLength={20}
-          onChange={(e) => setSkidLabel(e.target.value)}
+          onChange={(e) => setPartLabel(e.target.value)}
         />
 
         <input

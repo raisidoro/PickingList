@@ -11,8 +11,10 @@ import { apiLog } from "../lib/axios";
 import successSound from '../sounds/success.mp3';
 import CaixasVaziasPopup from "../components/popups/CaixasVaziasPopup.tsx";
 import CaixasVaziasView from "../components/popups/CompCaixasVaziasView.tsx";
-import SkidRfidPopup from "../components/popups/CaixasRfid.tsx";
+
+import SkidRfidPopup from "../components/popups/SkidRfidPopup";
 import CaixasRfidPopup from "../components/popups/CaixasRfid.tsx";
+import { jsonToyota } from "../components/JSON/criaJSON.js";
 
 import type { Carga } from "../types/carga";
 import type { Pallet, PalletApi, PalletItem } from "../types/pallet";
@@ -1113,7 +1115,7 @@ export default function PalletViewSingle() {
     setShowSkidPopup(true);
   }
 
-  function handleSkidPopupResponse(
+  async function handleSkidPopupResponse(
     response: string,
     values?: { skidLabel: string; rfid: string }
   ) {
@@ -1130,11 +1132,17 @@ export default function PalletViewSingle() {
         rfid: values.rfid,
       });
 
-      void atualizarStatusPalete("1");
+      try {
+        await jsonToyota("", values.rfid, values.skidLabel, "");
+        await atualizarStatusPalete("1");
+      } catch (error) {
+        console.error("Erro ao registrar leitura do Skid Label e RFID:", error);
+        setErro("Não foi possível registrar o Skid Label e o RFID no arquivo de leitura. O palete não foi liberado.");
+      }
     }
   }
 
-  function handleCaixasRfidPopupResponse(
+  async function handleCaixasRfidPopupResponse(
     response: string,
     values?: { partLabel: string; rfid: string }
   ) {
@@ -1147,10 +1155,17 @@ export default function PalletViewSingle() {
     if (values) {
       console.log("Part Label e RFID validados para as caixas:", {
         codPalete: palletAtual?.cod_palete,
-        partLabel: values.partLabel,
+        skidLabel: values.partLabel,
         rfid: values.rfid,
       });
-      setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
+
+      try {
+        await jsonToyota("", values.rfid, values.partLabel, "");
+        await atualizarStatusPalete("1");
+      } catch (error) {
+        console.error("Erro ao registrar leitura do Part Label e RFID:", error);
+        setErro("Não foi possível registrar o Part Label e o RFID no arquivo de leitura. O palete não foi liberado.");
+      }
     }
   }
 
