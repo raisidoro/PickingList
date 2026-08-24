@@ -13,7 +13,7 @@ import CaixasVaziasPopup from "../components/popups/CaixasVaziasPopup.tsx";
 import CaixasVaziasView from "../components/popups/CompCaixasVaziasView.tsx";
 
 import SkidRfidPopup from "../components/popups/SkidRfidPopup";
-import CaixasRfidPopup from "../components/popups/CaixasRfid.tsx";
+import PartRfidPopup from "../components/popups/PartRfid.tsx";
 import { jsonToyota } from "../components/JSON/criaJSON.js";
 
 import type { Carga } from "../types/carga";
@@ -59,14 +59,14 @@ export default function PalletViewSingle() {
 
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
   const [showSkidPopup, setShowSkidPopup] = useState(false);
-  const [showCaixasRfidPopup, setShowCaixasRfidPopup] = useState(false);
+  const [showPartRfidPopup, setShowPartRfidPopup] = useState(false);
   
   const [caixasVazias, setCaixasVazias] = useState<string | null>(null);
   const kanbanitem = palletAtual?.itens.find(item => item.status !== "3")?.kanban ?? "";
   const finalizandoPaleteRef = useRef(false);
   const finalizandoCargaRef = useRef(false);
   const finalizandoItemRef = useRef(false);
-  const autoCorrigindoRef = useRef<Set<string>>(new Set());
+  const partRfidConfirmationRef = useRef<((confirmed: boolean) => void) | null>(null);
   const { dataLog, horaLog } = getDataHoraAtual();
 
   const matricula = location.state?.matricula || localStorage.getItem("matricula");
@@ -94,12 +94,6 @@ export default function PalletViewSingle() {
       }
     }
   }, [pallets]);
-
-  useEffect(() => {
-    if (palletAtual && palletAtual.stat_pale === "1" && palletAtual.itens?.length) {
-      autoCorrigirPendencias(palletAtual, palletAtual.itens);
-    }
-  }, [palletAtual?.cod_palete, palletAtual?.itens]);
 
   useEffect(() => {
     setSucess(null);
@@ -638,6 +632,15 @@ export default function PalletViewSingle() {
       cHistor: `Item ${_item.kanban ?? ""} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} lido com sucesso pelo operador ${matricula} `
     }));
 
+    setShowPartRfidPopup(true);
+    const partRfidConfirmed = await new Promise<boolean>((resolve) => {
+      partRfidConfirmationRef.current = resolve;
+    });
+
+    if (!partRfidConfirmed) {
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -656,7 +659,6 @@ export default function PalletViewSingle() {
       const httpOk = resp && typeof resp.status === "number" && resp.status >= 200 && resp.status < 300;
 
       if (data === "Gravado com sucesso" || data === "Gravado com sucessoGravado com sucesso" || (httpOk && !data?.Erro)) {
-        setShowCaixasRfidPopup(true);
         setKanbanGDBR("");
         setEtiquetaCliente("");
         setEtiquetaLiberada(false);
@@ -723,7 +725,6 @@ export default function PalletViewSingle() {
           } else if (lidasServidor === proximaQtd) {
             // a leitura foi salva normalmente, só a resposta que se perdeu
             setSucess({ type: "LEITURA", message: "Leitura sincronizada com sucesso!" });
-            setShowCaixasRfidPopup(true);
             setItemEmMontagem(itemNoServidor as PalletItem);
           } else {
             // realmente não foi salva
@@ -888,27 +889,6 @@ export default function PalletViewSingle() {
     }
   }
 
-  function precisaFinalizarNoServidor(item: any): boolean {
-    const total = Number(item.qtd_caixa);
-    const lidas = Number(item.qtd_contada);
-    return item.status !== "3" && total > 0 && lidas >= total;
-  }
-
-  async function autoCorrigirPendencias(pallet: Pallet, itens: any[]) {
-    for (const item of itens) {
-      const chave = `${pallet.cod_palete}-${item.sequen}`;
-      if (precisaFinalizarNoServidor(item) && !autoCorrigindoRef.current.has(chave)) {
-        autoCorrigindoRef.current.add(chave);
-        console.log("Auto-correção: item com todas as caixas lidas mas não finalizado. Corrigindo:", item.kanban);
-        try {
-          await finalizarItem(pallet, item as PalletItem);
-        } finally {
-          autoCorrigindoRef.current.delete(chave);
-        }
-      }
-    }
-  }
-
  async function atualizarItensDoPallet() {
   try {
     const resp = await apiItens.get("", {
@@ -934,10 +914,6 @@ export default function PalletViewSingle() {
       return updated;
     });
 
-    // NOVO: corrige qualquer item que já tem todas as caixas lidas mas não foi finalizado
-    if (palletAtual) {
-      await autoCorrigirPendencias(palletAtual, novosItens);
-    }
   } catch {
     setErro("Erro ao atualizar itens do palete.");
   }
@@ -1142,11 +1118,11 @@ export default function PalletViewSingle() {
     }
   }
 
-  async function handleCaixasRfidPopupResponse(
+  async function handlePartRfidPopupResponse(
     response: string,
     values?: { partLabel: string; rfid: string }
   ) {
-    setShowCaixasRfidPopup(false);
+    setShowPartRfidPopup(false);
 
     if (response !== "s") {
       return;
@@ -1161,9 +1137,13 @@ export default function PalletViewSingle() {
 
       try {
         await jsonToyota("", values.rfid, values.partLabel, "");
-        await atualizarStatusPalete("1");
+        setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
+        partRfidConfirmationRef.current?.(true);
+        partRfidConfirmationRef.current = null;
       } catch (error) {
         console.error("Erro ao registrar leitura do Part Label e RFID:", error);
+        partRfidConfirmationRef.current?.(false);
+        partRfidConfirmationRef.current = null;
         setErro("Não foi possível registrar o Part Label e o RFID no arquivo de leitura. O palete não foi liberado.");
       }
     }
@@ -1311,11 +1291,15 @@ export default function PalletViewSingle() {
             onRespond={handleSkidPopupResponse}
           />
 
-          <CaixasRfidPopup
-            isOpen={showCaixasRfidPopup}
+          <PartRfidPopup
+            isOpen={showPartRfidPopup}
             message={`Informe o Part Label e o RFID para adicionar à caixa.`}
-            onClose={() => setShowCaixasRfidPopup(false)}
-            onRespond={handleCaixasRfidPopupResponse}
+            onClose={() => {
+              partRfidConfirmationRef.current?.(false);
+              partRfidConfirmationRef.current = null;
+              setShowPartRfidPopup(false);
+            }}
+            onRespond={handlePartRfidPopupResponse}
           />
 
           {caixasVazias && (
