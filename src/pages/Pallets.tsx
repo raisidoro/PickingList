@@ -14,7 +14,7 @@ import CaixasVaziasView from "../components/popups/CompCaixasVaziasView.tsx";
 
 import SkidRfidPopup from "../components/popups/SkidRfidPopup";
 import PartRfidPopup from "../components/popups/PartRfid.tsx";
-import { jsonToyota } from "../components/JSON/criaJSON.js";
+import { exportarPaleteToyota, jsonToyota } from "../components/JSON/criaJSON.js";
 
 import type { Carga } from "../types/carga";
 import type { Pallet, PalletApi, PalletItem } from "../types/pallet";
@@ -66,6 +66,7 @@ export default function PalletViewSingle() {
   const finalizandoPaleteRef = useRef(false);
   const finalizandoCargaRef = useRef(false);
   const finalizandoItemRef = useRef(false);
+  const skidLabelPaleteRef = useRef("");
   const partRfidConfirmationRef = useRef<((confirmed: boolean) => void) | null>(null);
   const { dataLog, horaLog } = getDataHoraAtual();
 
@@ -996,6 +997,15 @@ export default function PalletViewSingle() {
 
     if (data === "Gravado com sucesso" || data === "Gravado com sucessoGravado com sucesso" || (httpOk && !data?.Erro)) {
 
+      if (status === "3" && skidLabelPaleteRef.current) {
+        try {
+          exportarPaleteToyota(skidLabelPaleteRef.current);
+        } catch (error) {
+          console.error("Erro ao exportar JSON do palete finalizado:", error);
+          setErro("Palete finalizado, mas não foi possível gerar o JSON.");
+        }
+      }
+
       setPallets(prev => {
         const updated = [...prev];
         updated[palletIndex] = {
@@ -1109,7 +1119,8 @@ export default function PalletViewSingle() {
       });
 
       try {
-        await jsonToyota("", values.rfid, values.skidLabel, "");
+        skidLabelPaleteRef.current = values.skidLabel;
+        await jsonToyota("", values.rfid, values.skidLabel, "", { baixar: false });
         await atualizarStatusPalete("1");
       } catch (error) {
         console.error("Erro ao registrar leitura do Skid Label e RFID:", error);
@@ -1136,7 +1147,7 @@ export default function PalletViewSingle() {
       });
 
       try {
-        await jsonToyota("", values.rfid, values.partLabel, "");
+        await jsonToyota("", values.rfid, skidLabelPaleteRef.current, values.partLabel, { baixar: false });
         setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
         partRfidConfirmationRef.current?.(true);
         partRfidConfirmationRef.current = null;

@@ -47,9 +47,11 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
     }
 
     function handleRfidChange(e: React.ChangeEvent<HTMLInputElement>) {
-        const rfid = e.target.value;
-        setRfid(rfid);
+        setRfid(e.target.value);
+        if (erro) setErro(null);
+    }
 
+    function confirmarRfid(rfid: string) {
         const skid = skidLabel.trim();
         const rfidValue = rfid.trim();
 
@@ -120,11 +122,8 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
                     className="border-b-2 border-gray-400 bg-transparent px-2 py-2 text-lg focus:outline-none focus:border-blue-500 rounded-none w-full max-w-xs text-center"
                     value={rfid}
                     onChange={(e) => {
-                        const val = e.target.value;
                         handleRfidChange(e);
-                        setRfid(val);
-                        if (erro) setErro(null);
-
+                        confirmarRfid(e.target.value);
                     }}
                 />
 
@@ -143,6 +142,9 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
                         message={erro}
                         onClose={() => {
                             setErro(null);
+                            setSucess(null);
+                            setRfid("");
+                            setSkidLabel("");
                         }}
                     />
                 )}

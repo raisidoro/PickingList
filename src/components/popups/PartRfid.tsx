@@ -130,6 +130,9 @@ export default function PartRfidPopup({ isOpen, message, onClose, onRespond }: P
             message={erro}
             onClose={() => {
               setErro(null);
+              setSucess(null);
+              setRfid("");
+              setPartLabel("");
             }}
           />
         )}
