@@ -1,4 +1,7 @@
-const STORAGE_KEY = "TOYOTA_LEITURAS";
+function getStorageKey(codCarg) {
+  const cargaLimpa = String(codCarg || "SEM_CARGA").trim();
+  return `TOYOTA_LEITURAS_${cargaLimpa}`;
+}
 
 function getFileNameDoDia() {
   return new Date().toISOString().slice(0, 10);
@@ -9,66 +12,35 @@ function normalizar(valor) {
 }
 
 function getEstruturaPadrao() {
-  return {
-    carga: { pallets: {} },
-    pallets: {}
-  };
+  return { pallets: [] };
 }
 
-function obterPaletes(estrutura) {
-  const base = estrutura && typeof estrutura === "object" ? estrutura : getEstruturaPadrao();
-
-  const paletesSalvos = base.carga?.pallets ?? base.pallets;
-  const paletes = {};
-
-  if (Array.isArray(paletesSalvos)) {
-    paletesSalvos.forEach((palete, indice) => {
-      const chave = normalizar(palete?.skidLabel) || `palete_${indice + 1}`;
-      paletes[chave] = palete;
-    });
-  } else if (paletesSalvos && typeof paletesSalvos === "object") {
-    Object.assign(paletes, paletesSalvos);
-  }
-
-  base.pallets = paletes;
-  base.carga = base.carga && typeof base.carga === "object" ? base.carga : { pallets: {} };
-  base.carga.pallets = paletes;
-
-  return paletes;
-}
-
-function lerLeiturasSalvas() {
+function lerLeiturasSalvas(codCarg) {
   try {
-    const valorSalvo = localStorage.getItem(STORAGE_KEY);
-
-    if (!valorSalvo) {
-      return getEstruturaPadrao();
-    }
+    const chave = getStorageKey(codCarg);
+    const valorSalvo = localStorage.getItem(chave);
+    if (!valorSalvo) return getEstruturaPadrao();
 
     const parseado = JSON.parse(valorSalvo);
-
-    if (parseado && typeof parseado === "object") {
-      const estrutura = parseado && typeof parseado === "object" ? parseado : getEstruturaPadrao();
-      obterPaletes(estrutura);
-
-      return estrutura;
+    if (parseado && typeof parseado === "object" && Array.isArray(parseado.pallets)) {
+      return parseado;
     }
-
     return getEstruturaPadrao();
   } catch (error) {
     throw new Error("Não foi possível acessar as leituras salvas no navegador.", { cause: error });
   }
 }
 
-function salvarLeituras(conteudo) {
+function salvarLeituras(codCarg, conteudo) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(conteudo, null, 2));
+    const chave = getStorageKey(codCarg);
+    localStorage.setItem(chave, JSON.stringify(conteudo, null, 2));
   } catch (error) {
     throw new Error("Não foi possível salvar o arquivo de leitura no navegador.", { cause: error });
   }
 }
 
-function baixarArquivo(conteudo, nomeArquivo = `Toyota_${getFileNameDoDia()}.json`) {
+function baixarArquivo(conteudo, nomeArquivo) {
   const blob = new Blob([conteudo], { type: "application/json;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -81,130 +53,103 @@ function baixarArquivo(conteudo, nomeArquivo = `Toyota_${getFileNameDoDia()}.jso
   return nomeArquivo;
 }
 
-export async function jsonToyota(kanban, tagRfid, skidLabel, partLabel, opcoes = {}) {
-  const kanbanLimpo = String(kanban || "").trim();
+function nomeArquivoCarga(codCarg) {
+  const cargaLimpa = normalizar(codCarg) || "SEM_CARGA";
+  return `Toyota_${cargaLimpa}_${getFileNameDoDia()}.json`;
+}
+
+function ultimoGrupoDoSkid(estrutura, skidLabelNormalizado) {
+  for (let i = estrutura.pallets.length - 1; i >= 0; i--) {
+    if (normalizar(estrutura.pallets[i].skidLabel) === skidLabelNormalizado) {
+      return estrutura.pallets[i];
+    }
+  }
+  return null;
+}
+
+// Registra/garante um grupo vazio pronto para os itens do palete.
+// NÃO grava a tagRfid do skid no JSON — serve só pra abrir o palete.
+export async function registrarSkidLabel(codCarg, skidLabel, opcoes = {}) {
+  const skidLabelLimpo = String(skidLabel || "").trim();
+  if (!skidLabelLimpo) return null;
+
+  const estrutura = lerLeiturasSalvas(codCarg);
+  const skidNormalizado = normalizar(skidLabelLimpo);
+
+  let grupo = ultimoGrupoDoSkid(estrutura, skidNormalizado);
+  if (!grupo || grupo.items.length > 0) {
+    grupo = { items: [], skidLabel: skidLabelLimpo };
+    estrutura.pallets.push(grupo);
+  }
+
+  salvarLeituras(codCarg, estrutura);
+  const conteudo = JSON.stringify(estrutura, null, 2);
+  return opcoes.baixar === false ? null : baixarArquivo(conteudo, nomeArquivoCarga(codCarg));
+}
+
+// Registra a leitura de uma caixa/item.
+// "partLabel" é gravado no campo "kanban" do JSON (nome do campo mantido, valor é o partLabel).
+export async function jsonToyota(codCarg, tagRfid, skidLabel, partLabel, opcoes = {}) {
   const tagRfidLimpa = String(tagRfid || "").trim();
   const skidLabelLimpo = String(skidLabel || "").trim();
   const partLabelLimpo = String(partLabel || "").trim();
-  const labelDoPalete = skidLabelLimpo;
 
-  if (!labelDoPalete && !kanbanLimpo && !tagRfidLimpa) {
+  if (!skidLabelLimpo && !tagRfidLimpa && !partLabelLimpo) {
     return null;
   }
 
-  let estrutura = lerLeiturasSalvas();
+  const estrutura = lerLeiturasSalvas(codCarg);
+  const skidNormalizado = normalizar(skidLabelLimpo);
 
-  if (!estrutura || typeof estrutura !== "object") {
-    estrutura = getEstruturaPadrao();
+  let grupo = skidLabelLimpo
+    ? ultimoGrupoDoSkid(estrutura, skidNormalizado)
+    : estrutura.pallets[estrutura.pallets.length - 1];
+
+  if (!grupo) {
+    grupo = { items: [], skidLabel: skidLabelLimpo };
+    estrutura.pallets.push(grupo);
   }
 
-  const paletes = obterPaletes(estrutura);
-
-  let palete = null;
-  let chavePalete = "";
-
-  if (labelDoPalete) {
-    chavePalete = normalizar(labelDoPalete);
-    palete = paletes[chavePalete];
-
-    if (!palete) {
-      palete = { skidLabel: labelDoPalete, items: {} };
-      paletes[chavePalete] = palete;
-    }
-  } else {
-    const chavesPaletes = Object.keys(paletes);
-    chavePalete = chavesPaletes[chavesPaletes.length - 1] || "palete_1";
-    palete = paletes[chavePalete] || { skidLabel: "", items: {} };
-    if (!paletes[chavePalete]) {
-      paletes[chavePalete] = palete;
-    }
+  if (!Array.isArray(grupo.items)) {
+    grupo.items = [];
   }
 
-  if (!palete.items || typeof palete.items !== "object" || Array.isArray(palete.items)) {
-    palete.items = {};
-  }
+  const ultimoItem = grupo.items[grupo.items.length - 1];
+  const kanbanMudou = grupo.items.length > 0
+    && normalizar(ultimoItem?.kanban) !== normalizar(partLabelLimpo);
 
-  if (labelDoPalete) {
-    palete.skidLabel = labelDoPalete;
-  }
-
-  if (!kanbanLimpo && !tagRfidLimpa) {
-    const conteudo = JSON.stringify(estrutura, null, 2);
-    salvarLeituras(estrutura);
-    return opcoes.baixar === false ? null : baixarArquivo(conteudo);
+  if (kanbanMudou) {
+    grupo = { items: [], skidLabel: skidLabelLimpo || grupo.skidLabel };
+    estrutura.pallets.push(grupo);
   }
 
   const caixa = {};
+  if (partLabelLimpo) caixa.kanban = partLabelLimpo;
+  if (tagRfidLimpa) caixa.tagRfid = tagRfidLimpa;
 
-  if (partLabelLimpo) {
-    caixa.partLabel = partLabelLimpo;
-  }
+  grupo.items.push(caixa);
+  if (skidLabelLimpo) grupo.skidLabel = skidLabelLimpo;
 
-  if (kanbanLimpo) {
-    caixa.kanban = kanbanLimpo;
-  }
-
-  if (tagRfidLimpa) {
-    caixa.tagRfid = tagRfidLimpa;
-  }
-
-  let itemAtual = null;
-
-  if (kanbanLimpo) {
-    itemAtual = Object.values(palete.items)
-      .find((item) => normalizar(item?.kanban) === normalizar(kanbanLimpo));
-  }
-
-  if (!itemAtual) {
-    itemAtual = {
-      skidLabel: palete.skidLabel || labelDoPalete || "",
-      items: {}
-    };
-
-    if (kanbanLimpo) {
-      itemAtual.kanban = kanbanLimpo;
-    }
-
-    const chaveItem = kanbanLimpo || `item_${Object.keys(palete.items).length + 1}`;
-    palete.items[chaveItem] = itemAtual;
-  }
-
-  itemAtual.skidLabel = palete.skidLabel || labelDoPalete || itemAtual.skidLabel || "";
-
-  if (!itemAtual.items || typeof itemAtual.items !== "object" || Array.isArray(itemAtual.items)) {
-    itemAtual.items = {};
-  }
-  itemAtual.items[String(Object.keys(itemAtual.items).length + 1)] = caixa;
-
-  estrutura.pallets = paletes;
-  estrutura.carga = estrutura.carga && typeof estrutura.carga === "object" ? estrutura.carga : { pallets: {} };
-  estrutura.carga.pallets = paletes;
-
+  salvarLeituras(codCarg, estrutura);
   const conteudo = JSON.stringify(estrutura, null, 2);
-  salvarLeituras(estrutura);
 
-  return opcoes.baixar === false ? null : baixarArquivo(conteudo);
+  return opcoes.baixar === false ? null : baixarArquivo(conteudo, nomeArquivoCarga(codCarg));
 }
 
-export function exportarPaleteToyota(skidLabel) {
-  const estrutura = lerLeiturasSalvas();
-  const paletes = obterPaletes(estrutura);
-  const palete = paletes[normalizar(skidLabel)];
+export function exportarPaleteToyota(codCarg, skidLabel) {
+  const estrutura = lerLeiturasSalvas(codCarg);
+  const skidNormalizado = normalizar(skidLabel);
+  const grupos = estrutura.pallets.filter((p) => normalizar(p.skidLabel) === skidNormalizado);
 
-  if (!palete) {
-    throw new Error(`Nenhuma leitura encontrada para o palete ${skidLabel}.`);
+  if (grupos.length === 0) {
+    throw new Error(`Nenhuma leitura encontrada para o palete ${skidLabel} na carga ${codCarg}.`);
   }
 
-  const conteudo = JSON.stringify({
-    carga: { pallets: { [normalizar(skidLabel)]: palete } },
-    pallets: { [normalizar(skidLabel)]: palete }
-  }, null, 2);
-  const nomeSeguro = normalizar(skidLabel).replace(/[^a-zA-Z0-9_-]/g, "_");
-
-  salvarLeituras(estrutura);
-  return baixarArquivo(conteudo, `Toyota_${getFileNameDoDia()}.json`);
+  const conteudo = JSON.stringify({ pallets: grupos }, null, 2);
+  return baixarArquivo(conteudo, nomeArquivoCarga(codCarg));
 }
 
-export function limparLeiturasToyota() {
-  localStorage.removeItem(STORAGE_KEY);
+export function limparLeiturasToyota(codCarg) {
+  localStorage.removeItem(getStorageKey(codCarg));
 }
+

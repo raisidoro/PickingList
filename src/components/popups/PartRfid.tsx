@@ -76,9 +76,6 @@ export default function PartRfidPopup({ isOpen, message, onClose, onRespond }: P
     onClose();
   };
 
-  console.log("PartLabel: ", partLabel);
-  console.log("RFID: ", rfid);
-
   return (
     <Modal
       isOpen={showModal}
@@ -107,7 +104,7 @@ export default function PartRfidPopup({ isOpen, message, onClose, onRespond }: P
             setPartLabel(val);
             if (erro) setErro(null);
 
-            if(val.trim()){
+            if (val.trim()) {
               rfidInputRef.current?.focus();
             }
           }}

@@ -60,7 +60,7 @@ export default function PalletViewSingle() {
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
   const [showSkidPopup, setShowSkidPopup] = useState(false);
   const [showPartRfidPopup, setShowPartRfidPopup] = useState(false);
-  
+
   const [caixasVazias, setCaixasVazias] = useState<string | null>(null);
   const kanbanitem = palletAtual?.itens.find(item => item.status !== "3")?.kanban ?? "";
   const finalizandoPaleteRef = useRef(false);
@@ -890,188 +890,105 @@ export default function PalletViewSingle() {
     }
   }
 
- async function atualizarItensDoPallet() {
-  try {
-    const resp = await apiItens.get("", {
-      params: { cCarga: carga?.cod_carg, cPalet: palletAtual?.cod_palete }
-    });
-
-    const novosItens = resp.data?.itens ?? [];
-
-    setPallets((prevPallets) => {
-      const updated = [...prevPallets];
-      updated[palletIndex] = {
-        ...updated[palletIndex],
-        itens: novosItens.map((it: any) => ({
-          ...it,
-          status: it.status ?? "0",
-          qtd_contada: it.qtd_contada ?? "-",
-        }))
-      };
-      const todosFinalizados = updated[palletIndex].itens.every((item) => item.status === "3");
-      if (todosFinalizados) {
-        void atualizarStatusPalete("3");
-      }
-      return updated;
-    });
-
-  } catch {
-    setErro("Erro ao atualizar itens do palete.");
-  }
-}
-
-  async function atualizarStatusPalete(status: string) {
-  if (!palletAtual || !carga) return;
-
-  if (status === "3") {
-    if (finalizandoPaleteRef.current) return;
-    finalizandoPaleteRef.current = true;
-
+  async function atualizarItensDoPallet() {
     try {
-      // 1º: revalida itens no servidor, não confia em estado local nem em callers
-      const todosFinalizados = await allItemsFinalizedServer(palletAtual.cod_palete);
-      if (!todosFinalizados) {
-        setErro("Nem todos os itens foram confirmados no servidor. Finalização abortada.");
-        finalizandoPaleteRef.current = false;
-        return;
-      }
-
-      // 2º: só então verifica caixas vazias
-      const respVzias = await apiVzias.get("", {
-        params: { cCarga: carga.cod_carg, cPalet: palletAtual.cod_palete }
+      const resp = await apiItens.get("", {
+        params: { cCarga: carga?.cod_carg, cPalet: palletAtual?.cod_palete }
       });
-      const itens = Array.isArray(respVzias.data?.itens) ? respVzias.data.itens : [];
-      const hasPendingCaixasVazias = itens.some((item: any) => item.status !== "3");
-      if (hasPendingCaixasVazias) {
-        setCaixasVazias("Existem caixas vazias pendentes para finalizar a montagem deste palete!");
-        finalizandoPaleteRef.current = false;
-        return;
-      }
-    } catch (error) {
-      console.error("Erro ao revalidar antes de finalizar palete:", error);
-      setErro("Não foi possível confirmar os itens no servidor. Tente novamente.");
-      finalizandoPaleteRef.current = false;
-      return;
-    } 
-  }
 
-  // Log da mudança de status do palete (início "1" ou finalização "3") vai
-  // dentro do MESMO POST para apiPallets — ver nota de atomicidade no backend.
-  const logs = [];
-  if (status === "1") {
-    logs.push(montarLog({
-      codCarg: carga?.cod_carg.toString() ?? "",
-      codPale: palletAtual.cod_palete.trim(),
-      codItem: "",
-      cOperac: "2",
-      cLeit1: "",
-      cLeit2: "",
-      cStatus: "",
-      cHistor: `Pallet ${palletAtual.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} iniciada pelo operador ${matricula} `
-    }));
-  }
-  if (status === "3") {
-    logs.push(montarLog({
-      codCarg: carga?.cod_carg.toString() ?? "",
-      codPale: palletAtual.cod_palete.trim(),
-      codItem: "",
-      cOperac: "6",
-      cLeit1: "",
-      cLeit2: "",
-      cStatus: "",
-      cHistor: `Pallet ${palletAtual.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} finalizada pelo operador ${matricula}  `
-    }));
-  }
+      const novosItens = resp.data?.itens ?? [];
 
-  try {
-    setLoading(true);
-    const resp = await apiPallets.post("", {
-      codCarg: carga.cod_carg,
-      codPale: palletAtual.cod_palete.trim(),
-      status,
-      logs
-    });
-  
-    const data = resp.data;
-    const httpOk = resp && typeof resp.status === "number" && resp.status >= 200 && resp.status < 300;
-
-    if (data === "Gravado com sucesso" || data === "Gravado com sucessoGravado com sucesso" || (httpOk && !data?.Erro)) {
-
-      if (status === "3" && skidLabelPaleteRef.current) {
-        try {
-          exportarPaleteToyota(skidLabelPaleteRef.current);
-        } catch (error) {
-          console.error("Erro ao exportar JSON do palete finalizado:", error);
-          setErro("Palete finalizado, mas não foi possível gerar o JSON.");
-        }
-      }
-
-      setPallets(prev => {
-        const updated = [...prev];
+      setPallets((prevPallets) => {
+        const updated = [...prevPallets];
         updated[palletIndex] = {
           ...updated[palletIndex],
-          stat_pale: status
+          itens: novosItens.map((it: any) => ({
+            ...it,
+            status: it.status ?? "0",
+            qtd_contada: it.qtd_contada ?? "-",
+          }))
         };
-  
-        const todosPaletesFinalizados = updated.every(p => p.stat_pale === "3");
-        if (todosPaletesFinalizados) {
-          verificaCarga();
+        const todosFinalizados = updated[palletIndex].itens.every((item) => item.status === "3");
+        if (todosFinalizados) {
+          void atualizarStatusPalete("3");
         }
-  
         return updated;
       });
-    } else if (data?.Erro) {
-      setErro(data.Erro);
-      setEtiquetaCliente("");
-      setKanbanGDBR("");
-    } else {
-      setErro("Falha ao atualizar o status do palete.");
-      setEtiquetaCliente("");
-      setKanbanGDBR("");
+
+    } catch {
+      setErro("Erro ao atualizar itens do palete.");
     }
-  } catch {
-    setErro("Erro ao conectar com a API.");
-    setEtiquetaCliente("");
-    setKanbanGDBR("");
-  } finally {
-    setLoading(false);
-    if (status === "3") finalizandoPaleteRef.current = false;
   }
-}
 
-  //verifica se a carga não foi completada (com palletes pendentes)
-  async function verificaCarga() {
-    if (finalizandoCargaRef.current || !carga) return;
-    finalizandoCargaRef.current = true;
+  async function atualizarStatusPalete(status: string) {
+    if (!palletAtual || !carga) return;
 
-  try {
-    // Revalida no servidor, não confia no estado local
-    const respPallets = await apiPallets.get("/PICK_PALETE", { params: { cCarga: carga.cod_carg } });
-    const paletesApi: PalletApi[] = Array.isArray(respPallets.data?.paletes) ? respPallets.data.paletes : [];
-    const todosFinalizadosNoServidor = paletesApi.length > 0 && paletesApi.every(p => p.stat_pale === "3");
+    if (status === "3") {
+      if (finalizandoPaleteRef.current) return;
+      finalizandoPaleteRef.current = true;
 
-    if (!todosFinalizadosNoServidor) return;
+      try {
+        // 1º: revalida itens no servidor, não confia em estado local nem em callers
+        const todosFinalizados = await allItemsFinalizedServer(palletAtual.cod_palete);
+        if (!todosFinalizados) {
+          setErro("Nem todos os itens foram confirmados no servidor. Finalização abortada.");
+          finalizandoPaleteRef.current = false;
+          return;
+        }
 
-    setLoading(true);
+        // 2º: só então verifica caixas vazias
+        const respVzias = await apiVzias.get("", {
+          params: { cCarga: carga.cod_carg, cPalet: palletAtual.cod_palete }
+        });
+        const itens = Array.isArray(respVzias.data?.itens) ? respVzias.data.itens : [];
+        const hasPendingCaixasVazias = itens.some((item: any) => item.status !== "3");
+        if (hasPendingCaixasVazias) {
+          setCaixasVazias("Existem caixas vazias pendentes para finalizar a montagem deste palete!");
+          finalizandoPaleteRef.current = false;
+          return;
+        }
+      } catch (error) {
+        console.error("Erro ao revalidar antes de finalizar palete:", error);
+        setErro("Não foi possível confirmar os itens no servidor. Tente novamente.");
+        finalizandoPaleteRef.current = false;
+        return;
+      }
+    }
+
+    // Log da mudança de status do palete (início "1" ou finalização "3") vai
+    // dentro do MESMO POST para apiPallets — ver nota de atomicidade no backend.
+    const logs = [];
+    if (status === "1") {
+      logs.push(montarLog({
+        codCarg: carga?.cod_carg.toString() ?? "",
+        codPale: palletAtual.cod_palete.trim(),
+        codItem: "",
+        cOperac: "2",
+        cLeit1: "",
+        cLeit2: "",
+        cStatus: "",
+        cHistor: `Pallet ${palletAtual.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} iniciada pelo operador ${matricula} `
+      }));
+    }
+    if (status === "3") {
+      logs.push(montarLog({
+        codCarg: carga?.cod_carg.toString() ?? "",
+        codPale: palletAtual.cod_palete.trim(),
+        codItem: "",
+        cOperac: "6",
+        cLeit1: "",
+        cLeit2: "",
+        cStatus: "",
+        cHistor: `Pallet ${palletAtual.cod_palete.trim()} da carga ${carga?.cod_carg.toString() ?? ""} finalizada pelo operador ${matricula}  `
+      }));
+    }
+
     try {
-      // Log da finalização da carga vai junto no mesmo POST para apiCarga —
-      // ver nota de atomicidade no backend descrita em caixas().
-      const logs = [
-        montarLog({
-          codCarg: carga?.cod_carg.toString() ?? "",
-          codPale: "",
-          codItem: "",
-          cOperac: "7",
-          cLeit1: "",
-          cLeit2: "",
-          cStatus: "",
-          cHistor: `Carga ${carga?.cod_carg.toString() ?? ""} finalizada pelo operador ${matricula} `
-        })
-      ];
-
-      const resp = await apiCarga.post("", {
-        codCarg: carga?.cod_carg,
-        status: "3",
+      setLoading(true);
+      const resp = await apiPallets.post("", {
+        codCarg: carga.cod_carg,
+        codPale: palletAtual.cod_palete.trim(),
+        status,
         logs
       });
 
@@ -1079,9 +996,36 @@ export default function PalletViewSingle() {
       const httpOk = resp && typeof resp.status === "number" && resp.status >= 200 && resp.status < 300;
 
       if (data === "Gravado com sucesso" || data === "Gravado com sucessoGravado com sucesso" || (httpOk && !data?.Erro)) {
-        setSucess({ type: "CARGA", message: "Carga finalizada com sucesso! Todos os paletes concluídos." });
+
+        if (status === "3" && skidLabelPaleteRef.current) {
+          try {
+            exportarPaleteToyota(carga.cod_carg, skidLabelPaleteRef.current);
+          } catch (error) {
+            console.error("Erro ao exportar JSON do palete finalizado:", error);
+            setErro("Palete finalizado, mas não foi possível gerar o JSON.");
+          }
+        }
+
+        setPallets(prev => {
+          const updated = [...prev];
+          updated[palletIndex] = {
+            ...updated[palletIndex],
+            stat_pale: status
+          };
+
+          const todosPaletesFinalizados = updated.every(p => p.stat_pale === "3");
+          if (todosPaletesFinalizados) {
+            verificaCarga();
+          }
+
+          return updated;
+        });
       } else if (data?.Erro) {
         setErro(data.Erro);
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
+      } else {
+        setErro("Falha ao atualizar o status do palete.");
         setEtiquetaCliente("");
         setKanbanGDBR("");
       }
@@ -1089,12 +1033,68 @@ export default function PalletViewSingle() {
       setErro("Erro ao conectar com a API.");
       setEtiquetaCliente("");
       setKanbanGDBR("");
+    } finally {
+      setLoading(false);
+      if (status === "3") finalizandoPaleteRef.current = false;
     }
-  } finally {
-    finalizandoCargaRef.current = false;
-    setLoading(false);
   }
-}
+
+  //verifica se a carga não foi completada (com palletes pendentes)
+  async function verificaCarga() {
+    if (finalizandoCargaRef.current || !carga) return;
+    finalizandoCargaRef.current = true;
+
+    try {
+      // Revalida no servidor, não confia no estado local
+      const respPallets = await apiPallets.get("/PICK_PALETE", { params: { cCarga: carga.cod_carg } });
+      const paletesApi: PalletApi[] = Array.isArray(respPallets.data?.paletes) ? respPallets.data.paletes : [];
+      const todosFinalizadosNoServidor = paletesApi.length > 0 && paletesApi.every(p => p.stat_pale === "3");
+
+      if (!todosFinalizadosNoServidor) return;
+
+      setLoading(true);
+      try {
+        // Log da finalização da carga vai junto no mesmo POST para apiCarga —
+        // ver nota de atomicidade no backend descrita em caixas().
+        const logs = [
+          montarLog({
+            codCarg: carga?.cod_carg.toString() ?? "",
+            codPale: "",
+            codItem: "",
+            cOperac: "7",
+            cLeit1: "",
+            cLeit2: "",
+            cStatus: "",
+            cHistor: `Carga ${carga?.cod_carg.toString() ?? ""} finalizada pelo operador ${matricula} `
+          })
+        ];
+
+        const resp = await apiCarga.post("", {
+          codCarg: carga?.cod_carg,
+          status: "3",
+          logs
+        });
+
+        const data = resp.data;
+        const httpOk = resp && typeof resp.status === "number" && resp.status >= 200 && resp.status < 300;
+
+        if (data === "Gravado com sucesso" || data === "Gravado com sucessoGravado com sucesso" || (httpOk && !data?.Erro)) {
+          setSucess({ type: "CARGA", message: "Carga finalizada com sucesso! Todos os paletes concluídos." });
+        } else if (data?.Erro) {
+          setErro(data.Erro);
+          setEtiquetaCliente("");
+          setKanbanGDBR("");
+        }
+      } catch {
+        setErro("Erro ao conectar com a API.");
+        setEtiquetaCliente("");
+        setKanbanGDBR("");
+      }
+    } finally {
+      finalizandoCargaRef.current = false;
+      setLoading(false);
+    }
+  }
 
   function iniciarPaleteComSkid() {
     if (!palletAtual) return;
@@ -1112,19 +1112,22 @@ export default function PalletViewSingle() {
     }
 
     if (values) {
-      console.log("Skid Label e RFID validados para o palete:", {
+      if (!carga) {
+        setErro("Carga não encontrada.");
+        return;
+      }
+
+      console.log("Skid Label validado para o palete:", {
         codPalete: palletAtual?.cod_palete,
         skidLabel: values.skidLabel,
-        rfid: values.rfid,
       });
 
       try {
         skidLabelPaleteRef.current = values.skidLabel;
-        await jsonToyota("", values.rfid, values.skidLabel, "", { baixar: false });
         await atualizarStatusPalete("1");
       } catch (error) {
-        console.error("Erro ao registrar leitura do Skid Label e RFID:", error);
-        setErro("Não foi possível registrar o Skid Label e o RFID no arquivo de leitura. O palete não foi liberado.");
+        console.error("Erro ao registrar o Skid Label:", error);
+        setErro("Não foi possível registrar o Skid Label no arquivo de leitura. O palete não foi liberado.");
       }
     }
   }
@@ -1137,17 +1140,22 @@ export default function PalletViewSingle() {
 
     if (response !== "s") {
       return;
-    } 
+    }
 
     if (values) {
+      if(!carga) {
+        setErro("Carga não encontrada.");
+        return;
+      }
+
       console.log("Part Label e RFID validados para as caixas:", {
         codPalete: palletAtual?.cod_palete,
-        skidLabel: values.partLabel,
+        partLabel: values.partLabel,
         rfid: values.rfid,
       });
 
       try {
-        await jsonToyota("", values.rfid, skidLabelPaleteRef.current, values.partLabel, { baixar: false });
+        await jsonToyota(carga.cod_carg, values.rfid, skidLabelPaleteRef.current, values.partLabel);
         setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
         partRfidConfirmationRef.current?.(true);
         partRfidConfirmationRef.current = null;

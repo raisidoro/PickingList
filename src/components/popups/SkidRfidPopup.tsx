@@ -78,9 +78,6 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
         onClose();
     }
 
-    console.log("SkidLabel: ", skidLabel);
-    console.log("RFID: ", rfid);
-
     return (
         <Modal
             isOpen={showModal}
