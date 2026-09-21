@@ -7,7 +7,7 @@ const adapter = Capacitor.isNativePlatform() ? capacitorHttpAdapter : undefined;
 
 const defaultAuth = {
   username: 'depto.ti',  
-  password: 'TOthEu$@2k26',    
+  password: '@T1$uP0rt3',    
 };
 
 const makeApi = (baseURL: string) =>

@@ -1,7 +1,6 @@
 import Modal from "react-modal";
 import React, { useEffect, useState } from "react";
 import ErrorPopup from "./CompErrorPopup";
-import SuccessPopup from "./CompSuccessPopup";
 
 Modal.setAppElement("#root");
 
@@ -12,15 +11,13 @@ interface PartRfidPopupProps {
   onRespond: (response: string, values?: { partLabel: string; rfid: string }) => void;
 }
 
-export default function PartRfidPopup({ isOpen, message, onClose, onRespond }: PartRfidPopupProps) {
+export default function PartRfidPopup({ isOpen, message, onRespond }: PartRfidPopupProps) {
   const [partLabel, setPartLabel] = useState<string>("");
   const [rfid, setRfid] = useState<string>("");
   const partLabelInputRef = React.useRef<HTMLInputElement>(null);
   const rfidInputRef = React.useRef<HTMLInputElement>(null);
 
   const [erro, setErro] = useState<string | null>(null);
-  type SuccessType = "LEITURA";
-  const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
 
   const [showModal, setShowModal] = useState(isOpen);
 
@@ -38,7 +35,6 @@ export default function PartRfidPopup({ isOpen, message, onClose, onRespond }: P
     setPartLabel("");
     setRfid("");
     setErro(null);
-    setSucess(null);
   };
 
   function handlePartLabelChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -64,22 +60,14 @@ export default function PartRfidPopup({ isOpen, message, onClose, onRespond }: P
     }
 
     setErro(null);
-    setSucess({ type: "LEITURA", message: "Part Label e RFID validados." });
     onRespond("s", { partLabel: part, rfid: rfidValue });
     resetFields();
     setShowModal(false);
   }
 
-  const handleClose = () => {
-    resetFields();
-    setShowModal(false);
-    onClose();
-  };
-
   return (
     <Modal
       isOpen={showModal}
-      onRequestClose={handleClose}
       shouldCloseOnOverlayClick={false}
       shouldCloseOnEsc={false}
       contentLabel="Leituras Part Label"
@@ -113,7 +101,7 @@ export default function PartRfidPopup({ isOpen, message, onClose, onRespond }: P
         <input
           ref={rfidInputRef}
           type="text"
-          placeholder="Rfid do palete"
+          placeholder="Rfid da caixa"
           className="border-b-2 border-gray-400 bg-transparent px-2 py-2 text-lg focus:outline-none focus:border-blue-500 rounded-none w-full max-w-xs text-center"
           value={rfid}
           onChange={(e) => {
@@ -127,24 +115,12 @@ export default function PartRfidPopup({ isOpen, message, onClose, onRespond }: P
             message={erro}
             onClose={() => {
               setErro(null);
-              setSucess(null);
               setRfid("");
               setPartLabel("");
             }}
           />
         )}
 
-        {success && (
-          <SuccessPopup
-            message={success.message}
-            onClose={() => {
-              setSucess(null);
-            }}
-            onRespond={() => {
-              setSucess(null);
-            }}
-          />
-        )}
       </div>
     </Modal>
   );

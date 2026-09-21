@@ -1,7 +1,6 @@
 import Modal from "react-modal";
 import React, { useEffect, useState } from "react";
 import ErrorPopup from "./CompErrorPopup";
-import SuccessPopup from "./CompSuccessPopup";
 
 Modal.setAppElement("#root");
 
@@ -19,8 +18,6 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
     const rfidInputRef = React.useRef<HTMLInputElement>(null);
 
     const [erro, setErro] = useState<string | null>(null);
-    type SuccessType = "LEITURA";
-    const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
 
     const [showModal, setShowModal] = useState(isOpen);
 
@@ -38,7 +35,6 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
         setSkidLabel("");
         setRfid("");
         setErro(null);
-        setSucess(null);
     };
 
     function handleSkidLabelChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -66,7 +62,6 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
         }
 
         setErro(null);
-        setSucess({ type: "LEITURA", message: "Skid Label e RFID validados." });
         onRespond("s", { skidLabel: skid, rfid: rfidValue });
         resetFields();
         setShowModal(false);
@@ -139,24 +134,12 @@ export default function SkidRfidPopup({ isOpen, message, onClose, onRespond }: S
                         message={erro}
                         onClose={() => {
                             setErro(null);
-                            setSucess(null);
                             setRfid("");
                             setSkidLabel("");
                         }}
                     />
                 )}
 
-                {success && (
-                    <SuccessPopup
-                        message={success.message}
-                        onClose={() => {
-                            setSucess(null);
-                        }}
-                        onRespond={() => {
-                            setSucess(null);
-                        }}
-                    />
-                )}
             </div>
         </Modal>
     );

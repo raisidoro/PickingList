@@ -3,153 +3,296 @@ function getStorageKey(codCarg) {
   return `TOYOTA_LEITURAS_${cargaLimpa}`;
 }
 
-function getFileNameDoDia() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function normalizar(valor) {
   return String(valor || "").replace(/\s+/g, "");
 }
 
 function getEstruturaPadrao() {
-  return { pallets: [] };
+  return { skids: [] };
 }
 
 function lerLeiturasSalvas(codCarg) {
   try {
     const chave = getStorageKey(codCarg);
     const valorSalvo = localStorage.getItem(chave);
+
     if (!valorSalvo) return getEstruturaPadrao();
 
     const parseado = JSON.parse(valorSalvo);
-    if (parseado && typeof parseado === "object" && Array.isArray(parseado.pallets)) {
+
+    if (
+      parseado &&
+      typeof parseado === "object" &&
+      Array.isArray(parseado.skids)
+    ) {
       return parseado;
     }
+
     return getEstruturaPadrao();
   } catch (error) {
-    throw new Error("Não foi possível acessar as leituras salvas no navegador.", { cause: error });
+    throw new Error(
+      "Não foi possível acessar as leituras salvas no navegador.",
+      { cause: error }
+    );
   }
 }
 
 function salvarLeituras(codCarg, conteudo) {
   try {
     const chave = getStorageKey(codCarg);
-    localStorage.setItem(chave, JSON.stringify(conteudo, null, 2));
+
+    localStorage.setItem(
+      chave,
+      JSON.stringify(conteudo, null, 2)
+    );
   } catch (error) {
-    throw new Error("Não foi possível salvar o arquivo de leitura no navegador.", { cause: error });
+    throw new Error(
+      "Não foi possível salvar o arquivo de leitura no navegador.",
+      { cause: error }
+    );
   }
 }
 
-function baixarArquivo(conteudo, nomeArquivo) {
-  const blob = new Blob([conteudo], { type: "application/json;charset=utf-8" });
+function limparNomeArquivo(valor) {
+  return String(valor || "SEM_CARGA")
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_");
+}
+
+function baixarArquivo(conteudo, codCarg) {
+  const carga = limparNomeArquivo(codCarg);
+
+  const blob = new Blob([conteudo], {
+    type: "application/json;charset=utf-8",
+  });
+
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
 
   link.href = url;
-  link.download = nomeArquivo;
+  link.download = `conciliacao-rfid-${carga}.json`;
+
+  document.body.appendChild(link);
   link.click();
+  document.body.removeChild(link);
+
   URL.revokeObjectURL(url);
 
-  return nomeArquivo;
+  return link.download;
 }
 
-function nomeArquivoCarga(codCarg) {
-  const cargaLimpa = normalizar(codCarg) || "SEM_CARGA";
-  return `Toyota_${cargaLimpa}_${getFileNameDoDia()}.json`;
-}
-
-function ultimoGrupoDoSkid(estrutura, skidLabelNormalizado) {
-  for (let i = estrutura.pallets.length - 1; i >= 0; i--) {
-    if (normalizar(estrutura.pallets[i].skidLabel) === skidLabelNormalizado) {
-      return estrutura.pallets[i];
+function ultimoSkid(estrutura, qrCodeNormalizado) {
+  for (let i = estrutura.skids.length - 1; i >= 0; i--) {
+    if (
+      normalizar(estrutura.skids[i].qrCode) === qrCodeNormalizado
+    ) {
+      return estrutura.skids[i];
     }
   }
+
   return null;
 }
 
-// Registra/garante um grupo vazio pronto para os itens do palete.
-// NÃO grava a tagRfid do skid no JSON — serve só pra abrir o palete.
-export async function registrarSkidLabel(codCarg, skidLabel, opcoes = {}) {
-  const skidLabelLimpo = String(skidLabel || "").trim();
-  if (!skidLabelLimpo) return null;
+export async function registrarSkidLabel(
+  codCarg,
+  qrCode,
+  rfid = "",
+  opcoes = {}
+) {
+  const qrCodeLimpo = String(qrCode || "").trim();
+  const rfidLimpo = String(rfid || "").trim();
 
-  const estrutura = lerLeiturasSalvas(codCarg);
-  const skidNormalizado = normalizar(skidLabelLimpo);
-
-  let grupo = ultimoGrupoDoSkid(estrutura, skidNormalizado);
-  if (!grupo || grupo.items.length > 0) {
-    grupo = { items: [], skidLabel: skidLabelLimpo };
-    estrutura.pallets.push(grupo);
-  }
-
-  salvarLeituras(codCarg, estrutura);
-  const conteudo = JSON.stringify(estrutura, null, 2);
-  return opcoes.baixar === false ? null : baixarArquivo(conteudo, nomeArquivoCarga(codCarg));
-}
-
-// Registra a leitura de uma caixa/item.
-// "partLabel" é gravado no campo "kanban" do JSON (nome do campo mantido, valor é o partLabel).
-export async function jsonToyota(codCarg, tagRfid, skidLabel, partLabel, opcoes = {}) {
-  const tagRfidLimpa = String(tagRfid || "").trim();
-  const skidLabelLimpo = String(skidLabel || "").trim();
-  const partLabelLimpo = String(partLabel || "").trim();
-
-  if (!skidLabelLimpo && !tagRfidLimpa && !partLabelLimpo) {
+  if (!qrCodeLimpo && !rfidLimpo) {
     return null;
   }
 
   const estrutura = lerLeiturasSalvas(codCarg);
-  const skidNormalizado = normalizar(skidLabelLimpo);
+  const qrCodeNormalizado = normalizar(qrCodeLimpo);
 
-  let grupo = skidLabelLimpo
-    ? ultimoGrupoDoSkid(estrutura, skidNormalizado)
-    : estrutura.pallets[estrutura.pallets.length - 1];
+  let skid = qrCodeLimpo
+    ? ultimoSkid(estrutura, qrCodeNormalizado)
+    : null;
 
-  if (!grupo) {
-    grupo = { items: [], skidLabel: skidLabelLimpo };
-    estrutura.pallets.push(grupo);
+  if (!skid || skid.parts.length > 0) {
+    skid = {
+      qrCode: qrCodeLimpo,
+      rfid: rfidLimpo,
+      parts: [],
+    };
+
+    estrutura.skids.push(skid);
+  } else {
+    if (qrCodeLimpo) skid.qrCode = qrCodeLimpo;
+    if (rfidLimpo) skid.rfid = rfidLimpo;
   }
-
-  if (!Array.isArray(grupo.items)) {
-    grupo.items = [];
-  }
-
-  const ultimoItem = grupo.items[grupo.items.length - 1];
-  const kanbanMudou = grupo.items.length > 0
-    && normalizar(ultimoItem?.kanban) !== normalizar(partLabelLimpo);
-
-  if (kanbanMudou) {
-    grupo = { items: [], skidLabel: skidLabelLimpo || grupo.skidLabel };
-    estrutura.pallets.push(grupo);
-  }
-
-  const caixa = {};
-  if (partLabelLimpo) caixa.kanban = partLabelLimpo;
-  if (tagRfidLimpa) caixa.tagRfid = tagRfidLimpa;
-
-  grupo.items.push(caixa);
-  if (skidLabelLimpo) grupo.skidLabel = skidLabelLimpo;
 
   salvarLeituras(codCarg, estrutura);
+
+  if (opcoes.baixar === true) {
+    const conteudo = JSON.stringify(estrutura, null, 2);
+    return baixarArquivo(conteudo, codCarg);
+  }
+
+  return null;
+}
+
+export async function jsonToyota(
+  codCarg,
+  tagRfidPalete,
+  skidLabel,
+  tagRfidCaixa,
+  partLabel,
+  opcoes = {}
+) {
+  const rfidPalete = String(tagRfidPalete || "").trim();
+  const qrCodeSkid = String(skidLabel || "").trim();
+  const rfidCaixa = String(tagRfidCaixa || "").trim();
+  const qrCodePart = String(partLabel || "").trim();
+
+  if (!qrCodeSkid || !qrCodePart || !rfidCaixa || !rfidPalete) {
+    return null;
+  }
+
+  const estrutura = lerLeiturasSalvas(codCarg);
+
+  let skid = qrCodeSkid
+    ? ultimoSkid(estrutura, normalizar(qrCodeSkid))
+    : estrutura.skids[estrutura.skids.length - 1];
+
+  if (!skid) {
+    skid = {
+      qrCode: qrCodeSkid,
+      rfid: rfidPalete,
+      parts: [],
+    };
+
+    estrutura.skids.push(skid);
+  }
+
+  if (!Array.isArray(skid.parts)) {
+    skid.parts = [];
+  }
+
+  const part = {};
+
+  if (qrCodePart) {
+    part.qrCode = qrCodePart;
+  }
+
+  if (rfidCaixa) {
+    part.rfid = rfidCaixa;
+  }
+
+  skid.parts.push(part);
+
+  if (qrCodeSkid) {
+    skid.qrCode = qrCodeSkid;
+  }
+
+  if (rfidPalete) {
+    skid.rfid = rfidPalete;
+  }
+
+  salvarLeituras(codCarg, estrutura);
+
+  // Só baixa se for solicitado explicitamente
+  if (opcoes.baixar === true) {
+    const conteudo = JSON.stringify(estrutura, null, 2);
+    return baixarArquivo(conteudo, codCarg);
+  }
+
+  return null;
+}
+
+export function registrarRfidSkid(codCarg, skidLabel, rfid) {
+  const qrCodeSkid = String(skidLabel || "").trim();
+  const rfidLimpo = String(rfid || "").trim();
+
+  if (!qrCodeSkid) {
+    return null;
+  }
+
+  const estrutura = lerLeiturasSalvas(codCarg);
+
+  const skid = ultimoSkid(
+    estrutura,
+    normalizar(qrCodeSkid)
+  );
+
+  if (!skid) {
+    throw new Error(
+      `Nenhum SKID encontrado para o QR Code ${qrCodeSkid}.`
+    );
+  }
+
+  skid.rfid = rfidLimpo;
+
+  salvarLeituras(codCarg, estrutura);
+
   const conteudo = JSON.stringify(estrutura, null, 2);
 
-  return opcoes.baixar === false ? null : baixarArquivo(conteudo, nomeArquivoCarga(codCarg));
+  return baixarArquivo(conteudo, codCarg);
 }
 
 export function exportarPaleteToyota(codCarg, skidLabel) {
   const estrutura = lerLeiturasSalvas(codCarg);
   const skidNormalizado = normalizar(skidLabel);
-  const grupos = estrutura.pallets.filter((p) => normalizar(p.skidLabel) === skidNormalizado);
 
-  if (grupos.length === 0) {
-    throw new Error(`Nenhuma leitura encontrada para o palete ${skidLabel} na carga ${codCarg}.`);
+  const skids = estrutura.skids.filter(
+    (skid) =>
+      normalizar(skid.qrCode) === skidNormalizado
+  );
+
+  if (skids.length === 0) {
+    throw new Error(
+      `Nenhuma leitura encontrada para o SKID ${skidLabel} na carga ${codCarg}.`
+    );
   }
 
-  const conteudo = JSON.stringify({ pallets: grupos }, null, 2);
-  return baixarArquivo(conteudo, nomeArquivoCarga(codCarg));
+  const conteudo = JSON.stringify(
+    {
+      skids,
+    },
+    null,
+    2
+  );
+
+  return baixarArquivo(conteudo, codCarg);
+}
+
+export function exportarToyota(codCarg) {
+  if (!codCarg) {
+    throw new Error("Código da carga não informado.");
+  }
+
+  const estrutura = lerLeiturasSalvas(codCarg);
+
+  if (!estrutura.skids.length) {
+    throw new Error(
+      `Nenhuma leitura encontrada para a carga ${codCarg}.`
+    );
+  }
+
+  const conteudo = JSON.stringify(
+    estrutura,
+    null,
+    2
+  );
+
+  return baixarArquivo(conteudo, codCarg);
 }
 
 export function limparLeiturasToyota(codCarg) {
-  localStorage.removeItem(getStorageKey(codCarg));
+  localStorage.removeItem(
+    getStorageKey(codCarg)
+  );
 }
 
+export function ultimoSkidRegistrado(codCarg) {
+  const estrutura = lerLeiturasSalvas(codCarg);
+  const skid = estrutura.skids[estrutura.skids.length - 1];
+
+  if (!skid || !skid.qrCode || !skid.rfid) return null;
+
+  return { skidLabel: skid.qrCode, rfid: skid.rfid };
+}

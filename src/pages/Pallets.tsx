@@ -13,8 +13,10 @@ import CaixasVaziasPopup from "../components/popups/CaixasVaziasPopup.tsx";
 import CaixasVaziasView from "../components/popups/CompCaixasVaziasView.tsx";
 
 import SkidRfidPopup from "../components/popups/SkidRfidPopup";
-import PartRfidPopup from "../components/popups/PartRfid.tsx";
-import { exportarPaleteToyota, jsonToyota } from "../components/JSON/criaJSON.js";
+import PartRfidPopup from "../components/popups/PartRfidPopup.tsx";
+import * as CriaJsonModule from "../components/JSON/criaJSON.js";
+
+const { exportarPaleteToyota, jsonToyota, registrarSkidLabel, ultimoSkidRegistrado } = CriaJsonModule as any;
 
 import type { Carga } from "../types/carga";
 import type { Pallet, PalletApi, PalletItem } from "../types/pallet";
@@ -27,11 +29,24 @@ import { Card } from "../components/ui/card.tsx";
 import { KANBAN_REGEX, parseKanban, encontraItensComKanban } from "../utils/validacaoKanban.ts";
 
 import { usePallets } from "../hooks/usePallets.ts";
+import { usePartRfid, useSkidRfid } from "../hooks/useRfid.ts";
 
 export default function PalletViewSingle() {
   const navigate = useNavigate();
   const location = useLocation();
   const carga = location.state?.carga as Carga | undefined;
+
+  const {
+    isOpen: showPartRfidPopup, requestPartRfid,
+    handleRespond: handlePartRfidRespond,
+    handleClose: handlePartRfidClose
+  } = usePartRfid();
+
+  const {
+    isOpen: showSkidPopup, requestSkidRfid,
+    handleRespond: handleSkidRfidRespond,
+    handleClose: handleSkidRfidClose
+  } = useSkidRfid();
 
   const {
     pallets,
@@ -58,17 +73,16 @@ export default function PalletViewSingle() {
   type SuccessType = "LEITURA" | "ITEM" | "CARGA";
 
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
-  const [showSkidPopup, setShowSkidPopup] = useState(false);
-  const [showPartRfidPopup, setShowPartRfidPopup] = useState(false);
 
   const [caixasVazias, setCaixasVazias] = useState<string | null>(null);
   const kanbanitem = palletAtual?.itens.find(item => item.status !== "3")?.kanban ?? "";
   const finalizandoPaleteRef = useRef(false);
   const finalizandoCargaRef = useRef(false);
   const finalizandoItemRef = useRef(false);
-  const skidLabelPaleteRef = useRef("");
-  const partRfidConfirmationRef = useRef<((confirmed: boolean) => void) | null>(null);
   const { dataLog, horaLog } = getDataHoraAtual();
+
+  const skidPaleteRef = useRef<{ skidLabel: string; rfid: string } | null>(null);
+  const iniciandoPaleteRef = useRef(false);
 
   const matricula = location.state?.matricula || localStorage.getItem("matricula");
   const [showCaixasVazias, setShowCaixasVazias] = useState(false);
@@ -582,6 +596,7 @@ export default function PalletViewSingle() {
   }
 
   //Valida quantidade de caixas lidas (quantidade de caixas lidas menor que a quantidade de caixas total do pallet)
+
   async function caixas(_pallet: Pallet, _item: PalletItem, _itemIdx: number) {
     const etiquetaLog = etiquetaClienteRef.current?.value || "";
     if (!_pallet || !_item) return;
@@ -633,12 +648,23 @@ export default function PalletViewSingle() {
       cHistor: `Item ${_item.kanban ?? ""} do Pallet ${palletAtual?.cod_palete.trim() ?? ""} da carga ${carga?.cod_carg.toString() ?? ""} lido com sucesso pelo operador ${matricula} `
     }));
 
-    setShowPartRfidPopup(true);
-    const partRfidConfirmed = await new Promise<boolean>((resolve) => {
-      partRfidConfirmationRef.current = resolve;
-    });
+    function getSkidAtual() {
+      if (skidPaleteRef.current) return skidPaleteRef.current;
+      const salvo = ultimoSkidRegistrado(carga!.cod_carg);
+      if (salvo) skidPaleteRef.current = salvo;
+      return salvo as { skidLabel: string; rfid: string } | null;
+    }
 
-    if (!partRfidConfirmed) {
+    const partRfid = await requestPartRfid();
+    if (!partRfid) {
+      return;
+    }
+
+    const skidRfid = getSkidAtual();
+    if (!skidRfid) {
+      setErro("Skid do palete não encontrado neste dispositivo. Não é possível registrar a leitura.");
+      setEtiquetaCliente("");
+      setKanbanGDBR("");
       return;
     }
 
@@ -660,6 +686,28 @@ export default function PalletViewSingle() {
       const httpOk = resp && typeof resp.status === "number" && resp.status >= 200 && resp.status < 300;
 
       if (data === "Gravado com sucesso" || data === "Gravado com sucessoGravado com sucesso" || (httpOk && !data?.Erro)) {
+        try {
+          await jsonToyota(
+            carga!.cod_carg,
+            skidRfid.rfid,
+            skidRfid.skidLabel,
+            partRfid.rfid,
+            partRfid.partLabel);
+
+          console.log(
+            carga!.cod_carg,
+            skidRfid.rfid,
+            skidRfid.skidLabel,
+            partRfid.rfid,
+            partRfid.partLabel
+          )
+        } catch (jsonError) {
+          console.error("Falha ao gravar leitura no arquivo JSON local:", jsonError);
+          setErro("Leitura gravada no servidor, mas houve falha ao gerar o arquivo local. Verifique.");
+        }
+
+        setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
+
         setKanbanGDBR("");
         setEtiquetaCliente("");
         setEtiquetaLiberada(false);
@@ -716,19 +764,50 @@ export default function PalletViewSingle() {
           const lidasServidor = Number(itemNoServidor.qtd_contada);
 
           if (itemNoServidor.status === "3") {
-            // já estava tudo certo no servidor (leitura + finalização)
+            // A leitura foi de fato salva — grava no JSON local agora.
+            try {
+              await jsonToyota(
+                carga!.cod_carg, 
+                skidRfid.rfid,
+                skidRfid.skidLabel,
+                partRfid.rfid,
+                partRfid.partLabel);
+            } catch (jsonError) {
+              console.error("Falha ao gravar leitura no arquivo JSON local:", jsonError);
+            }
             setSucess({ type: "ITEM", message: "Item já estava finalizado no servidor. Estado sincronizado." });
             setItemEmMontagem(null);
           } else if (lidasServidor >= totalCaixasServidor && totalCaixasServidor > 0) {
             // a leitura foi salva, mas a finalização nunca chegou a ser disparada — completa agora
+            try {
+              await jsonToyota(
+                carga!.cod_carg, 
+                skidRfid.rfid,
+                skidRfid.skidLabel,
+                partRfid.rfid,
+                partRfid.partLabel
+              );
+            } catch (jsonError) {
+              console.error("Falha ao gravar leitura no arquivo JSON local:", jsonError);
+            }
             setErro(null);
             await finalizarItem(_pallet, itemNoServidor as PalletItem);
           } else if (lidasServidor === proximaQtd) {
-            // a leitura foi salva normalmente, só a resposta que se perdeu
+            // a leitura foi salva normalmente no servidor, só a resposta que se perdeu — grava no JSON agora
+            try {
+              await jsonToyota(
+                carga!.cod_carg, 
+                skidRfid.rfid, 
+                skidRfid.skidLabel,
+                partRfid.rfid, 
+                partRfid.partLabel);
+            } catch (jsonError) {
+              console.error("Falha ao gravar leitura no arquivo JSON local:", jsonError);
+            }
             setSucess({ type: "LEITURA", message: "Leitura sincronizada com sucesso!" });
             setItemEmMontagem(itemNoServidor as PalletItem);
           } else {
-            // realmente não foi salva
+            // realmente não foi salva — NÃO grava no JSON
             setErro("Conexão instável. Leitura pode não ter sido salva. Tente novamente.");
           }
         }
@@ -920,11 +999,11 @@ export default function PalletViewSingle() {
     }
   }
 
-  async function atualizarStatusPalete(status: string) {
-    if (!palletAtual || !carga) return;
+  async function atualizarStatusPalete(status: string): Promise<boolean> {
+    if (!palletAtual || !carga) return false;
 
     if (status === "3") {
-      if (finalizandoPaleteRef.current) return;
+      if (finalizandoPaleteRef.current) return false;
       finalizandoPaleteRef.current = true;
 
       try {
@@ -933,7 +1012,7 @@ export default function PalletViewSingle() {
         if (!todosFinalizados) {
           setErro("Nem todos os itens foram confirmados no servidor. Finalização abortada.");
           finalizandoPaleteRef.current = false;
-          return;
+          return false;
         }
 
         // 2º: só então verifica caixas vazias
@@ -945,13 +1024,13 @@ export default function PalletViewSingle() {
         if (hasPendingCaixasVazias) {
           setCaixasVazias("Existem caixas vazias pendentes para finalizar a montagem deste palete!");
           finalizandoPaleteRef.current = false;
-          return;
+          return false;
         }
       } catch (error) {
         console.error("Erro ao revalidar antes de finalizar palete:", error);
         setErro("Não foi possível confirmar os itens no servidor. Tente novamente.");
         finalizandoPaleteRef.current = false;
-        return;
+        return false;
       }
     }
 
@@ -983,6 +1062,8 @@ export default function PalletViewSingle() {
       }));
     }
 
+    let ok = false;
+
     try {
       setLoading(true);
       const resp = await apiPallets.post("", {
@@ -996,14 +1077,19 @@ export default function PalletViewSingle() {
       const httpOk = resp && typeof resp.status === "number" && resp.status >= 200 && resp.status < 300;
 
       if (data === "Gravado com sucesso" || data === "Gravado com sucessoGravado com sucesso" || (httpOk && !data?.Erro)) {
+        ok = true;
 
-        if (status === "3" && skidLabelPaleteRef.current) {
-          try {
-            exportarPaleteToyota(carga.cod_carg, skidLabelPaleteRef.current);
-          } catch (error) {
-            console.error("Erro ao exportar JSON do palete finalizado:", error);
-            setErro("Palete finalizado, mas não foi possível gerar o JSON.");
+        if (status === "3") {
+          const skid = skidPaleteRef.current ?? ultimoSkidRegistrado(carga.cod_carg);
+          if (skid) {
+            try {
+              exportarPaleteToyota(carga.cod_carg, skid.skidLabel);
+            } catch (error) {
+              console.error("Erro ao exportar JSON do palete finalizado:", error);
+              setErro("Palete finalizado, mas não foi possível gerar o JSON.");
+            }
           }
+          skidPaleteRef.current = null;
         }
 
         setPallets(prev => {
@@ -1037,6 +1123,7 @@ export default function PalletViewSingle() {
       setLoading(false);
       if (status === "3") finalizandoPaleteRef.current = false;
     }
+    return ok;
   }
 
   //verifica se a carga não foi completada (com palletes pendentes)
@@ -1096,75 +1183,33 @@ export default function PalletViewSingle() {
     }
   }
 
-  function iniciarPaleteComSkid() {
-    if (!palletAtual) return;
-    setShowSkidPopup(true);
-  }
+  async function iniciarPaleteComSkid() {
+    if (!palletAtual || !carga) return;
+    if (iniciandoPaleteRef.current) return;
+    iniciandoPaleteRef.current = true;
 
-  async function handleSkidPopupResponse(
-    response: string,
-    values?: { skidLabel: string; rfid: string }
-  ) {
-    setShowSkidPopup(false);
+    try {
+      // 1) Popup do skid: cancelar = palete continua pendente
+      const skid = await requestSkidRfid();
+      if (!skid) return;
 
-    if (response !== "s") {
-      return;
-    }
-
-    if (values) {
-      if (!carga) {
-        setErro("Carga não encontrada.");
+      // 2) Grava no JSON local. Se falhar, o palete NÃO é liberado.
+      try {
+        await registrarSkidLabel(carga.cod_carg, skid.skidLabel, skid.rfid);
+      } catch (error) {
+        console.error("Falha ao registrar skid no JSON local:", error);
+        setErro("Falha ao registrar o Skid Label/RFID. O palete não foi iniciado.");
         return;
       }
 
-      console.log("Skid Label validado para o palete:", {
-        codPalete: palletAtual?.cod_palete,
-        skidLabel: values.skidLabel,
-      });
+      // 3) Só agora muda o status no servidor. Se falhar, o palete NÃO é liberado.
+      const ok = await atualizarStatusPalete("1");
+      if (!ok) return;
 
-      try {
-        skidLabelPaleteRef.current = values.skidLabel;
-        await atualizarStatusPalete("1");
-      } catch (error) {
-        console.error("Erro ao registrar o Skid Label:", error);
-        setErro("Não foi possível registrar o Skid Label no arquivo de leitura. O palete não foi liberado.");
-      }
-    }
-  }
-
-  async function handlePartRfidPopupResponse(
-    response: string,
-    values?: { partLabel: string; rfid: string }
-  ) {
-    setShowPartRfidPopup(false);
-
-    if (response !== "s") {
-      return;
-    }
-
-    if (values) {
-      if(!carga) {
-        setErro("Carga não encontrada.");
-        return;
-      }
-
-      console.log("Part Label e RFID validados para as caixas:", {
-        codPalete: palletAtual?.cod_palete,
-        partLabel: values.partLabel,
-        rfid: values.rfid,
-      });
-
-      try {
-        await jsonToyota(carga.cod_carg, values.rfid, skidLabelPaleteRef.current, values.partLabel);
-        setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
-        partRfidConfirmationRef.current?.(true);
-        partRfidConfirmationRef.current = null;
-      } catch (error) {
-        console.error("Erro ao registrar leitura do Part Label e RFID:", error);
-        partRfidConfirmationRef.current?.(false);
-        partRfidConfirmationRef.current = null;
-        setErro("Não foi possível registrar o Part Label e o RFID no arquivo de leitura. O palete não foi liberado.");
-      }
+      // 4) Tudo certo: guarda o skid do palete em montagem
+      skidPaleteRef.current = skid;
+    } finally {
+      iniciandoPaleteRef.current = false;
     }
   }
 
@@ -1306,19 +1351,15 @@ export default function PalletViewSingle() {
           <SkidRfidPopup
             isOpen={showSkidPopup}
             message={`Informe o Skid Label e o RFID para iniciar o palete ${palletAtual?.cod_palete ?? "atual"}.`}
-            onClose={() => setShowSkidPopup(false)}
-            onRespond={handleSkidPopupResponse}
+            onClose={handleSkidRfidClose}
+            onRespond={handleSkidRfidRespond}
           />
 
           <PartRfidPopup
             isOpen={showPartRfidPopup}
-            message={`Informe o Part Label e o RFID para adicionar à caixa.`}
-            onClose={() => {
-              partRfidConfirmationRef.current?.(false);
-              partRfidConfirmationRef.current = null;
-              setShowPartRfidPopup(false);
-            }}
-            onRespond={handlePartRfidPopupResponse}
+            message="Informe o Part Label e o RFID para adicionar à caixa vazia."
+            onClose={handlePartRfidClose}
+            onRespond={handlePartRfidRespond}
           />
 
           {caixasVazias && (
