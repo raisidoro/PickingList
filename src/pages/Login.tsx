@@ -1,4 +1,4 @@
-import React, { type JSX } from "react";
+import React from "react";
 import { useState } from "react";
 import { autenticarOperador } from "../services/operadorService";
 import { useNavigate } from "react-router-dom";
@@ -123,8 +123,3 @@ export default function Login() {
     </main>
   );
 }
-
-//EE22HM40152144258
-//E22HM;0152-1;4;I;10;600;400;330
-
-//X|G-052|0001

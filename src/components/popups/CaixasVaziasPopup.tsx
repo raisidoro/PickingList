@@ -67,7 +67,7 @@ interface VaziaItem {
   qtd_restante: number;
 }
 
-export default function CaixasVaziasPopup({ message, matricula, onClose, palletIndex, skidLabel }: CaixasVaziasPopupProps) {
+export default function CaixasVaziasPopup({ message, matricula, onClose, palletIndex,}: CaixasVaziasPopupProps) {
   const [embalagem, setEmbalagem] = useState<string>("");
   const [contagens, setContagens] = useState<Record<string, number>>({});
   const [, setTotalCaixas] = useState<number>(0);

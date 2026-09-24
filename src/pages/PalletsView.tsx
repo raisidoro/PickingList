@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { apiItens, apiPallets } from "../lib/axios";
 import { MdArrowBack } from "react-icons/md";
 import { GoChevronLeft, GoChevronRight } from "react-icons/go";
