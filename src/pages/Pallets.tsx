@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { apiCarga, apiItens, apiPallets, apiVzias } from "../lib/axios";
-import { MdArrowBack } from "react-icons/md";
+import { MdArrowBack, MdSubject } from "react-icons/md";
 import { GoChevronLeft, GoChevronRight } from "react-icons/go";
 import { TfiReload } from "react-icons/tfi";
 import { LuPackageSearch } from "react-icons/lu";
@@ -16,7 +16,7 @@ import SkidRfidPopup from "../components/popups/SkidRfidPopup";
 import PartRfidPopup from "../components/popups/PartRfidPopup.tsx";
 import * as CriaJsonModule from "../components/JSON/criaJSON.js";
 
-const { exportarPaleteToyota, jsonToyota, registrarSkidLabel, ultimoSkidRegistrado } = CriaJsonModule as any;
+const { exportarPaleteToyota, jsonToyota, registrarSkidLabel, ultimoSkidRegistrado, enviarConciliacaoPorEmail } = CriaJsonModule as any;
 
 import type { Carga } from "../types/carga";
 import type { Pallet, PalletApi, PalletItem } from "../types/pallet";
@@ -767,7 +767,7 @@ export default function PalletViewSingle() {
             // A leitura foi de fato salva — grava no JSON local agora.
             try {
               await jsonToyota(
-                carga!.cod_carg, 
+                carga!.cod_carg,
                 skidRfid.rfid,
                 skidRfid.skidLabel,
                 partRfid.rfid,
@@ -781,7 +781,7 @@ export default function PalletViewSingle() {
             // a leitura foi salva, mas a finalização nunca chegou a ser disparada — completa agora
             try {
               await jsonToyota(
-                carga!.cod_carg, 
+                carga!.cod_carg,
                 skidRfid.rfid,
                 skidRfid.skidLabel,
                 partRfid.rfid,
@@ -796,10 +796,10 @@ export default function PalletViewSingle() {
             // a leitura foi salva normalmente no servidor, só a resposta que se perdeu — grava no JSON agora
             try {
               await jsonToyota(
-                carga!.cod_carg, 
-                skidRfid.rfid, 
+                carga!.cod_carg,
+                skidRfid.rfid,
                 skidRfid.skidLabel,
-                partRfid.rfid, 
+                partRfid.rfid,
                 partRfid.partLabel);
             } catch (jsonError) {
               console.error("Falha ao gravar leitura no arquivo JSON local:", jsonError);
@@ -1087,6 +1087,14 @@ export default function PalletViewSingle() {
             } catch (error) {
               console.error("Erro ao exportar JSON do palete finalizado:", error);
               setErro("Palete finalizado, mas não foi possível gerar o JSON.");
+            }
+            try {
+              await enviarConciliacaoPorEmail(carga.cod_carg, {
+                subject: `Conciliação RFID - Carga ${carga.cod_carg} - Palete ${skid.skidLabel} finalizado`,
+              });
+            } catch (emailError) {
+              console.error("Falha ao enviar e-mail de teste (palete):", emailError);
+              setErro("Palete finalizado, mas houve falha ao enviar o e-mail de teste.");
             }
           }
           skidPaleteRef.current = null;
