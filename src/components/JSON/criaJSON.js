@@ -1,120 +1,120 @@
 
-const EMAIL_API_URL = 'http//:172.16.168.235:3000';
-const EMAIL_API_KEY = '3m@!lauT0m@t1c0';
+// const EMAIL_API_URL = 'http//:172.16.168.235:3000';
+// const EMAIL_API_KEY = '3m@!lauT0m@t1c0';
 
-// Converte string (JSON) para base64 preservando caracteres UTF-8 (acentos etc.)
-function stringParaBase64(str) {
-  const bytes = new TextEncoder().encode(str);
-  let binario = "";
-  bytes.forEach((b) => {
-    binario += String.fromCharCode(b);
-  });
-  return btoa(binario);
-}
+// // Converte string (JSON) para base64 preservando caracteres UTF-8 (acentos etc.)
+// function stringParaBase64(str) {
+//   const bytes = new TextEncoder().encode(str);
+//   let binario = "";
+//   bytes.forEach((b) => {
+//     binario += String.fromCharCode(b);
+//   });
+//   return btoa(binario);
+// }
 
-// função de teste pra enviar JSON no fim dos paletes
-export async function enviarPaleteEmailTeste(codCarg, skidLabel, opcoes = {}) {
-  const estrutura = lerLeiturasSalvas(codCarg);
-  const skidNormalizado = normalizar(skidLabel);
+// // função de teste pra enviar JSON no fim dos paletes
+// export async function enviarPaleteEmailTeste(codCarg, skidLabel, opcoes = {}) {
+//   const estrutura = lerLeiturasSalvas(codCarg);
+//   const skidNormalizado = normalizar(skidLabel);
 
-  const skids = estrutura.skids.filter(
-    (skid) => normalizar(skid.qrCode) === skidNormalizado
-  );
+//   const skids = estrutura.skids.filter(
+//     (skid) => normalizar(skid.qrCode) === skidNormalizado
+//   );
 
-  if (skids.length === 0) {
-    throw new Error(`Nenhuma leitura encontrada para o SKID ${skidLabel}.`);
-  }
+//   if (skids.length === 0) {
+//     throw new Error(`Nenhuma leitura encontrada para o SKID ${skidLabel}.`);
+//   }
 
-  const conteudo = JSON.stringify({ skids }, null, 2);
-  const nomeArquivo = `conciliacao-rfid-${limparNomeArquivo(codCarg)}-${limparNomeArquivo(skidLabel)}.json`;
+//   const conteudo = JSON.stringify({ skids }, null, 2);
+//   const nomeArquivo = `conciliacao-rfid-${limparNomeArquivo(codCarg)}-${limparNomeArquivo(skidLabel)}.json`;
 
-  const payload = {
-    subject: opcoes.subject || `[TESTE] Conciliação RFID - Carga ${codCarg} - Palete ${skidLabel}`,
-    body: opcoes.body || `Envio de teste: palete ${skidLabel} finalizado na carga ${codCarg}.`,
-    recipients: opcoes.recipients,
-    attachments: [
-      {
-        filename: nomeArquivo,
-        content: stringParaBase64(conteudo),
-        encoding: "base64",
-        contentType: "application/json",
-      },
-    ],
-  };
+//   const payload = {
+//     subject: opcoes.subject || `[TESTE] Conciliação RFID - Carga ${codCarg} - Palete ${skidLabel}`,
+//     body: opcoes.body || `Envio de teste: palete ${skidLabel} finalizado na carga ${codCarg}.`,
+//     recipients: opcoes.recipients,
+//     attachments: [
+//       {
+//         filename: nomeArquivo,
+//         content: stringParaBase64(conteudo),
+//         encoding: "base64",
+//         contentType: "application/json",
+//       },
+//     ],
+//   };
 
-  const resposta = await fetch(EMAIL_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-api-key": EMAIL_API_KEY },
-    body: JSON.stringify(payload),
-  });
+//   const resposta = await fetch(EMAIL_API_URL, {
+//     method: "POST",
+//     headers: { "Content-Type": "application/json", "x-api-key": EMAIL_API_KEY },
+//     body: JSON.stringify(payload),
+//   });
 
-  const dados = await resposta.json().catch(() => ({}));
-  if (!resposta.ok) {
-    throw new Error(dados.error || `Falha ao enviar e-mail (status ${resposta.status}).`);
-  }
-  return dados;
-}
+//   const dados = await resposta.json().catch(() => ({}));
+//   if (!resposta.ok) {
+//     throw new Error(dados.error || `Falha ao enviar e-mail (status ${resposta.status}).`);
+//   }
+//   return dados;
+// }
 
-export async function enviarConciliacaoPorEmail(codCarg, opcoes = {}) {
-  if (!codCarg) {
-    throw new Error("Código da carga não informado.");
-  }
+// export async function enviarConciliacaoPorEmail(codCarg, opcoes = {}) {
+//   if (!codCarg) {
+//     throw new Error("Código da carga não informado.");
+//   }
 
-  const estrutura = lerLeiturasSalvas(codCarg);
+//   const estrutura = lerLeiturasSalvas(codCarg);
 
-  if (!estrutura.skids.length) {
-    throw new Error(
-      `Nenhuma leitura encontrada para a carga ${codCarg}. Nada para enviar.`
-    );
-  }
+//   if (!estrutura.skids.length) {
+//     throw new Error(
+//       `Nenhuma leitura encontrada para a carga ${codCarg}. Nada para enviar.`
+//     );
+//   }
 
-  const conteudo = JSON.stringify(estrutura, null, 2);
-  const nomeArquivo = `conciliacao-rfid-${limparNomeArquivo(codCarg)}.json`;
+//   const conteudo = JSON.stringify(estrutura, null, 2);
+//   const nomeArquivo = `conciliacao-rfid-${limparNomeArquivo(codCarg)}.json`;
 
-  const payload = {
-    subject: opcoes.subject || `Conciliação RFID - Carga ${codCarg}`,
-    body:
-      opcoes.body ||
-      `Segue em anexo o arquivo de conciliação RFID referente à carga ${codCarg}.\n\n` +
-      `Total de SKIDs: ${estrutura.skids.length}`,
-    recipients: opcoes.recipients, // opcional; se omitido, backend usa DEFAULT_RECIPIENT
-    attachments: [
-      {
-        filename: nomeArquivo,
-        content: stringParaBase64(conteudo),
-        encoding: "base64",
-        contentType: "application/json",
-      },
-    ],
-  };
+//   const payload = {
+//     subject: opcoes.subject || `Conciliação RFID - Carga ${codCarg}`,
+//     body:
+//       opcoes.body ||
+//       `Segue em anexo o arquivo de conciliação RFID referente à carga ${codCarg}.\n\n` +
+//       `Total de SKIDs: ${estrutura.skids.length}`,
+//     recipients: opcoes.recipients, // opcional; se omitido, backend usa DEFAULT_RECIPIENT
+//     attachments: [
+//       {
+//         filename: nomeArquivo,
+//         content: stringParaBase64(conteudo),
+//         encoding: "base64",
+//         contentType: "application/json",
+//       },
+//     ],
+//   };
 
-  let resposta;
-  try {
-    resposta = await fetch(EMAIL_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": EMAIL_API_KEY,
-      },
-      body: JSON.stringify(payload),
-    });
-  } catch (error) {
-    throw new Error(
-      "Não foi possível conectar ao serviço de envio de e-mail.",
-      { cause: error }
-    );
-  }
+//   let resposta;
+//   try {
+//     resposta = await fetch(EMAIL_API_URL, {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//         "x-api-key": EMAIL_API_KEY,
+//       },
+//       body: JSON.stringify(payload),
+//     });
+//   } catch (error) {
+//     throw new Error(
+//       "Não foi possível conectar ao serviço de envio de e-mail.",
+//       { cause: error }
+//     );
+//   }
 
-  const dados = await resposta.json().catch(() => ({}));
+//   const dados = await resposta.json().catch(() => ({}));
 
-  if (!resposta.ok) {
-    throw new Error(
-      dados.error || `Falha ao enviar e-mail (status ${resposta.status}).`
-    );
-  }
+//   if (!resposta.ok) {
+//     throw new Error(
+//       dados.error || `Falha ao enviar e-mail (status ${resposta.status}).`
+//     );
+//   }
 
-  return dados;
-}
+//   return dados;
+// }
 
 function getStorageKey(codCarg) {
   const cargaLimpa = String(codCarg || "SEM_CARGA").trim();
@@ -177,8 +177,9 @@ function limparNomeArquivo(valor) {
     .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_");
 }
 
-function baixarArquivo(conteudo, codCarg) {
+function baixarArquivo(conteudo, codCarg, sufixo = "") {
   const carga = limparNomeArquivo(codCarg);
+  const sufixoLimpo = sufixo ? `-${limparNomeArquivo(sufixo)}` : "";
 
   const blob = new Blob([conteudo], {
     type: "application/json;charset=utf-8",
@@ -188,7 +189,7 @@ function baixarArquivo(conteudo, codCarg) {
   const link = document.createElement("a");
 
   link.href = url;
-  link.download = `conciliacao-rfid-${carga}.json`;
+  link.download = `conciliacao-rfid-${carga}${sufixoLimpo}.json`;
 
   document.body.appendChild(link);
   link.click();
@@ -378,7 +379,7 @@ export function exportarPaleteToyota(codCarg, skidLabel) {
   return baixarArquivo(conteudo, codCarg);
 }
 
-export async function exportarToyota(codCarg, opcoes = {}) {
+export function exportarToyota(codCarg, opcoes = {}) {
   if (!codCarg) {
     throw new Error("Código da carga não informado.");
   }
@@ -392,13 +393,7 @@ export async function exportarToyota(codCarg, opcoes = {}) {
   }
 
   const conteudo = JSON.stringify(estrutura, null, 2);
-  const nomeArquivo = baixarArquivo(conteudo, codCarg);
-
-  if (opcoes.enviarEmail === true) {
-    await enviarConciliacaoPorEmail(codCarg, opcoes.emailOpcoes);
-  }
-
-  return nomeArquivo;
+  return baixarArquivo(conteudo, codCarg, opcoes.sufixo);
 }
 
 export function limparLeiturasToyota(codCarg) {

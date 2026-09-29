@@ -1,18 +1,9 @@
-import { CapacitorConfig } from '@capacitor/cli';
+import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'seu.app.id',
-  appName: 'PickingList',
-  webDir: 'dist',
-  server: {
-    androidScheme: 'https',
-    cleartext: false
-  },
-  plugins: {
-    CapacitorHttp: {
-      enabled: true 
-    }
-  }
+  appId: 'com.example.app',
+  appName: 'pickinglist',
+  webDir: 'dist'
 };
 
 export default config;

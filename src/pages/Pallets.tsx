@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { apiCarga, apiItens, apiPallets, apiVzias } from "../lib/axios";
-import { MdArrowBack, MdSubject } from "react-icons/md";
+import { MdArrowBack } from "react-icons/md";
 import { GoChevronLeft, GoChevronRight } from "react-icons/go";
 import { TfiReload } from "react-icons/tfi";
 import { LuPackageSearch } from "react-icons/lu";
