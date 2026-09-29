@@ -1,5 +1,5 @@
 
-const EMAIL_API_URL = import.meta.env.VITE_EMAIL_API_URL || "http://localhost:3000/enviar-email";
+const EMAIL_API_URL = 'http//:172.16.168.235:3000';
 const EMAIL_API_KEY = '3m@!lauT0m@t1c0';
 
 // Converte string (JSON) para base64 preservando caracteres UTF-8 (acentos etc.)

@@ -8,6 +8,8 @@ import nodemailer from "nodemailer";
 // ---------------------------------------------------------------------------
 // Validação de variáveis de ambiente obrigatórias (falha rápido na subida)
 // ---------------------------------------------------------------------------
+console.log("API rodando no servidor")
+
 const REQUIRED_ENV = ["SMTP_USER", "SMTP_PASS", "API_KEY"];
 for (const key of REQUIRED_ENV) {
   if (!process.env[key]) {
