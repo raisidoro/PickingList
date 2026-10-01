@@ -1,3 +1,7 @@
+import { Capacitor } from "@capacitor/core";
+import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
+
+const DOWNLOADS_DIRECTORY_KEY = "DOWNLOADS_DIRECTORY_URI";
 
 // const EMAIL_API_URL = 'http//:172.16.168.235:3000';
 // const EMAIL_API_KEY = '3m@!lauT0m@t1c0';
@@ -177,27 +181,68 @@ function limparNomeArquivo(valor) {
     .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_");
 }
 
-function baixarArquivo(conteudo, codCarg, sufixo = "") {
+async function baixarArquivo(conteudo, codCarg, sufixo = "") {
   const carga = limparNomeArquivo(codCarg);
   const sufixoLimpo = sufixo ? `-${limparNomeArquivo(sufixo)}` : "";
+  const nome = `conciliacao-rfid-${carga}${sufixoLimpo}.json`;
+  const path = `ConciliacaoRFID/${nome}`;
 
-  const blob = new Blob([conteudo], {
-    type: "application/json;charset=utf-8",
-  });
+  // 1) Capacitor (APK)
+  if (Capacitor.isNativePlatform()) {
+    // Tenta pedir permissão (necessária no Android <= 10); ignora se não se aplicar
+    try {
+      const perm = await Filesystem.checkPermissions();
+      if (perm.publicStorage !== "granted") {
+        await Filesystem.requestPermissions();
+      }
+    } catch (_) { }
 
+    // Ordem: Documents (pública) -> External (Android/data/<pkg>/files, sem permissão)
+    const destinos = [Directory.Documents, Directory.External];
+    let ultimoErro;
+
+    for (const directory of destinos) {
+      try {
+        const res = await Filesystem.writeFile({
+          path,
+          data: conteudo,
+          directory,
+          encoding: Encoding.UTF8,
+          recursive: true,
+        });
+        console.log("Arquivo salvo em:", res.uri);
+        return nome;
+      } catch (e) {
+        console.warn(`Falha ao salvar em ${directory}:`, e);
+        ultimoErro = e;
+      }
+    }
+    throw new Error(
+      `Não foi possível salvar o arquivo no coletor: ${ultimoErro?.message ?? ultimoErro}`
+    );
+  }
+
+  // 2) Ponte Kotlin
+  if (window.AndroidBridge?.salvarArquivo) {
+    const ok = window.AndroidBridge.salvarArquivo(nome, conteudo);
+    // aceita true, "true" ou undefined (caso o método Kotlin seja void)
+    if (ok === false || ok === "false") {
+      throw new Error("Falha ao salvar o arquivo no coletor.");
+    }
+    return nome;
+  }
+
+  // 3) Navegador de verdade (não WebView)
+  const blob = new Blob([conteudo], { type: "application/json;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-
   link.href = url;
-  link.download = `conciliacao-rfid-${carga}${sufixoLimpo}.json`;
-
+  link.download = nome;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-
   URL.revokeObjectURL(url);
-
-  return link.download;
+  return nome;
 }
 
 function ultimoSkid(estrutura, qrCodeNormalizado) {

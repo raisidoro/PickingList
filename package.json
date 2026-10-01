@@ -13,6 +13,7 @@
     "@azure/msal-node": "^6.0.1",
     "@capacitor/android": "^7.6.9",
     "@capacitor/core": "^7.6.9",
+    "@capacitor/filesystem": "^7.1.8",
     "@react-icons/all-files": "^4.1.0",
     "@tailwindcss/postcss": "^4.1.11",
     "@tailwindcss/vite": "^4.1.11",

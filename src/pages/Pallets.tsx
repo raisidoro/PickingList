@@ -16,7 +16,7 @@ import SkidRfidPopup from "../components/popups/SkidRfidPopup";
 import PartRfidPopup from "../components/popups/PartRfidPopup.tsx";
 import * as CriaJsonModule from "../components/JSON/criaJSON.js";
 
-const { exportarPaleteToyota, jsonToyota, registrarSkidLabel, ultimoSkidRegistrado, enviarConciliacaoPorEmail } = CriaJsonModule as any;
+const { exportarPaleteToyota, jsonToyota, registrarSkidLabel, ultimoSkidRegistrado, exportarToyota } = CriaJsonModule as any;
 
 import type { Carga } from "../types/carga";
 import type { Pallet, PalletApi, PalletItem } from "../types/pallet";
@@ -1083,18 +1083,11 @@ export default function PalletViewSingle() {
           const skid = skidPaleteRef.current ?? ultimoSkidRegistrado(carga.cod_carg);
           if (skid) {
             try {
-              exportarPaleteToyota(carga.cod_carg, skid.skidLabel);
+              const nomeArquivo = await exportarPaleteToyota(carga.cod_carg, skid.skidLabel);
+              console.log("JSON do palete salvo no coletor:", nomeArquivo);
             } catch (error) {
               console.error("Erro ao exportar JSON do palete finalizado:", error);
-              setErro("Palete finalizado, mas não foi possível gerar o JSON.");
-            }
-            try {
-              await enviarConciliacaoPorEmail(carga.cod_carg, {
-                subject: `Conciliação RFID - Carga ${carga.cod_carg} - Palete ${skid.skidLabel} finalizado`,
-              });
-            } catch (emailError) {
-              console.error("Falha ao enviar e-mail de teste (palete):", emailError);
-              setErro("Palete finalizado, mas houve falha ao enviar o e-mail de teste.");
+              setErro("Palete finalizado, mas não foi possível salvar o JSON no coletor.");
             }
           }
           skidPaleteRef.current = null;
@@ -1175,6 +1168,14 @@ export default function PalletViewSingle() {
 
         if (data === "Gravado com sucesso" || data === "Gravado com sucessoGravado com sucesso" || (httpOk && !data?.Erro)) {
           setSucess({ type: "CARGA", message: "Carga finalizada com sucesso! Todos os paletes concluídos." });
+
+          try {
+            await exportarToyota(carga.cod_carg);
+          } catch (error) {
+            console.error("Erro ao exportar JSON da carga:", error);
+            setErro("Carga finalizada, mas não foi possível salvar o JSON no coletor.");
+          }
+
         } else if (data?.Erro) {
           setErro(data.Erro);
           setEtiquetaCliente("");
