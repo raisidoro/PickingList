@@ -7,7 +7,7 @@ import { apiPallets, apiLog, apiVzias } from "../../lib/axios";
 import { useLocation, } from "react-router-dom";
 import { usePartRfid } from "../../hooks/useRfid.ts";
 import PartRfidPopup from "./PartRfidPopup.tsx";
-import { jsonToyota } from "../JSON/criaJSON.js";
+import { jsonToyota, ultimoSkidRegistrado } from "../JSON/criaJSON.js";
 
 Modal.setAppElement("#root");
 
@@ -67,7 +67,7 @@ interface VaziaItem {
   qtd_restante: number;
 }
 
-export default function CaixasVaziasPopup({ message, matricula, onClose, palletIndex,}: CaixasVaziasPopupProps) {
+export default function CaixasVaziasPopup({ message, matricula, onClose, palletIndex, }: CaixasVaziasPopupProps) {
   const [embalagem, setEmbalagem] = useState<string>("");
   const [contagens, setContagens] = useState<Record<string, number>>({});
   const [, setTotalCaixas] = useState<number>(0);
@@ -95,6 +95,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
   const [vaziasItens, setVaziasItens] = useState<VaziaItem[]>([]);
   const [showModal, setShowModal] = useState(false);
   const vaziasItensRef = useRef<VaziaItem[]>([]);
+  const [partLabelVazia, setPartLabelVazia] = useState<string>("");
 
   const {
     isOpen: showPartRfidPopup,
@@ -378,20 +379,33 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     caixaClienteVal: string,
     caixaGDBRVal: string
   ) {
+    const skid = ultimoSkidRegistrado(carga!.cod_carg);
+    if (!skid) {
+      setErro("Skid do palete não encontrado neste dispositivo. Não é possível registrar a leitura.");
+      setCaixaCliente("");
+      setCaixaGDBR("");
+      return;
+    }
+
+    setPartLabelVazia(caixaClienteVal.trim());
+
     const partRfid = await requestPartRfid();
     if (!partRfid) {
       setCaixaCliente("");
       setCaixaGDBR("");
       return;
     }
-    await leituracaixa(alvo, caixaClienteVal, caixaGDBRVal, partRfid);
+
+    await leituracaixa(alvo, caixaClienteVal, caixaGDBRVal, partRfid, skid);
   }
 
   async function leituracaixa(
     embalagemAlvo: string,
     caixaClienteVal: string,
     caixaGDBRVal: string,
-    partRfid: { partLabel: string; rfid: string }) {
+    partRfid: { partLabel: string; rfid: string },
+    skid: { skidLabel: string; rfid: string }
+  ) {
     const itemAlvo = vaziasItensRef.current?.find(i => i.cod_emb === embalagemAlvo);
     if (!itemAlvo) {
       setErro("Item não encontrado no palete.");
@@ -447,8 +461,10 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     try {
       await jsonToyota(
         carga!.cod_carg,
-        partRfid.rfid,
-        partRfid.partLabel
+        skid.rfid,       
+        skid.skidLabel,   
+        partRfid.rfid,    
+        partRfid.partLabel 
       );
       setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
     } catch (jsonError) {
@@ -786,10 +802,13 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
 
         <PartRfidPopup
           isOpen={showPartRfidPopup}
-          message="Informe o Part Label e o RFID para adicionar à caixa vazia."
+          mode="vazia"
+          presetPartLabel={partLabelVazia}
+          message="Informe o RFID para contabilizar a caixa vazia."
           onClose={handlePartRfidClose}
           onRespond={handlePartRfidRespond}
         />
+
       </div>
     </Modal>
   );

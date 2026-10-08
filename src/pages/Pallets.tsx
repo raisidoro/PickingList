@@ -1366,7 +1366,7 @@ export default function PalletViewSingle() {
 
           <PartRfidPopup
             isOpen={showPartRfidPopup}
-            message="Informe o Part Label e o RFID para adicionar à caixa vazia."
+            message="Informe o Part Label e o RFID para contabilizar a caixa vazia."
             onClose={handlePartRfidClose}
             onRespond={handlePartRfidRespond}
           />
