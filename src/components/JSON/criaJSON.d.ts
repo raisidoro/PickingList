@@ -10,3 +10,8 @@ export function jsonToyota(
 export function exportarPaleteToyota(codCarg: string | number, skidLabel: string): string;
 
 export function limparLeiturasToyota(codCarg: string | number): void;
+
+export function ultimoSkidRegistrado(codCarg: string):{
+  skidLabel: string;
+  rfid: string;
+} | null;
