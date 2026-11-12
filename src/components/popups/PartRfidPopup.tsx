@@ -63,7 +63,7 @@ export default function PartRfidPopup({
     if (!part) {
       setErro(
         isVazia
-          ? "Part Label da caixa vazia não encontrado. Leia a Caixa Cliente novamente."
+          ? "Part Label da caixa não encontrado. Leia a Caixa Cliente novamente."
           : "Informe o Part Label antes de continuar."
       );
       return;
@@ -85,7 +85,7 @@ export default function PartRfidPopup({
       isOpen={showModal}
       shouldCloseOnOverlayClick={false}
       shouldCloseOnEsc={false}
-      contentLabel={isVazia ? "Leitura RFID Caixa Vazia" : "Leituras Part Label"}
+      contentLabel={isVazia ? "Leitura RFID Caixa" : "Leituras Part Label"}
       className="fixed inset-0 flex items-center justify-center p-4"
       overlayClassName="fixed inset-0 bg-black/50"
     >
@@ -94,7 +94,7 @@ export default function PartRfidPopup({
           {isVazia ? "Leitura RFID" : "Leituras Part Label + RFID"}
         </h2>
         <p className="text-gray-700 break-words text-center">
-          {message || (isVazia ? "Informe o RFID da caixa vazia." : "Informe o Part Label e o RFID.")}
+          {message || (isVazia ? "Informe o RFID da caixa." : "Informe o Part Label e o RFID.")}
         </p>
 
         {isVazia ? (
