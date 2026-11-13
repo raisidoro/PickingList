@@ -42,6 +42,30 @@ dependencies {
     implementation project(':capacitor-cordova-android-plugins')
 }
 
+tasks.register("printDexInputs") {
+    dependsOn "dexBuilderDebug"
+    doLast {
+        def dexTask = tasks.findByName("dexBuilderDebug")
+        if (dexTask != null) {
+            def matches = []
+            dexTask.inputs.files.files.each { f ->
+                if (f.exists() && f.isFile() && f.name.endsWith(".jar")) {
+                    try {
+                        def zip = new java.util.zip.ZipFile(f)
+                        zip.entries().each { entry ->
+                            if (entry.name.contains("annotation/experimental/R.class")) {
+                                matches.add("JAR: ${f.path}")
+                            }
+                        }
+                        zip.close()
+                    } catch (Throwable t) {}
+                }
+            }
+            throw new GradleException("DEX_INPUT_MATCHES:\n" + matches.join("\n"))
+        }
+    }
+}
+
 apply from: 'capacitor.build.gradle'
 
 try {
