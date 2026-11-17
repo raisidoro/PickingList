@@ -24,7 +24,7 @@ allprojects {
     }
     configurations.all {
         resolutionStrategy {
-            force 'androidx.annotation:annotation-experimental:1.4.1'
+            force 'androidx.annotation:annotation-experimental:1.5.1'
         }
     }
 }

@@ -5,8 +5,6 @@ import SuccessPopup from "./CompSuccessPopup";
 import successSound from '../../sounds/success.mp3';
 import { apiPallets, apiLog, apiVzias } from "../../lib/axios";
 import { useLocation, } from "react-router-dom";
-import { usePartRfid } from "../../hooks/useRfid.ts";
-import PartRfidPopup from "./PartRfidPopup.tsx";
 import { jsonToyota, ultimoSkidRegistrado } from "../JSON/criaJSON.js";
 
 Modal.setAppElement("#root");
@@ -72,7 +70,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
   const [contagens, setContagens] = useState<Record<string, number>>({});
   const [, setTotalCaixas] = useState<number>(0);
   const location = useLocation();
-  const [caixaGDBR, setCaixaGDBR] = useState("");
+  const [caixaRfid, setCaixaRfid] = useState("");
   const [caixaCliente, setCaixaCliente] = useState("");
   const [clienteValido, setClienteValido] = useState<boolean>(false);
   const carga = location.state?.carga as Carga | undefined;
@@ -84,7 +82,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
   const [, setLoading] = useState(false);
   const [contagemCaixas, setContagemCaixas] = useState(0);
-  const caixaGDBRRef = useRef<HTMLInputElement>(null);
+  const caixaRfidRef = useRef<HTMLInputElement>(null);
   const caixaClienteRef = useRef<HTMLInputElement>(null);
   const dataAtual = new Date();
   const dataformatada =
@@ -95,14 +93,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
   const [vaziasItens, setVaziasItens] = useState<VaziaItem[]>([]);
   const [showModal, setShowModal] = useState(false);
   const vaziasItensRef = useRef<VaziaItem[]>([]);
-  const [partLabelVazia, setPartLabelVazia] = useState<string>("");
-
-  const {
-    isOpen: showPartRfidPopup,
-    requestPartRfid,
-    handleRespond: handlePartRfidRespond,
-    handleClose: handlePartRfidClose,
-  } = usePartRfid();
 
   useEffect(() => {
     vaziasItensRef.current = vaziasItens;
@@ -246,11 +236,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     }
   }, [matricula]);
 
-  function handleCaixaGDBRChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const caixaGDBR = e.target.value;
-    setCaixaGDBR(caixaGDBR);
-  }
-
   function handleCaixaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
     const caixaCliente = e.target.value;
     setCaixaCliente(caixaCliente);
@@ -274,13 +259,8 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     return primeira.length > 0 && s !== primeira;
   }
 
-  function isGDBRFormatoValido(etiqueta: string, embalagemEsperada?: string): boolean {
-    const s = sanitize(etiqueta);
-    // gdbg nunca deve conter ponto-e-vírgula
-    if (s.includes(";")) return false;
-    // não pode ser somente a embalagem
-    if (embalagemEsperada && s === sanitize(embalagemEsperada)) return false;
-    // deve ter pelo menos um caractere além da embalagem (ou ao menos ser não vazio)
+  function isRfidFormatoValido(rfid: string): boolean {
+    const s = sanitize(rfid);
     return s.length > 0;
   }
 
@@ -309,21 +289,18 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     return null;
   }
 
-  function descobrirEmbalagem(
-    caixaClienteVal: string,
-    caixaGDBRVal: string): string | null {
+  function Embalagem(
+    caixaClienteVal: string): string | null {
     for (const it of vaziasItens) {
       const emb = sanitize(it.cod_emb);
-      const c1 = extrairEmbalagem(caixaClienteVal, emb);
-      const c2 = extrairEmbalagem(caixaGDBRVal, emb);
-      if (c1 === emb && c2 === emb) return it.cod_emb;
+      if (extrairEmbalagem(caixaClienteVal, emb) === emb) return it.cod_emb;
     }
     return null;
   }
 
   function verificaCaixas(
     caixaClienteVal: string,
-    caixaGDBRVal: string) {
+    rfidVal: string) {
 
     if (!isClienteFormatoValido(caixaClienteVal)) {
       setErro("Formato de etiqueta da Caixa Cliente inválido.");
@@ -331,15 +308,15 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
       return false;
     }
 
-    if (!isGDBRFormatoValido(caixaGDBRVal, embalagem)) {
-      setErro("Formato de etiqueta da Caixa GDBR inválido.");
-      setCaixaGDBR("");
+    if (!isRfidFormatoValido(rfidVal)) {
+      setErro("Formato de RFID inválido.");
+      setCaixaRfid("");
       return false;
     }
 
-    const alvo = descobrirEmbalagem(caixaClienteVal, caixaGDBRVal);
+    const alvo = Embalagem(caixaClienteVal);
     if (!alvo) {
-      setErro("Embalagem não pertence ao palete ou leituras não conferem.");
+      setErro("Embalagem não pertence ao palete.");
       atualizarOp(
         carga?.cod_carg ?? "",
         palletAtual?.cod_palete?.trim() ?? "",
@@ -349,68 +326,48 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
         horaformatada,
         String(matricula ?? ""),
         caixaClienteVal,
-        caixaGDBRVal,
+        rfidVal,
         "2",
-        "Leitura inválida: embalagem não encontrada ou divergente"
+        "Leitura inválida: embalagem não encontrada"
       );
       setCaixaCliente("");
-      setCaixaGDBR("");
+      setCaixaRfid("");
       return false;
     }
 
-    // não aceitamos apenas a embalagem nas leituras
-    if (
-      sanitize(caixaClienteVal) === sanitize(alvo) ||
-      sanitize(caixaGDBRVal) === sanitize(alvo)
-    ) {
+    // não aceitamos apenas a embalagem na leitura do cliente
+    if (sanitize(caixaClienteVal) === sanitize(alvo)) {
       setErro("Etiqueta inválida, informe a etiqueta completa!");
       setCaixaCliente("");
-      setCaixaGDBR("");
+      setCaixaRfid("");
       return false;
     }
 
     setEmbalagem(alvo);
-    solicitarRfidEEnviar(alvo, caixaClienteVal, caixaGDBRVal);
-    return true;
-  }
 
-  async function solicitarRfidEEnviar(
-    alvo: string,
-    caixaClienteVal: string,
-    caixaGDBRVal: string
-  ) {
     const skid = ultimoSkidRegistrado(carga!.cod_carg);
     if (!skid) {
       setErro("Skid do palete não encontrado neste dispositivo. Não é possível registrar a leitura.");
       setCaixaCliente("");
-      setCaixaGDBR("");
-      return;
+      setCaixaRfid("");
+      return false;
     }
 
-    setPartLabelVazia(caixaClienteVal.trim());
-
-    const partRfid = await requestPartRfid();
-    if (!partRfid) {
-      setCaixaCliente("");
-      setCaixaGDBR("");
-      return;
-    }
-
-    await leituracaixa(alvo, caixaClienteVal, caixaGDBRVal, partRfid, skid);
+    leituracaixa(alvo, caixaClienteVal, rfidVal.trim(), skid);
+    return true;
   }
 
   async function leituracaixa(
     embalagemAlvo: string,
     caixaClienteVal: string,
-    caixaGDBRVal: string,
-    partRfid: { partLabel: string; rfid: string },
+    rfidVal: string,
     skid: { skidLabel: string; rfid: string }
   ) {
     const itemAlvo = vaziasItensRef.current?.find(i => i.cod_emb === embalagemAlvo);
     if (!itemAlvo) {
       setErro("Item não encontrado no palete.");
       setCaixaCliente("");
-      setCaixaGDBR("");
+      setCaixaRfid("");
       return;
     }
 
@@ -429,12 +386,12 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
         horaformatada,
         String(matricula ?? ""),
         caixaClienteVal,
-        caixaGDBRVal,
+        rfidVal,
         "2",
         `Embalagem: ${embalagemAlvo}. Todas as caixas desse item já foram lidas.`
       );
       setCaixaCliente("");
-      setCaixaGDBR("");
+      setCaixaRfid("");
       return;
     }
 
@@ -454,17 +411,17 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     if (!sucessoVzias) {
       setContagens(prev => ({ ...prev, [embalagemAlvo]: lidasAtuais }));
       setCaixaCliente("");
-      setCaixaGDBR("");
+      setCaixaRfid("");
       return;
     }
 
     try {
       await jsonToyota(
         carga!.cod_carg,
-        skid.rfid,       
-        skid.skidLabel,   
-        partRfid.rfid,    
-        partRfid.partLabel 
+        skid.rfid,
+        skid.skidLabel,
+        rfidVal,                 // RFID lido no input
+        caixaClienteVal.trim()   // etiqueta cliente (partLabel)
       );
       setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
     } catch (jsonError) {
@@ -492,7 +449,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
           horaformatada,
           String(matricula ?? ""),
           caixaClienteVal,
-          caixaGDBRVal,
+          rfidVal,
           "1",
           `Item ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} iniciado pelo operador ${matricula}`
         );
@@ -519,7 +476,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
           horaformatada,
           String(matricula ?? ""),
           caixaClienteVal,
-          caixaGDBRVal,
+          rfidVal,
           "1",
           `Caixa ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} concluido pelo operador ${matricula}`
         );
@@ -555,14 +512,14 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
         horaformatada,
         String(matricula ?? ""),
         caixaClienteVal,
-        caixaGDBRVal,
+        rfidVal,
         "1",
         `Caixa ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} lida com sucesso pelo operador ${matricula}`
       );
     }
 
     setCaixaCliente("");
-    setCaixaGDBR("");
+    setCaixaRfid("");
   }
 
   async function atualizarOp(
@@ -603,17 +560,17 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
       if (data === "Gravado com sucessoGravado com sucesso" || data === "Gravado com sucesso" || (httpOk && !data?.Erro)) {
         console.log("LOG enviado com sucesso");
         setCaixaCliente("");
-        setCaixaGDBR("");
+        setCaixaRfid("");
       } else if (data?.Erro) {
         console.error("LOG erro:", data.Erro);
         setErro(data.Erro);
         setCaixaCliente("");
-        setCaixaGDBR("");
+        setCaixaRfid("");
       } else {
         console.error("LOG falhou:", data);
         setErro("Falha ao atualizar o Log do Usuário.");
         setCaixaCliente("");
-        setCaixaGDBR("");
+        setCaixaRfid("");
       }
     } catch (error) {
       if (contagemCaixas > 0) {
@@ -622,7 +579,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
       console.error("Erro API Log:", error);
       setErro("Erro ao conectar com a API de Log.");
       setCaixaCliente("");
-      setCaixaGDBR("");
+      setCaixaRfid("");
     } finally {
       setLoading(false);
     }
@@ -659,11 +616,11 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
       if (error.response?.data) {
         setErro(`Erro servidor: ${error.response.data}`);
         setCaixaCliente("");
-        setCaixaGDBR("");
+        setCaixaRfid("");
       } else {
         setErro("Erro ao conectar com VZIAS");
         setCaixaCliente("");
-        setCaixaGDBR("");
+        setCaixaRfid("");
       }
       return false;
     } finally {
@@ -725,25 +682,24 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
               setClienteValido(false);
             }
             if (val.trim()) {
-              caixaGDBRRef.current?.focus();
+              caixaRfidRef.current?.focus();
             }
           }}
         />
 
         <input
-          ref={caixaGDBRRef}
+          ref={caixaRfidRef}
           type="text"
-          placeholder="Caixa GDBR"
+          placeholder="RFID"
           className="border-b-2 border-gray-400 bg-transparent px-2 py-2 text-lg focus:outline-none focus:border-blue-500 rounded-none w-full max-w-xs text-center"
-          value={caixaGDBR}
+          value={caixaRfid}
           onChange={(e) => {
             const val = e.target.value;
-            handleCaixaGDBRChange(e);
-            setCaixaGDBR(val);
+            setCaixaRfid(val);
 
             if (!clienteValido) {
               setErro("Formato de etiqueta cliente inválido!");
-              setCaixaGDBR("");
+              setCaixaRfid("");
               return;
             }
 
@@ -779,7 +735,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
             onClose={() => {
               setErro(null);
               setCaixaCliente("");
-              setCaixaGDBR("");
+              setCaixaRfid("");
               setClienteValido(false);
               caixaClienteRef.current?.focus();
             }}
@@ -799,16 +755,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
             }}
           />
         )}
-
-        <PartRfidPopup
-          isOpen={showPartRfidPopup}
-          mode="vazia"
-          presetPartLabel={partLabelVazia}
-          message="Informe o RFID para contabilizar a caixa vazia."
-          onClose={handlePartRfidClose}
-          onRespond={handlePartRfidRespond}
-        />
-
       </div>
     </Modal>
   );
