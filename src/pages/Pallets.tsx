@@ -16,7 +16,7 @@ import SkidRfidPopup from "../components/popups/SkidRfidPopup";
 import PartRfidPopup from "../components/popups/PartRfidPopup.tsx";
 import * as CriaJsonModule from "../components/JSON/criaJSON.js";
 
-const { jsonToyota, registrarSkidLabel, ultimoSkidRegistrado, exportarToyota } = CriaJsonModule as any;
+const { exportarPaleteToyota, jsonToyota, registrarSkidLabel, ultimoSkidRegistrado, exportarToyota } = CriaJsonModule as any;
 
 import type { Carga } from "../types/carga";
 import type { Pallet, PalletApi, PalletItem } from "../types/pallet";
@@ -167,6 +167,14 @@ export default function PalletViewSingle() {
     } catch (err) {
       console.error("Erro ao checar caixas vazias na entrada do palete:", err);
     }
+  }
+
+  if (!carga) {
+    return (
+      <main className="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-gray-200 to-gray-300">
+        <span className="text-red-600 text-lg">Carga não informada!</span>
+      </main>
+    );
   }
 
   // Define foco automático no campo etiqueta cliente após validação do kanban
@@ -967,25 +975,24 @@ export default function PalletViewSingle() {
         params: { cCarga: carga?.cod_carg, cPalet: palletAtual?.cod_palete }
       });
 
-      const novosItens = (resp.data?.itens ?? []).map((it: any) => ({
-        ...it,
-        status: it.status ?? "0",
-        qtd_contada: it.qtd_contada ?? "-",
-      }));
+      const novosItens = resp.data?.itens ?? [];
 
       setPallets((prevPallets) => {
         const updated = [...prevPallets];
         updated[palletIndex] = {
           ...updated[palletIndex],
-          itens: novosItens
+          itens: novosItens.map((it: any) => ({
+            ...it,
+            status: it.status ?? "0",
+            qtd_contada: it.qtd_contada ?? "-",
+          }))
         };
+        const todosFinalizados = updated[palletIndex].itens.every((item) => item.status === "3");
+        if (todosFinalizados) {
+          void atualizarStatusPalete("3");
+        }
         return updated;
       });
-
-      // Efeito colateral fora do setState; lista vazia não finaliza o palete
-      if (novosItens.length > 0 && novosItens.every((i: any) => i.status === "3")) {
-        void atualizarStatusPalete("3");
-      }
 
     } catch {
       setErro("Erro ao atualizar itens do palete.");
@@ -993,7 +1000,6 @@ export default function PalletViewSingle() {
   }
 
   async function atualizarStatusPalete(status: string): Promise<boolean> {
-    console.log("[FINALIZAR] status:", status);
     if (!palletAtual || !carga) return false;
 
     if (status === "3") {
@@ -1014,9 +1020,8 @@ export default function PalletViewSingle() {
           params: { cCarga: carga.cod_carg, cPalet: palletAtual.cod_palete }
         });
         const itens = Array.isArray(respVzias.data?.itens) ? respVzias.data.itens : [];
-        const hasPendingCaixasVazias = itens.some((item: any) => String(item.status) !== "3");
+        const hasPendingCaixasVazias = itens.some((item: any) => item.status !== "3");
         if (hasPendingCaixasVazias) {
-          console.log("[FINALIZAR] vazias pendentes:", itens);
           setCaixasVazias("Existem caixas vazias pendentes para finalizar a montagem deste palete!");
           finalizandoPaleteRef.current = false;
           return false;
@@ -1074,26 +1079,34 @@ export default function PalletViewSingle() {
       if (data === "Gravado com sucesso" || data === "Gravado com sucessoGravado com sucesso" || (httpOk && !data?.Erro)) {
         ok = true;
 
-        const paletesAtualizados = pallets.map(p =>
-          p.cod_palete === palletAtual.cod_palete ? { ...p, stat_pale: status } : p
-        );
-        setPallets(paletesAtualizados);
-
         if (status === "3") {
-          // Arquivo único da carga, regravado a cada palete finalizado
-          try {
-            const nomeArquivo = await exportarToyota(carga.cod_carg);
-            console.log("[EXPORT] arquivo da carga atualizado:", nomeArquivo);
-          } catch (error) {
-            console.error("[EXPORT] erro:", error);
-            setErro("Palete finalizado, mas não foi possível salvar o JSON no coletor.");
+          const skid = skidPaleteRef.current ?? ultimoSkidRegistrado(carga.cod_carg);
+          if (skid) {
+            try {
+              const nomeArquivo = await exportarPaleteToyota(carga.cod_carg, skid.skidLabel);
+              console.log("JSON do palete salvo no coletor:", nomeArquivo);
+            } catch (error) {
+              console.error("Erro ao exportar JSON do palete finalizado:", error);
+              setErro("Palete finalizado, mas não foi possível salvar o JSON no coletor.");
+            }
           }
           skidPaleteRef.current = null;
+        }
 
-          if (paletesAtualizados.every(p => p.stat_pale === "3")) {
+        setPallets(prev => {
+          const updated = [...prev];
+          updated[palletIndex] = {
+            ...updated[palletIndex],
+            stat_pale: status
+          };
+
+          const todosPaletesFinalizados = updated.every(p => p.stat_pale === "3");
+          if (todosPaletesFinalizados) {
             verificaCarga();
           }
-        }
+
+          return updated;
+        });
       } else if (data?.Erro) {
         setErro(data.Erro);
         setEtiquetaCliente("");
@@ -1124,7 +1137,6 @@ export default function PalletViewSingle() {
       const respPallets = await apiPallets.get("/PICK_PALETE", { params: { cCarga: carga.cod_carg } });
       const paletesApi: PalletApi[] = Array.isArray(respPallets.data?.paletes) ? respPallets.data.paletes : [];
       const todosFinalizadosNoServidor = paletesApi.length > 0 && paletesApi.every(p => p.stat_pale === "3");
-      console.log("[CARGA] todos finalizados no servidor?", todosFinalizadosNoServidor, paletesApi.map(p => p.stat_pale));
 
       if (!todosFinalizadosNoServidor) return;
 
@@ -1155,8 +1167,15 @@ export default function PalletViewSingle() {
         const httpOk = resp && typeof resp.status === "number" && resp.status >= 200 && resp.status < 300;
 
         if (data === "Gravado com sucesso" || data === "Gravado com sucessoGravado com sucesso" || (httpOk && !data?.Erro)) {
-          // O arquivo da carga já foi gravado completo ao finalizar o último palete
           setSucess({ type: "CARGA", message: "Carga finalizada com sucesso! Todos os paletes concluídos." });
+
+          try {
+            await exportarToyota(carga.cod_carg);
+          } catch (error) {
+            console.error("Erro ao exportar JSON da carga:", error);
+            setErro("Carga finalizada, mas não foi possível salvar o JSON no coletor.");
+          }
+
         } else if (data?.Erro) {
           setErro(data.Erro);
           setEtiquetaCliente("");
@@ -1229,7 +1248,7 @@ export default function PalletViewSingle() {
   }
 
   // Usado apenas quando NÃO existe uma ação para "carregar" o log
-  // junto (ex.: falhas de validação)
+  // junto (ex.: falhas de validação de
   async function registrarLog(params: {
     codCarg: string;
     codPale: string;
@@ -1269,15 +1288,6 @@ export default function PalletViewSingle() {
     }
   }
 
-  // Return condicional DEPOIS de todos os hooks (regras de hooks do React)
-  if (!carga) {
-    return (
-      <main className="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-gray-200 to-gray-300">
-        <span className="text-red-600 text-lg">Carga não informada!</span>
-      </main>
-    );
-  }
-
   return (
     <main
 
@@ -1288,7 +1298,7 @@ export default function PalletViewSingle() {
       "
     >
       <Card
-        className="
+        className="</main>
         w-full h-full max-w-full max-h-full flex flex-col items-center justify-start
         p-0 shadow-lg bg-white rounded-none
         sm:rounded-3xl sm:max-w-lg sm:max-h-[90vh] overflow-hidden
@@ -1356,7 +1366,7 @@ export default function PalletViewSingle() {
 
           <PartRfidPopup
             isOpen={showPartRfidPopup}
-            message="Informe o Part Label e o RFID da caixa lida."
+            message="Informe o Part Label e o RFID para contabilizar a caixa vazia."
             onClose={handlePartRfidClose}
             onRespond={handlePartRfidRespond}
           />

@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@azure/msal-node": "^6.0.1",
-    "@capacitor/android": "^7.6.10",
-    "@capacitor/core": "^7.6.10",
+    "@capacitor/android": "^7.6.9",
+    "@capacitor/core": "^7.6.9",
     "@capacitor/filesystem": "^7.1.8",
     "@react-icons/all-files": "^4.1.0",
     "@tailwindcss/postcss": "^4.1.11",
@@ -34,7 +34,7 @@
     "zod": "^4.0.10"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.6.2",
+    "@capacitor/cli": "^8.5.2",
     "@react-native-community/cli": "latest",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
