@@ -1,125 +1,6 @@
 import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 
-const DOWNLOADS_DIRECTORY_KEY = "DOWNLOADS_DIRECTORY_URI";
-
-// const EMAIL_API_URL = 'http//:172.16.168.235:3000';
-// const EMAIL_API_KEY = '3m@!lauT0m@t1c0';
-
-// // Converte string (JSON) para base64 preservando caracteres UTF-8 (acentos etc.)
-// function stringParaBase64(str) {
-//   const bytes = new TextEncoder().encode(str);
-//   let binario = "";
-//   bytes.forEach((b) => {
-//     binario += String.fromCharCode(b);
-//   });
-//   return btoa(binario);
-// }
-
-// // função de teste pra enviar JSON no fim dos paletes
-// export async function enviarPaleteEmailTeste(codCarg, skidLabel, opcoes = {}) {
-//   const estrutura = lerLeiturasSalvas(codCarg);
-//   const skidNormalizado = normalizar(skidLabel);
-
-//   const skids = estrutura.skids.filter(
-//     (skid) => normalizar(skid.qrCode) === skidNormalizado
-//   );
-
-//   if (skids.length === 0) {
-//     throw new Error(`Nenhuma leitura encontrada para o SKID ${skidLabel}.`);
-//   }
-
-//   const conteudo = JSON.stringify({ skids }, null, 2);
-//   const nomeArquivo = `conciliacao-rfid-${limparNomeArquivo(codCarg)}-${limparNomeArquivo(skidLabel)}.json`;
-
-//   const payload = {
-//     subject: opcoes.subject || `[TESTE] Conciliação RFID - Carga ${codCarg} - Palete ${skidLabel}`,
-//     body: opcoes.body || `Envio de teste: palete ${skidLabel} finalizado na carga ${codCarg}.`,
-//     recipients: opcoes.recipients,
-//     attachments: [
-//       {
-//         filename: nomeArquivo,
-//         content: stringParaBase64(conteudo),
-//         encoding: "base64",
-//         contentType: "application/json",
-//       },
-//     ],
-//   };
-
-//   const resposta = await fetch(EMAIL_API_URL, {
-//     method: "POST",
-//     headers: { "Content-Type": "application/json", "x-api-key": EMAIL_API_KEY },
-//     body: JSON.stringify(payload),
-//   });
-
-//   const dados = await resposta.json().catch(() => ({}));
-//   if (!resposta.ok) {
-//     throw new Error(dados.error || `Falha ao enviar e-mail (status ${resposta.status}).`);
-//   }
-//   return dados;
-// }
-
-// export async function enviarConciliacaoPorEmail(codCarg, opcoes = {}) {
-//   if (!codCarg) {
-//     throw new Error("Código da carga não informado.");
-//   }
-
-//   const estrutura = lerLeiturasSalvas(codCarg);
-
-//   if (!estrutura.skids.length) {
-//     throw new Error(
-//       `Nenhuma leitura encontrada para a carga ${codCarg}. Nada para enviar.`
-//     );
-//   }
-
-//   const conteudo = JSON.stringify(estrutura, null, 2);
-//   const nomeArquivo = `conciliacao-rfid-${limparNomeArquivo(codCarg)}.json`;
-
-//   const payload = {
-//     subject: opcoes.subject || `Conciliação RFID - Carga ${codCarg}`,
-//     body:
-//       opcoes.body ||
-//       `Segue em anexo o arquivo de conciliação RFID referente à carga ${codCarg}.\n\n` +
-//       `Total de SKIDs: ${estrutura.skids.length}`,
-//     recipients: opcoes.recipients, // opcional; se omitido, backend usa DEFAULT_RECIPIENT
-//     attachments: [
-//       {
-//         filename: nomeArquivo,
-//         content: stringParaBase64(conteudo),
-//         encoding: "base64",
-//         contentType: "application/json",
-//       },
-//     ],
-//   };
-
-//   let resposta;
-//   try {
-//     resposta = await fetch(EMAIL_API_URL, {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//         "x-api-key": EMAIL_API_KEY,
-//       },
-//       body: JSON.stringify(payload),
-//     });
-//   } catch (error) {
-//     throw new Error(
-//       "Não foi possível conectar ao serviço de envio de e-mail.",
-//       { cause: error }
-//     );
-//   }
-
-//   const dados = await resposta.json().catch(() => ({}));
-
-//   if (!resposta.ok) {
-//     throw new Error(
-//       dados.error || `Falha ao enviar e-mail (status ${resposta.status}).`
-//     );
-//   }
-
-//   return dados;
-// }
-
 function getStorageKey(codCarg) {
   const cargaLimpa = String(codCarg || "SEM_CARGA").trim();
   return `TOYOTA_LEITURAS_${cargaLimpa}`;
@@ -135,21 +16,13 @@ function getEstruturaPadrao() {
 
 function lerLeiturasSalvas(codCarg) {
   try {
-    const chave = getStorageKey(codCarg);
-    const valorSalvo = localStorage.getItem(chave);
-
+    const valorSalvo = localStorage.getItem(getStorageKey(codCarg));
     if (!valorSalvo) return getEstruturaPadrao();
 
     const parseado = JSON.parse(valorSalvo);
-
-    if (
-      parseado &&
-      typeof parseado === "object" &&
-      Array.isArray(parseado.skids)
-    ) {
+    if (parseado && typeof parseado === "object" && Array.isArray(parseado.skids)) {
       return parseado;
     }
-
     return getEstruturaPadrao();
   } catch (error) {
     throw new Error(
@@ -161,12 +34,7 @@ function lerLeiturasSalvas(codCarg) {
 
 function salvarLeituras(codCarg, conteudo) {
   try {
-    const chave = getStorageKey(codCarg);
-
-    localStorage.setItem(
-      chave,
-      JSON.stringify(conteudo, null, 2)
-    );
+    localStorage.setItem(getStorageKey(codCarg), JSON.stringify(conteudo, null, 2));
   } catch (error) {
     throw new Error(
       "Não foi possível salvar o arquivo de leitura no navegador.",
@@ -189,7 +57,6 @@ async function baixarArquivo(conteudo, codCarg, sufixo = "") {
 
   // 1) Capacitor (APK)
   if (Capacitor.isNativePlatform()) {
-    // Tenta pedir permissão (necessária no Android <= 10); ignora se não se aplicar
     try {
       const perm = await Filesystem.checkPermissions();
       if (perm.publicStorage !== "granted") {
@@ -197,7 +64,6 @@ async function baixarArquivo(conteudo, codCarg, sufixo = "") {
       }
     } catch (_) { }
 
-    // Ordem: Documents (pública) -> External (Android/data/<pkg>/files, sem permissão)
     const destinos = [Directory.Documents, Directory.External];
     let ultimoErro;
 
@@ -225,14 +91,12 @@ async function baixarArquivo(conteudo, codCarg, sufixo = "") {
   // 2) Ponte Kotlin
   if (window.AndroidBridge?.salvarArquivo) {
     const ok = window.AndroidBridge.salvarArquivo(nome, conteudo);
-    // aceita true, "true" ou undefined (caso o método Kotlin seja void)
     if (ok === false || ok === "false") {
       throw new Error("Falha ao salvar o arquivo no coletor.");
     }
     return nome;
   }
 
-  // 3) Navegador de verdade (não WebView)
   const blob = new Blob([conteudo], { type: "application/json;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -247,22 +111,14 @@ async function baixarArquivo(conteudo, codCarg, sufixo = "") {
 
 function ultimoSkid(estrutura, qrCodeNormalizado) {
   for (let i = estrutura.skids.length - 1; i >= 0; i--) {
-    if (
-      normalizar(estrutura.skids[i].qrCode) === qrCodeNormalizado
-    ) {
+    if (normalizar(estrutura.skids[i].qrCode) === qrCodeNormalizado) {
       return estrutura.skids[i];
     }
   }
-
   return null;
 }
 
-export async function registrarSkidLabel(
-  codCarg,
-  qrCode,
-  rfid = "",
-  opcoes = {}
-) {
+export async function registrarSkidLabel(codCarg, qrCode, rfid = "", opcoes = {}) {
   const qrCodeLimpo = String(qrCode || "").trim();
   const rfidLimpo = String(rfid || "").trim();
 
@@ -273,17 +129,10 @@ export async function registrarSkidLabel(
   const estrutura = lerLeiturasSalvas(codCarg);
   const qrCodeNormalizado = normalizar(qrCodeLimpo);
 
-  let skid = qrCodeLimpo
-    ? ultimoSkid(estrutura, qrCodeNormalizado)
-    : null;
+  let skid = qrCodeLimpo ? ultimoSkid(estrutura, qrCodeNormalizado) : null;
 
   if (!skid || skid.parts.length > 0) {
-    skid = {
-      qrCode: qrCodeLimpo,
-      rfid: rfidLimpo,
-      parts: [],
-    };
-
+    skid = { qrCode: qrCodeLimpo, rfid: rfidLimpo, parts: [] };
     estrutura.skids.push(skid);
   } else {
     if (qrCodeLimpo) skid.qrCode = qrCodeLimpo;
@@ -293,10 +142,8 @@ export async function registrarSkidLabel(
   salvarLeituras(codCarg, estrutura);
 
   if (opcoes.baixar === true) {
-    const conteudo = JSON.stringify(estrutura, null, 2);
-    return baixarArquivo(conteudo, codCarg);
+    return baixarArquivo(JSON.stringify(estrutura, null, 2), codCarg);
   }
-
   return null;
 }
 
@@ -305,7 +152,7 @@ export async function jsonToyota(
   tagRfidPalete,
   skidLabel,
   tagRfidCaixa,
-  partLabel,
+  partLabel = "",
   opcoes = {}
 ) {
   const rfidPalete = String(tagRfidPalete || "").trim();
@@ -313,8 +160,11 @@ export async function jsonToyota(
   const rfidCaixa = String(tagRfidCaixa || "").trim();
   const qrCodePart = String(partLabel || "").trim();
 
-  if (!qrCodeSkid || !qrCodePart || !rfidCaixa || !rfidPalete) {
-    return null;
+  if (!qrCodeSkid && !rfidPalete) {
+    throw new Error("Skid do palete não informado para gravar a leitura.");
+  }
+  if (!rfidCaixa && !qrCodePart) {
+    throw new Error("Nenhum dado da caixa (RFID/etiqueta) para gravar a leitura.");
   }
 
   const estrutura = lerLeiturasSalvas(codCarg);
@@ -324,47 +174,25 @@ export async function jsonToyota(
     : estrutura.skids[estrutura.skids.length - 1];
 
   if (!skid) {
-    skid = {
-      qrCode: qrCodeSkid,
-      rfid: rfidPalete,
-      parts: [],
-    };
-
+    skid = { qrCode: qrCodeSkid, rfid: rfidPalete, parts: [] };
     estrutura.skids.push(skid);
   }
 
-  if (!Array.isArray(skid.parts)) {
-    skid.parts = [];
-  }
+  if (!Array.isArray(skid.parts)) skid.parts = [];
 
   const part = {};
-
-  if (qrCodePart) {
-    part.qrCode = qrCodePart;
-  }
-
-  if (rfidCaixa) {
-    part.rfid = rfidCaixa;
-  }
-
+  if (qrCodePart) part.qrCode = qrCodePart;
+  if (rfidCaixa) part.rfid = rfidCaixa;
   skid.parts.push(part);
 
-  if (qrCodeSkid) {
-    skid.qrCode = qrCodeSkid;
-  }
-
-  if (rfidPalete) {
-    skid.rfid = rfidPalete;
-  }
+  if (qrCodeSkid) skid.qrCode = qrCodeSkid;
+  if (rfidPalete) skid.rfid = rfidPalete;
 
   salvarLeituras(codCarg, estrutura);
 
-  // Só baixa se for solicitado explicitamente
   if (opcoes.baixar === true) {
-    const conteudo = JSON.stringify(estrutura, null, 2);
-    return baixarArquivo(conteudo, codCarg);
+    return baixarArquivo(JSON.stringify(estrutura, null, 2), codCarg);
   }
-
   return null;
 }
 
@@ -372,30 +200,19 @@ export function registrarRfidSkid(codCarg, skidLabel, rfid) {
   const qrCodeSkid = String(skidLabel || "").trim();
   const rfidLimpo = String(rfid || "").trim();
 
-  if (!qrCodeSkid) {
-    return null;
-  }
+  if (!qrCodeSkid) return null;
 
   const estrutura = lerLeiturasSalvas(codCarg);
-
-  const skid = ultimoSkid(
-    estrutura,
-    normalizar(qrCodeSkid)
-  );
+  const skid = ultimoSkid(estrutura, normalizar(qrCodeSkid));
 
   if (!skid) {
-    throw new Error(
-      `Nenhum SKID encontrado para o QR Code ${qrCodeSkid}.`
-    );
+    throw new Error(`Nenhum SKID encontrado para o QR Code ${qrCodeSkid}.`);
   }
 
   skid.rfid = rfidLimpo;
-
   salvarLeituras(codCarg, estrutura);
 
-  const conteudo = JSON.stringify(estrutura, null, 2);
-
-  return baixarArquivo(conteudo, codCarg);
+  return baixarArquivo(JSON.stringify(estrutura, null, 2), codCarg);
 }
 
 export function exportarPaleteToyota(codCarg, skidLabel) {
@@ -403,8 +220,7 @@ export function exportarPaleteToyota(codCarg, skidLabel) {
   const skidNormalizado = normalizar(skidLabel);
 
   const skids = estrutura.skids.filter(
-    (skid) =>
-      normalizar(skid.qrCode) === skidNormalizado
+    (skid) => normalizar(skid.qrCode) === skidNormalizado
   );
 
   if (skids.length === 0) {
@@ -413,45 +229,29 @@ export function exportarPaleteToyota(codCarg, skidLabel) {
     );
   }
 
-  const conteudo = JSON.stringify(
-    {
-      skids,
-    },
-    null,
-    2
-  );
-
-  return baixarArquivo(conteudo, codCarg);
+  return baixarArquivo(JSON.stringify({ skids }, null, 2), codCarg);
 }
 
 export function exportarToyota(codCarg, opcoes = {}) {
-  if (!codCarg) {
-    throw new Error("Código da carga não informado.");
-  }
+  if (!codCarg) throw new Error("Código da carga não informado.");
 
   const estrutura = lerLeiturasSalvas(codCarg);
 
   if (!estrutura.skids.length) {
-    throw new Error(
-      `Nenhuma leitura encontrada para a carga ${codCarg}.`
-    );
+    throw new Error(`Nenhuma leitura encontrada para a carga ${codCarg}.`);
   }
 
-  const conteudo = JSON.stringify(estrutura, null, 2);
-  return baixarArquivo(conteudo, codCarg, opcoes.sufixo);
+  return baixarArquivo(JSON.stringify(estrutura, null, 2), codCarg, opcoes.sufixo);
 }
 
 export function limparLeiturasToyota(codCarg) {
-  localStorage.removeItem(
-    getStorageKey(codCarg)
-  );
+  localStorage.removeItem(getStorageKey(codCarg));
 }
 
 export function ultimoSkidRegistrado(codCarg) {
   const estrutura = lerLeiturasSalvas(codCarg);
   const skid = estrutura.skids[estrutura.skids.length - 1];
+  if (!skid || (!skid.qrCode && !skid.rfid)) return null;
 
-  if (!skid || !skid.qrCode || !skid.rfid) return null;
-
-  return { skidLabel: skid.qrCode, rfid: skid.rfid };
+  return { skidLabel: skid.qrCode || "", rfid: skid.rfid || "" };
 }

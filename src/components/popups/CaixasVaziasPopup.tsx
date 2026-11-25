@@ -4,7 +4,7 @@ import ErrorPopup from "./CompErrorPopup";
 import SuccessPopup from "./CompSuccessPopup";
 import successSound from '../../sounds/success.mp3';
 import { apiPallets, apiLog, apiVzias } from "../../lib/axios";
-import { useLocation, } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { jsonToyota, ultimoSkidRegistrado } from "../JSON/criaJSON.js";
 
 Modal.setAppElement("#root");
@@ -65,25 +65,23 @@ interface VaziaItem {
   qtd_restante: number;
 }
 
-export default function CaixasVaziasPopup({ message, matricula, onClose, palletIndex, }: CaixasVaziasPopupProps) {
+export default function CaixasVaziasPopup({ message, matricula, onClose, palletIndex }: CaixasVaziasPopupProps) {
   const [embalagem, setEmbalagem] = useState<string>("");
   const [contagens, setContagens] = useState<Record<string, number>>({});
   const [, setTotalCaixas] = useState<number>(0);
   const location = useLocation();
-  const [caixaRfid, setCaixaRfid] = useState("");
   const [caixaCliente, setCaixaCliente] = useState("");
-  const [clienteValido, setClienteValido] = useState<boolean>(false);
   const carga = location.state?.carga as Carga | undefined;
   const [pallets, setPallets] = useState<Pallet[]>([]);
   const palletIndexFinal = palletIndex ?? 0;
   const palletAtual = pallets.length > 0 ? pallets[palletIndexFinal] : undefined;
   const [erro, setErro] = useState<string | null>(null);
-  type SuccessType = "LEITURA"
+  type SuccessType = "LEITURA";
   const [success, setSucess] = useState<{ type: SuccessType; message: string } | null>(null);
   const [, setLoading] = useState(false);
   const [contagemCaixas, setContagemCaixas] = useState(0);
-  const caixaRfidRef = useRef<HTMLInputElement>(null);
   const caixaClienteRef = useRef<HTMLInputElement>(null);
+  const processandoRef = useRef(false);
   const dataAtual = new Date();
   const dataformatada =
     dataAtual.getFullYear().toString() +
@@ -98,30 +96,25 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     vaziasItensRef.current = vaziasItens;
   }, [vaziasItens]);
 
-  //Carrega informações na montagem do componente
+  // Carrega informações na montagem do componente
   useEffect(() => {
     const init = async () => {
-      console.log("INICIANDO CaixasVaziasPopup");
       setLoading(true);
       setErro(null);
       setShowModal(false);
 
       if (!carga) {
-        console.log("Carga não encontrada");
         setErro("Carga não encontrada.");
         setLoading(false);
         return;
       }
 
       try {
-        //Carrega paletes
-        console.log("Carregando paletes da carga:", carga.cod_carg);
         const respPallets = await apiPallets.get("/PICK_PALETE", {
           params: { cCarga: carga.cod_carg }
         });
 
         const palletsApi: PalletApi[] = Array.isArray(respPallets.data?.paletes) ? respPallets.data.paletes : [];
-        console.log("Paletes carregados:", palletsApi.length);
 
         if (palletsApi.length === 0) {
           setErro("Nenhum palete encontrado.");
@@ -138,13 +131,10 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
           num_order: p.num_order,
         })));
 
-        // Carrega caixas vazias do pallet atual
         const palletAtualLocal = palletsApi[palletIndexFinal];
         if (palletAtualLocal) {
-          console.log("Carregando vazias do pallet:", palletAtualLocal.cod_palete);
           await carregarVaziasItens(carga.cod_carg, palletAtualLocal.cod_palete);
         }
-
       } catch (error) {
         setErro("Erro ao carregar dados.");
       } finally {
@@ -155,27 +145,20 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     init();
   }, []);
 
-  // Recarrega vazias a cada vez que pallet muda
+  // Recarrega vazias a cada vez que o pallet muda
   useEffect(() => {
     if (palletAtual && carga) {
-      console.log("PALLET MUDOU");
       carregarVaziasItens(carga.cod_carg, palletAtual.cod_palete);
     }
   }, [palletAtual?.cod_palete, carga]);
 
-  const carregarVaziasItens = async (
-    codCarga: string,
-    codPalete: string) => {
-    console.log("CHAMANDO /PICK_VZIA:", { codCarga, codPalete });
+  const carregarVaziasItens = async (codCarga: string, codPalete: string) => {
     try {
       const response = await apiVzias.get("/PICK_VZIA", {
         params: { cCarga: codCarga, cPalet: codPalete }
       });
 
-      console.log("RESPOSTA /PICK_VZIA:", response.data);
-
       if (response.data?.error && response.data.error.includes("Registro(s) não encontrado(s)")) {
-        console.log("PALLET NÃO TEM CAIXAS VAZIAS - Fechando popup");
         setShowModal(false);
         return;
       }
@@ -190,7 +173,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
         : [];
 
       if (itensVazios.length > 0) {
-        console.log("PALLET TEM CAIXAS VAZIAS - Abrindo popup", itensVazios);
         setVaziasItens(itensVazios);
 
         setContagens(prev => {
@@ -211,7 +193,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
           setShowModal(false);
         }
       } else {
-        console.log("Array vazio - Fechando popup");
         setShowModal(false);
       }
     } catch (error) {
@@ -236,13 +217,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     }
   }, [matricula]);
 
-  function handleCaixaClienteChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const caixaCliente = e.target.value;
-    setCaixaCliente(caixaCliente);
-  }
-
-  function sanitize(
-    input: string): string {
+  function sanitize(input: string): string {
     return input
       .normalize('NFKC')
       .replace(/\s+/g, '')
@@ -251,7 +226,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
       .toUpperCase();
   }
 
-  // validações de formato das etiquetas
   function isClienteFormatoValido(etiqueta: string): boolean {
     const s = sanitize(etiqueta);
     if (!s.includes(";")) return false;
@@ -259,20 +233,12 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     return primeira.length > 0 && s !== primeira;
   }
 
-  function isRfidFormatoValido(rfid: string): boolean {
-    const s = sanitize(rfid);
-    return s.length > 0;
-  }
-
-  function extrairEmbalagem(
-    caixa: string,
-    embalagemEsperada: string): string | null {
+  function extrairEmbalagem(caixa: string, embalagemEsperada: string): string | null {
     if (!caixa) return null;
 
     const caixaNorm = sanitize(caixa);
     const embalagemNorm = sanitize(embalagemEsperada);
 
-    console.log('[DEBUG extrairEmbalagem] caixaNorm:', caixaNorm, 'embalagemNorm:', embalagemNorm);
     if (caixa.includes(';')) {
       const primeiraParte = caixa.split(';')[0].trim().toUpperCase();
       return primeiraParte || null;
@@ -289,8 +255,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     return null;
   }
 
-  function Embalagem(
-    caixaClienteVal: string): string | null {
+  function Embalagem(caixaClienteVal: string): string | null {
     for (const it of vaziasItens) {
       const emb = sanitize(it.cod_emb);
       if (extrairEmbalagem(caixaClienteVal, emb) === emb) return it.cod_emb;
@@ -298,23 +263,18 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     return null;
   }
 
-  function verificaCaixas(
-    caixaClienteVal: string,
-    rfidVal: string) {
+  // Agora recebe só a etiqueta cliente (que também é o RFID)
+  function verificaCaixas(caixaClienteVal: string) {
+    const etiqueta = caixaClienteVal.trim();
+    if (!etiqueta) return false;
 
-    if (!isClienteFormatoValido(caixaClienteVal)) {
+    if (!isClienteFormatoValido(etiqueta)) {
       setErro("Formato de etiqueta da Caixa Cliente inválido.");
       setCaixaCliente("");
       return false;
     }
 
-    if (!isRfidFormatoValido(rfidVal)) {
-      setErro("Formato de RFID inválido.");
-      setCaixaRfid("");
-      return false;
-    }
-
-    const alvo = Embalagem(caixaClienteVal);
+    const alvo = Embalagem(etiqueta);
     if (!alvo) {
       setErro("Embalagem não pertence ao palete.");
       atualizarOp(
@@ -325,21 +285,19 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
         dataformatada,
         horaformatada,
         String(matricula ?? ""),
-        caixaClienteVal,
-        rfidVal,
+        etiqueta,
+        etiqueta,
         "2",
         "Leitura inválida: embalagem não encontrada"
       );
       setCaixaCliente("");
-      setCaixaRfid("");
       return false;
     }
 
     // não aceitamos apenas a embalagem na leitura do cliente
-    if (sanitize(caixaClienteVal) === sanitize(alvo)) {
+    if (sanitize(etiqueta) === sanitize(alvo)) {
       setErro("Etiqueta inválida, informe a etiqueta completa!");
       setCaixaCliente("");
-      setCaixaRfid("");
       return false;
     }
 
@@ -349,177 +307,180 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     if (!skid) {
       setErro("Skid do palete não encontrado neste dispositivo. Não é possível registrar a leitura.");
       setCaixaCliente("");
-      setCaixaRfid("");
       return false;
     }
 
-    leituracaixa(alvo, caixaClienteVal, rfidVal.trim(), skid);
+    leituracaixa(alvo, etiqueta, skid);
     return true;
   }
 
   async function leituracaixa(
     embalagemAlvo: string,
     caixaClienteVal: string,
-    rfidVal: string,
     skid: { skidLabel: string; rfid: string }
   ) {
-    const itemAlvo = vaziasItensRef.current?.find(i => i.cod_emb === embalagemAlvo);
-    if (!itemAlvo) {
-      setErro("Item não encontrado no palete.");
-      setCaixaCliente("");
-      setCaixaRfid("");
-      return;
-    }
-
-    const total = Number(itemAlvo.qtd_total ?? 0);
-    const lidasAtuais = contagens[embalagemAlvo] ?? 0;
-
-    if (lidasAtuais >= total) {
-      setErro("Todas as caixas já foram lidas para este item.");
-
-      atualizarOp(
-        carga?.cod_carg ?? "",
-        palletAtual?.cod_palete?.trim() ?? "",
-        embalagemAlvo,
-        "4",
-        dataformatada,
-        horaformatada,
-        String(matricula ?? ""),
-        caixaClienteVal,
-        rfidVal,
-        "2",
-        `Embalagem: ${embalagemAlvo}. Todas as caixas desse item já foram lidas.`
-      );
-      setCaixaCliente("");
-      setCaixaRfid("");
-      return;
-    }
-
-    const novaContagem = lidasAtuais + 1;
-    setContagens(prev => ({ ...prev, [embalagemAlvo]: novaContagem }));
-
-    setVaziasItens(prev => prev.map(it => it.cod_emb === embalagemAlvo ? { ...it, qtd_restante: it.qtd_total - novaContagem } : it));
-
-    const sucessoVzias = await enviarVzias(
-      carga?.cod_carg ?? "",
-      palletAtual?.cod_palete?.trim() ?? "",
-      embalagemAlvo,
-      "2",
-      String(novaContagem)
-    );
-
-    if (!sucessoVzias) {
-      setContagens(prev => ({ ...prev, [embalagemAlvo]: lidasAtuais }));
-      setCaixaCliente("");
-      setCaixaRfid("");
-      return;
-    }
+    if (processandoRef.current) return;
+    processandoRef.current = true;
 
     try {
-      await jsonToyota(
-        carga!.cod_carg,
-        skid.rfid,
-        skid.skidLabel,
-        rfidVal,                 // RFID lido no input
-        caixaClienteVal.trim()   // etiqueta cliente (partLabel)
-      );
-      setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
-    } catch (jsonError) {
-      console.error("Falha ao gravar leitura de caixa vazia no arquivo JSON local:", jsonError);
-      setErro("Leitura gravada no servidor, mas houve falha ao gerar o arquivo local. Verifique.");
-    }
+      const itemAlvo = vaziasItensRef.current?.find(i => i.cod_emb === embalagemAlvo);
+      if (!itemAlvo) {
+        setErro("Item não encontrado no palete.");
+        setCaixaCliente("");
+        return;
+      }
 
-    // Primeira caixa do item
-    if (novaContagem === 1) {
-      const sucessoPrimeira = await enviarVzias(
+      const total = Number(itemAlvo.qtd_total ?? 0);
+      const lidasAtuais = contagens[embalagemAlvo] ?? 0;
+
+      if (lidasAtuais >= total) {
+        setErro("Todas as caixas já foram lidas para este item.");
+
+        atualizarOp(
+          carga?.cod_carg ?? "",
+          palletAtual?.cod_palete?.trim() ?? "",
+          embalagemAlvo,
+          "4",
+          dataformatada,
+          horaformatada,
+          String(matricula ?? ""),
+          caixaClienteVal,
+          caixaClienteVal,
+          "2",
+          `Embalagem: ${embalagemAlvo}. Todas as caixas desse item já foram lidas.`
+        );
+        setCaixaCliente("");
+        return;
+      }
+
+      const novaContagem = lidasAtuais + 1;
+      setContagens(prev => ({ ...prev, [embalagemAlvo]: novaContagem }));
+
+      setVaziasItens(prev => prev.map(it => it.cod_emb === embalagemAlvo ? { ...it, qtd_restante: it.qtd_total - novaContagem } : it));
+
+      const sucessoVzias = await enviarVzias(
         carga?.cod_carg ?? "",
         palletAtual?.cod_palete?.trim() ?? "",
         embalagemAlvo,
-        "1",
+        "2",
         String(novaContagem)
       );
 
-      if (sucessoPrimeira) {
-        await atualizarOp(
-          carga?.cod_carg ?? "",
-          palletAtual?.cod_palete?.trim() ?? "",
-          embalagemAlvo,
-          "8",
-          dataformatada,
-          horaformatada,
-          String(matricula ?? ""),
-          caixaClienteVal,
-          rfidVal,
-          "1",
-          `Item ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} iniciado pelo operador ${matricula}`
-        );
-
-        setVaziasItens(prev => prev.map(it => it.cod_emb === embalagemAlvo ? { ...it, status: "1" } : it));
+      if (!sucessoVzias) {
+        setContagens(prev => ({ ...prev, [embalagemAlvo]: lidasAtuais }));
+        setVaziasItens(prev => prev.map(it => it.cod_emb === embalagemAlvo ? { ...it, qtd_restante: it.qtd_total - lidasAtuais } : it));
+        setCaixaCliente("");
+        return;
       }
-    }
 
-    if (novaContagem === total) {
-      const sucessoFinal = await enviarVzias(
-        carga?.cod_carg ?? "",
-        palletAtual?.cod_palete?.trim() ?? "",
-        embalagemAlvo, "3",
-        String(novaContagem)
-      );
+      try {
+        await jsonToyota(
+          carga!.cod_carg,
+          skid.rfid,
+          skid.skidLabel,
+          caixaClienteVal,  // RFID da caixa
+          caixaClienteVal   // etiqueta cliente
+        );
+        setSucess({ type: "LEITURA", message: "Leitura realizada com sucesso!" });
+      } catch (jsonError) {
+        console.error("Falha ao gravar leitura de caixa vazia no arquivo JSON local:", jsonError);
+        setErro("Leitura gravada no servidor, mas houve falha ao gerar o arquivo local. Verifique.");
+      }
 
-      if (sucessoFinal) {
-        await atualizarOp(
+      // Primeira caixa do item
+      if (novaContagem === 1) {
+        const sucessoPrimeira = await enviarVzias(
           carga?.cod_carg ?? "",
           palletAtual?.cod_palete?.trim() ?? "",
           embalagemAlvo,
-          "8",
-          dataformatada,
-          horaformatada,
-          String(matricula ?? ""),
-          caixaClienteVal,
-          rfidVal,
           "1",
-          `Caixa ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} concluido pelo operador ${matricula}`
+          String(novaContagem)
         );
 
-        setVaziasItens(prev => {
-          const updatedItens = prev.map(it =>
-            it.cod_emb === embalagemAlvo ? { ...it, status: "3" } : it
+        if (sucessoPrimeira) {
+          await atualizarOp(
+            carga?.cod_carg ?? "",
+            palletAtual?.cod_palete?.trim() ?? "",
+            embalagemAlvo,
+            "8",
+            dataformatada,
+            horaformatada,
+            String(matricula ?? ""),
+            caixaClienteVal,
+            caixaClienteVal,
+            "1",
+            `Item ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} iniciado pelo operador ${matricula}`
           );
 
-          const proximoItem = updatedItens.find(it => it.status !== "3");
-
-          if (proximoItem) {
-            setEmbalagem(proximoItem.cod_emb);
-            setContagemCaixas(0);
-            setContagens(p => ({ ...p, [proximoItem.cod_emb]: 0 }));
-          } else {
-            setSucess({ type: "LEITURA", message: "Todas as caixas vazias foram lidas com sucesso!" });
-            setTimeout(() => onClose(true), 2000);
-          }
-
-          return updatedItens;
-        });
+          setVaziasItens(prev => prev.map(it => it.cod_emb === embalagemAlvo ? { ...it, status: "1" } : it));
+        }
       }
-    }
 
-    if (novaContagem <= total) {
-      await atualizarOp(
-        carga?.cod_carg ?? "",
-        palletAtual?.cod_palete?.trim() ?? "",
-        embalagemAlvo,
-        "8",
-        dataformatada,
-        horaformatada,
-        String(matricula ?? ""),
-        caixaClienteVal,
-        rfidVal,
-        "1",
-        `Caixa ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} lida com sucesso pelo operador ${matricula}`
-      );
-    }
+      if (novaContagem === total) {
+        const sucessoFinal = await enviarVzias(
+          carga?.cod_carg ?? "",
+          palletAtual?.cod_palete?.trim() ?? "",
+          embalagemAlvo,
+          "3",
+          String(novaContagem)
+        );
 
-    setCaixaCliente("");
-    setCaixaRfid("");
+        if (sucessoFinal) {
+          await atualizarOp(
+            carga?.cod_carg ?? "",
+            palletAtual?.cod_palete?.trim() ?? "",
+            embalagemAlvo,
+            "8",
+            dataformatada,
+            horaformatada,
+            String(matricula ?? ""),
+            caixaClienteVal,
+            caixaClienteVal,
+            "1",
+            `Caixa ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} concluido pelo operador ${matricula}`
+          );
+
+          setVaziasItens(prev => {
+            const updatedItens = prev.map(it =>
+              it.cod_emb === embalagemAlvo ? { ...it, status: "3" } : it
+            );
+
+            const proximoItem = updatedItens.find(it => it.status !== "3");
+
+            if (proximoItem) {
+              setEmbalagem(proximoItem.cod_emb);
+              setContagemCaixas(0);
+              setContagens(p => ({ ...p, [proximoItem.cod_emb]: 0 }));
+            } else {
+              setSucess({ type: "LEITURA", message: "Todas as caixas vazias foram lidas com sucesso!" });
+              setTimeout(() => onClose(true), 2000);
+            }
+
+            return updatedItens;
+          });
+        }
+      }
+
+      if (novaContagem <= total) {
+        await atualizarOp(
+          carga?.cod_carg ?? "",
+          palletAtual?.cod_palete?.trim() ?? "",
+          embalagemAlvo,
+          "8",
+          dataformatada,
+          horaformatada,
+          String(matricula ?? ""),
+          caixaClienteVal,
+          caixaClienteVal,
+          "1",
+          `Caixa ${embalagemAlvo} do Pallet ${palletAtual?.cod_palete} da carga ${carga?.cod_carg} lida com sucesso pelo operador ${matricula}`
+        );
+      }
+
+      setCaixaCliente("");
+    } finally {
+      processandoRef.current = false;
+    }
   }
 
   async function atualizarOp(
@@ -535,8 +496,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     cStatus: string,
     cHistor: string
   ) {
-    console.log("atualizarOp foi chamado", { codCarga, codPale, codItem, cOperac, cData, cHora, cUser, cLeit1, cLeit2, cStatus, cHistor });
-
     try {
       setLoading(true);
       const resp = await apiLog.post("", {
@@ -555,22 +514,17 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
 
       const data = resp.data;
       const httpOk = resp && typeof resp.status === "number" && resp.status >= 200 && resp.status < 300;
-      console.log("RESPOSTA LOG:", data, resp.status);
 
       if (data === "Gravado com sucessoGravado com sucesso" || data === "Gravado com sucesso" || (httpOk && !data?.Erro)) {
-        console.log("LOG enviado com sucesso");
         setCaixaCliente("");
-        setCaixaRfid("");
       } else if (data?.Erro) {
         console.error("LOG erro:", data.Erro);
         setErro(data.Erro);
         setCaixaCliente("");
-        setCaixaRfid("");
       } else {
         console.error("LOG falhou:", data);
         setErro("Falha ao atualizar o Log do Usuário.");
         setCaixaCliente("");
-        setCaixaRfid("");
       }
     } catch (error) {
       if (contagemCaixas > 0) {
@@ -579,7 +533,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
       console.error("Erro API Log:", error);
       setErro("Erro ao conectar com a API de Log.");
       setCaixaCliente("");
-      setCaixaRfid("");
     } finally {
       setLoading(false);
     }
@@ -591,46 +544,36 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
     codEmb: string,
     cOperac: string,
     cQuant: string): Promise<boolean> {
-    console.log("Enviando VZIAS:", { codCarg, codPale, codEmb, cOperac, cQuant });
-
     try {
       setLoading(true);
       const resp = await apiVzias.post("", {
         codCarg, codPale, codEmb, cOperac, cQuant
       });
 
-      console.log("RESPOSTA VZIAS status:", resp.status, "data:", resp.data);
-
       if (resp.status >= 200 && resp.status < 300 &&
         (resp.data === "Gravado com sucesso" || resp.data === "Gravado com sucessoGravado com sucesso")) {
-        console.log("VZIAS OK");
         return true;
       }
 
-      console.error("VZIAS falhou (status não 2xx):", resp.status, resp.data);
+      console.error("VZIAS falhou:", resp.status, resp.data);
       setErro("Falha no servidor VZIAS");
       return false;
 
     } catch (error: any) {
-      console.error("Erro API VZIAS 500:", error.response?.status, error.response?.data);
+      console.error("Erro API VZIAS:", error.response?.status, error.response?.data);
       if (error.response?.data) {
         setErro(`Erro servidor: ${error.response.data}`);
-        setCaixaCliente("");
-        setCaixaRfid("");
       } else {
         setErro("Erro ao conectar com VZIAS");
-        setCaixaCliente("");
-        setCaixaRfid("");
       }
+      setCaixaCliente("");
       return false;
     } finally {
       setLoading(false);
     }
   }
 
-  //Função para definir a cor da borda 
-  function getStatusColor(
-    status: string | undefined) {
+  function getStatusColor(status: string | undefined) {
     switch (status) {
       case "0":
         return "bg-gray-100 border-gray-300 text-black";
@@ -672,38 +615,14 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
           className="border-b-2 border-gray-400 bg-transparent px-2 py-2 text-lg focus:outline-none focus:border-blue-500 rounded-none w-full max-w-xs text-center"
           value={caixaCliente}
           onChange={(e) => {
-            const val = e.target.value;
-            handleCaixaClienteChange(e);
-            setCaixaCliente(val);
+            setCaixaCliente(e.target.value);
             if (erro) setErro(null);
-            if (val.trim() && isClienteFormatoValido(val)) {
-              setClienteValido(true);
-            } else {
-              setClienteValido(false);
-            }
-            if (val.trim()) {
-              caixaRfidRef.current?.focus();
-            }
           }}
-        />
-
-        <input
-          ref={caixaRfidRef}
-          type="text"
-          placeholder="RFID"
-          className="border-b-2 border-gray-400 bg-transparent px-2 py-2 text-lg focus:outline-none focus:border-blue-500 rounded-none w-full max-w-xs text-center"
-          value={caixaRfid}
-          onChange={(e) => {
-            const val = e.target.value;
-            setCaixaRfid(val);
-
-            if (!clienteValido) {
-              setErro("Formato de etiqueta cliente inválido!");
-              setCaixaRfid("");
-              return;
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              verificaCaixas(caixaCliente);
             }
-
-            verificaCaixas(caixaCliente, val);
           }}
         />
 
@@ -713,8 +632,7 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
           )}
           <div className="flex flex-col items-center gap-1.5">
             {vaziasItens.map((item, index) => (
-              <div key={index} className={`flex items-center justify-center h-11 ${getStatusColor
-                (item.status)} rounded-full px-3 py-2.5`}>
+              <div key={index} className={`flex items-center justify-center h-11 ${getStatusColor(item.status)} rounded-full px-3 py-2.5`}>
                 <p className="text-lg font-bold text-blue-600 min-w-[65px] text-center">
                   {item.cod_emb}
                 </p>
@@ -735,8 +653,6 @@ export default function CaixasVaziasPopup({ message, matricula, onClose, palletI
             onClose={() => {
               setErro(null);
               setCaixaCliente("");
-              setCaixaRfid("");
-              setClienteValido(false);
               caixaClienteRef.current?.focus();
             }}
           />
